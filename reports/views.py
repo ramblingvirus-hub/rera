@@ -1,0 +1,489 @@
+import json
+import uuid
+from datetime import datetime
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.test import APIRequestFactory
+
+from django.shortcuts import get_object_or_404
+
+from rera_core.engine_v1 import evaluate_project_v1
+from .models import Report
+from django.db import transaction
+from billing.services import has_active_subscription, has_sufficient_credit, deduct_credit
+from billing.services import calculate_user_balance
+from audit.services import log_audit_event
+from audit.constants import EVALUATION_ATTEMPT
+from idempotency.models import IdempotencyKey
+from idempotency.utils import generate_request_hash
+from django.db import IntegrityError
+
+from .interview_scoring import calculate_category_scores, calculate_final_score
+from .risk_band import classify_risk_band
+from .explanation_engine import generate_explanations
+
+from .models import InterviewSession, InterviewStatus
+from .serializers import InterviewSessionSerializer
+from rest_framework.permissions import AllowAny
+
+from billing.report_access import ReportAccessControl
+
+
+APIView
+class EvaluateProjectView(APIView):
+
+    http_method_names = ['post']
+
+    def post(self, request):
+            
+        try:
+                        # === IDEMPOTENCY CHECK ===
+            idempotency_key = request.headers.get("Idempotency-Key")
+
+            if idempotency_key:
+
+                request_hash = generate_request_hash(request.data)
+
+                existing_entry = IdempotencyKey.objects.filter(
+                    key=idempotency_key,
+                    user=request.user
+                ).first()
+
+                if existing_entry:
+
+                    # Same key used before
+                    if existing_entry.request_hash != request_hash:
+                        return Response(
+                            {"error": "Idempotency key reuse with different payload."},
+                            status=status.HTTP_409_CONFLICT
+                        )
+
+                    # Return stored response
+                    return Response(
+                        existing_entry.response_snapshot,
+                        status=status.HTTP_200_OK
+                    )
+            
+            request_id = str(uuid.uuid4())
+            log_audit_event(
+                user=request.user,
+                event_type="EVALUATION_ATTEMPT",
+                severity="INFO",
+                request_id=request_id,
+                metadata={
+                    "endpoint": "EvaluateProjectView",
+                },
+        )
+            # === SUBSCRIPTION CHECK ===
+            subscription_active = has_active_subscription(request.user)
+
+            # === CREDIT CHECK (NO DEDUCTION YET) ===
+            if not subscription_active:
+                if not has_sufficient_credit(request.user):
+
+                    log_audit_event(
+                        user=request.user,
+                        event_type="BILLING_INSUFFICIENT_CREDIT",
+                        severity="WARNING",
+                        request_id=request_id,
+                        metadata={
+                            "current_balance": calculate_user_balance(request.user)
+                        }
+                    )
+
+                    return Response(
+                        {"error": "Insufficient credits"},
+                        status=status.HTTP_402_PAYMENT_REQUIRED
+                    )
+
+            data = request.data
+
+            answers = data.get("answers")
+            if not answers:
+                return Response(
+                    {"error": "Interview answers are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            category_scores = calculate_category_scores(answers)
+
+            final_score = calculate_final_score(category_scores)
+
+            risk_band = classify_risk_band(final_score)
+
+            explanations = generate_explanations(answers)
+
+            license_to_sell_present = data.get("license_to_sell_present", True)
+
+                        
+            # === ENGINE EVALUATION ===
+            result = evaluate_project_v1(
+                category_scores,
+                license_to_sell_present=license_to_sell_present
+            )
+
+            # === SAVE + DEDUCT (ATOMIC) ===
+            with transaction.atomic():
+
+                timestamp = datetime.utcnow()
+
+                Report.objects.create(
+                    request_id=request_id,
+                    timestamp_utc=timestamp,
+                    user=request.user,
+                    structure_version=result["structure_version"],
+                    total_score=result["total_score"],
+                    risk_band=result["risk_band"],
+                    category_breakdown=result["category_breakdown"],
+                    license_to_sell_present=result["license_to_sell_present"],
+                    signals=explanations.get("signals", []),
+                    information_gaps=explanations.get("information_gaps", []),
+                    suggestions=explanations.get("suggestions", []),
+                    project_name=answers.get("q1", ""),
+                          city=answers.get("q3", ""),
+                          location=answers.get("q4", ""),
+                )
+
+                billing_type = "subscription"
+
+                if subscription_active:
+
+                    log_audit_event(
+                        user=request.user,
+                        event_type="BILLING_SUBSCRIPTION_APPLIED",
+                        severity="INFO",
+                        request_id=request_id,
+                        metadata={}
+                    )
+
+                    billing_type = "subscription"
+
+                else:
+
+                    deduct_credit(request.user)
+
+                    log_audit_event(
+                        user=request.user,
+                        event_type="BILLING_CREDIT_DEDUCTED",
+                        severity="INFO",
+                        request_id=str(request_id),
+                        metadata={"amount": -1}
+                    )
+
+                    billing_type = "credit"
+
+            response_payload = {
+                "request_id": str(request_id),
+                "timestamp_utc": timestamp.isoformat(),
+                "report": result,
+                "billing_type": billing_type
+            }
+
+            log_audit_event(
+                user=request.user,
+                event_type="EVALUATION_SUCCESS",
+                severity="INFO",
+                request_id=request_id,
+                metadata={
+                    "risk_band": response_payload.get("report", {}).get("risk_band"),
+                    "billing_type": response_payload.get("billing_type"),
+                },
+            )
+            # === STORE IDEMPOTENCY RECORD ===
+            if idempotency_key:
+                try:
+                    IdempotencyKey.objects.create(
+                        user=request.user,
+                        key=idempotency_key,
+                        request_hash=request_hash,
+                        response_snapshot=response_payload
+                    )
+                except IntegrityError:
+                    # Rare race condition protection
+                    pass
+
+            response_payload["report"]["signals"] = explanations["signals"]
+            response_payload["report"]["information_gaps"] = explanations["information_gaps"]
+            response_payload["report"]["suggestions"] = explanations["suggestions"]
+
+            response_payload["context"] = {
+                "project_name": answers.get("q1", ""),
+                "city": answers.get("q3", ""),
+                "location": answers.get("q4", ""),
+            }
+
+
+            return Response(response_payload, status=status.HTTP_200_OK)
+
+        except ValueError as e:
+            log_audit_event(
+                user=request.user,
+                event_type="EVALUATION_VALIDATION_FAIL",
+                severity="WARNING",
+                request_id=request_id,
+                metadata={
+                    "error": str(e)
+                }
+            )
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        
+        except Exception:
+            return Response(
+                {"error": "Unexpected error occurred."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+
+class GetReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, request_id):
+        report = get_object_or_404(
+            Report,
+            request_id=request_id,
+            user=request.user
+        )
+
+        can_view_full = ReportAccessControl.can_access_full_report(request.user)
+        active_subscription = ReportAccessControl.get_active_subscription(request.user)
+        subscription_days_remaining = ReportAccessControl.get_subscription_days_remaining(request.user)
+
+        report_payload = {
+            "structure_version": report.structure_version,
+            "total_score": report.total_score,
+            "risk_band": report.risk_band,
+        }
+
+        if can_view_full:
+            report_payload.update({
+                "category_breakdown": report.category_breakdown,
+                "license_to_sell_present": report.license_to_sell_present,
+                "signals": report.signals,
+                "information_gaps": report.information_gaps,
+                "suggestions": report.suggestions,
+            })
+
+        response_payload = {
+            "request_id": str(report.request_id),
+            "timestamp_utc": report.timestamp_utc.isoformat(),
+            "report": report_payload,
+            "access": {
+                "can_view_full_report": can_view_full,
+                "credit_balance": ReportAccessControl.get_user_credit_balance(request.user),
+                "subscription_active": bool(active_subscription),
+                "subscription_days_remaining": subscription_days_remaining,
+                "locked_sections": [] if can_view_full else ReportAccessControl.PAID_SECTIONS,
+            },
+            "context": {
+                "project_name": report.project_name or "",
+                "city": report.city or "",
+                "location": report.location or "",
+            },
+        }
+
+        return Response(response_payload, status=status.HTTP_200_OK)
+
+
+class ListReportsView(APIView):
+
+    def get(self, request):
+
+        reports = (
+            Report.objects
+            .filter(user=request.user)
+            .only("request_id", "timestamp_utc", "risk_band")
+            .order_by("-timestamp_utc")
+        )
+
+        response_payload = []
+
+        for report in reports:
+            response_payload.append({
+                "request_id": str(report.request_id),
+                "timestamp_utc": report.timestamp_utc.isoformat(),
+                "risk_band": report.risk_band,
+            })
+
+        return Response(response_payload, status=status.HTTP_200_OK)
+
+class StartInterviewView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+
+          
+        interview = InterviewSession.objects.create(
+            user=None if not request.user.is_authenticated else request.user,
+            interview_version="v1.1",
+            responses={},
+            status="draft"
+        )
+
+        serializer = InterviewSessionSerializer(interview)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class SaveInterviewView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def patch(self, request, interview_id):
+
+        interview = get_object_or_404(
+            InterviewSession,
+            id=interview_id,
+            
+        )
+
+        if interview.status == InterviewStatus.SUBMITTED:
+            return Response(
+            {"error": "Interview already submitted"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+        responses = request.data.get("responses")
+
+        if responses is None:
+            return Response(
+                {"error": "responses field required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        interview.responses.update(responses)
+        interview.save()
+
+        serializer = InterviewSessionSerializer(interview)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class GetInterviewView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, interview_id):
+
+        interview = get_object_or_404(
+            InterviewSession,
+            id=interview_id,
+            
+        )
+
+        serializer = InterviewSessionSerializer(interview)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class SubmitInterviewView(APIView):
+
+    permission_classes = [AllowAny]
+
+    from .views import EvaluateProjectView
+
+    def post(self, request, interview_id):
+
+        interview = get_object_or_404(
+            InterviewSession,
+            id=interview_id,
+            
+        )
+
+        if interview.status == InterviewStatus.SUBMITTED:
+            return Response(
+                {"error": "Interview already submitted"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        answers = interview.responses
+
+        required_questions = [
+            "q7","q8","q9","q10","q11",
+            "q12","q13","q14","q15","q16"
+        ]
+
+        missing = [q for q in required_questions if q not in answers]
+
+        answers = interview.responses
+
+        if not answers:
+            return Response(
+                {"error": "Interview has no responses"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        required_questions = [
+            "q7","q8","q9","q10","q11",
+            "q12","q13","q14","q15","q16"
+        ]
+
+        missing = [q for q in required_questions if q not in answers]
+
+        if missing:
+            return Response(
+                {
+                    "error": "Interview incomplete",
+                    "missing_questions": missing
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not request.user.is_authenticated:
+            category_scores = calculate_category_scores(answers)
+            final_score = calculate_final_score(category_scores)
+            risk_band = classify_risk_band(final_score)
+
+            teaser_request_id = str(uuid.uuid4())
+
+            return Response(
+                {
+                    "request_id": teaser_request_id,
+                    "preview": True,
+                    "report": {
+                        "total_score": final_score,
+                        "risk_band": risk_band,
+                    },
+                    "context": {
+                        "project_name": answers.get("q1", ""),
+                        "city": answers.get("q3", ""),
+                        "location": answers.get("q4", ""),
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        payload = {
+            "answers": answers
+        }
+
+        factory = APIRequestFactory()
+
+        internal_request = factory.post(
+            "/api/v1/evaluate/",
+            payload,
+            format="json",
+            HTTP_AUTHORIZATION=request.META.get("HTTP_AUTHORIZATION")
+        )
+
+        internal_request.user = request.user
+
+        response = EvaluateProjectView.as_view()(internal_request)
+
+        if response.status_code == 200:
+            interview.status = InterviewStatus.SUBMITTED
+            interview.save()
+
+        return response
+
+
+
+
+
+

@@ -1,0 +1,21 @@
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+.pytest_cache/
+.env
+.vs/
+# Documentation files
+*.docx
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtualenv
+venv/
+
+envfile.env
+
+staticfiles/

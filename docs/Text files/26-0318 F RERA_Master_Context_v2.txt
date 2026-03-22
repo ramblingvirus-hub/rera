@@ -1,0 +1,1697 @@
+RERA Master Context v2
+Updated: 2026-03-05
+
+System Purpose
+RERA is a structured real?estate risk evaluation engine designed to assess development projects based on regulatory, legal, and environmental indicators. The system produces standardized risk reports while enforcing strict billing integrity and audit traceability.
+Core Architecture
+� Django backend with PostgreSQL data layer
+� Immutable credit ledger for billing
+� JWT authentication with short?lived access tokens
+� Idempotent evaluation endpoint
+� Structured audit logging system
+� Request correlation via request_id
+Billing Model
+The system operates on a credit?based billing model. Purchases create positive ledger entries. Each evaluation deducts one credit through a usage entry. Ledger records are append?only and cannot be modified or deleted in production environments.
+Financial Integrity Guarantees
+� No duplicate charges under request retries
+� Idempotency?Key required for evaluation requests
+� Replay requests return stored responses
+� Payload conflicts produce HTTP 409
+� Zero balance produces HTTP 402 Payment Required
+Audit Architecture
+Audit events capture all lifecycle stages including:
+� EVALUATION_ATTEMPT
+� BILLING_CREDIT_DEDUCTED
+� EVALUATION_SUCCESS
+� BILLING_INSUFFICIENT_CREDIT
+Phase 3G Status
+Revenue flow dry?run simulation completed successfully. Credit purchase creation, multiple deductions, idempotency replay protection, payload conflict detection, and insufficient credit enforcement were validated.
+Recommended Next Phase
+Phase 3H � Operational Safety & Abuse Guardrails. This phase should introduce rate limiting, anomaly detection, and operational monitoring.
+?? RERA � Phase 3H: Operational Safety & Abuse Guardrails
+
+Date: March 5, 2026 (Manila Time)
+Status: Implemented
+
+Objective
+
+Introduce operational guardrails protecting the system from abuse, race conditions,
+and long-term operational drift without modifying core evaluation logic.
+
+This phase focuses on safety of execution rather than product features.
+
+
+Guardrail 1 � Explicit HTTP Method Lock
+
+EvaluateProjectView now explicitly restricts allowed HTTP methods.
+
+Implementation:
+
+http_method_names = ['post']
+
+Purpose:
+
+� Prevent accidental exposure of evaluation via GET/PUT/PATCH
+� Harden API contract at the view level
+� Reduce surface area for misuse
+
+
+Guardrail 2 � Idempotency Key Cleanup Command
+
+New management command introduced:
+
+python manage.py cleanup_idempotency
+
+Behavior:
+
+� Deletes IdempotencyKey rows older than 24 hours
+� Prevents long-term table growth
+� Maintains fast index scans and backup sizes
+
+Retention Rule:
+
+Idempotency keys are considered operational retry artifacts and
+do not represent permanent system records.
+
+Deletion does not affect:
+
+� Evaluation reports
+� Ledger entries
+� Audit events
+
+
+Guardrail 3 � Credit Deduction Concurrency Protection
+
+Critical race-condition hardening implemented in:
+
+billing/services.py ? deduct_credit()
+
+Row-level locking added:
+
+.select_for_update()
+
+Applied inside transaction.atomic() block.
+
+Effect:
+
+Purchase row is locked during deduction, preventing concurrent
+requests from reading the same balance simultaneously.
+
+Guarantee:
+
+� No negative credit balance possible
+� Ledger integrity preserved under concurrency
+� Financial correctness maintained
+
+
+System State After Phase 3H
+
+RERA now guarantees:
+
+� Idempotent evaluation endpoint
+� Immutable financial ledger
+� Audit traceability
+� PostgreSQL transaction safety
+� Concurrency-safe credit deduction
+� Controlled API surface
+� Operational table hygiene
+
+System Classification Updated To:
+
+Integrity-Hardened,
+Versioned,
+Retry-Protected,
+PostgreSQL-Backed,
+Environment-Disciplined,
+Operationally Observable,
+Concurrency-Safe Core
+
+MASTER CONTEXT UPDATE
+Append this section to the end of the Master Context file.
+This records Phase 3I.
+
+?? RERA � Phase 3I: Operational Monitoring & Anomaly Detection
+Date: March 6, 2026 (Manila Time)
+Status: Completed
+Objective
+Introduce operational visibility and anomaly detection without modifying core system logic.
+Phase 3I adds monitoring signals that allow the system operator to detect abnormal behavior in billing activity, API usage patterns, and evaluation velocity.
+This phase focuses on observability, not product features.
+
+Monitoring Command Introduced
+New management command:
+python manage.py check_operational_anomalies
+Purpose:
+Generate an operational snapshot of the system covering:
+� credit usage velocity
+� validation failure patterns
+� evaluation request velocity
+� per-user billing activity
+� aggregated system health status
+
+Monitoring Signals Implemented
+1?? Credit Usage Monitoring
+Source: CreditTransaction ledger.
+Checks:
+� total credit deductions in last 5 minutes
+� per-user credit consumption
+Anomaly Trigger:
+>10 credits consumed in 5 minutes
+Purpose:
+Detect billing spikes caused by retry loops, automation, or integration errors.
+
+2?? Validation Failure Monitoring
+Source: AuditEvent.
+Event Type:
+EVALUATION_VALIDATION_FAIL
+Anomaly Trigger:
+>5 validation failures in 5 minutes
+Purpose:
+Detect malformed client requests, API probing, or integration bugs.
+
+3?? Evaluation Velocity Monitoring
+Source: AuditEvent.
+Event Type:
+EVALUATION_ATTEMPT
+Anomaly Trigger:
+>50 evaluation attempts in 5 minutes
+Purpose:
+Detect scraping, flooding attempts, or runaway request loops.
+
+Monitoring Report Structure
+Running the command generates a structured operational report including:
+Monitoring time (Manila)
+Monitoring window start
+Credit usage summary
+Validation failure summary
+Evaluation attempt summary
+Per-user billing activity
+System health status
+Example output:
+Monitoring time (Manila): 2026-03-06 11:32:15
+
+Credits consumed in last 5 minutes: 2
+Validation failures in last 5 minutes: 0
+Evaluation attempts in last 5 minutes: 3
+
+Usage by user:
+User 5 used 2 credits
+
+-----------------------------------
+SYSTEM STATUS: HEALTHY
+
+System Health Aggregation
+Monitoring signals are combined into a unified system status flag.
+Possible values:
+HEALTHY
+ANOMALY DETECTED
+Any triggered anomaly updates the health status automatically.
+
+Timezone Correction
+System timezone updated:
+TIME_ZONE = "Asia/Manila"
+USE_TZ = True
+Monitoring output now displays Manila time, while database storage remains UTC.
+
+Architectural Impact
+No modification made to:
+� evaluation engine
+� billing logic
+� ledger immutability
+� audit immutability
+� idempotency layer
+� API contract
+Monitoring operates purely through read-only database queries.
+
+System Classification Update
+RERA backend now classified as:
+Integrity-Hardened
+Versioned
+Retry-Protected
+PostgreSQL-Backed
+Environment-Disciplined
+Operationally Observable
+Concurrency-Safe
+Monitoring-Aware Core
+RERA � Phase 3J: Monitoring Automation
+Date: March 6, 2026 (Manila Time)
+Status: Completed
+Objective
+Prepare the operational monitoring system for automated execution while preserving the existing read-only monitoring architecture introduced in Phase 3I.
+This phase ensures anomaly detection results are persistently recorded even when monitoring runs without an interactive console.
+
+Implementation
+Monitoring command updated:
+billing/management/commands/check_operational_anomalies.py
+Logging integration added.
+Imports introduced:
+import logging
+logger = logging.getLogger(__name__)
+
+System Health Logging
+Monitoring results now produce structured log entries.
+Healthy system state:
+INFO
+Operational monitoring check completed: SYSTEM STATUS HEALTHY
+Anomaly condition:
+ERROR
+ANOMALY DETECTED: SYSTEM STATUS <status>
+
+Persistent Log Destination
+ERROR-level anomaly logs are written to:
+logs/errors.log
+via the Phase 3E logging configuration.
+This ensures anomaly evidence is preserved even when monitoring runs via automated schedulers.
+
+Operational Outcome
+Monitoring command:
+python manage.py check_operational_anomalies
+is now safe to execute via external schedulers such as:
+* Windows Task Scheduler
+* Linux cron
+* container-based schedulers
+* local home server automation
+No changes were made to:
+* evaluation engine
+* billing logic
+* ledger immutability
+* audit immutability
+* database schema
+Monitoring remains read-only and non-invasive.
+
+System Classification Update
+RERA backend is now classified as:
+Integrity-Hardened
+Versioned
+Retry-Protected
+PostgreSQL-Backed
+Environment-Disciplined
+Operationally Observable
+Concurrency-Safe
+Monitoring-Aware
+Automation-Ready Core
+
+MASTER CONTEXT UPDATE
+Append to RERA_Master_Context_v2
+
+?? RERA � Phase 4A Planning: Interview Scoring & Risk Interpretation Layer
+Date: March 9, 2026
+Status: Design Locked (Implementation Pending)
+
+Objective
+Define the deterministic scoring architecture that converts the structured interview questionnaire into a risk-based evaluation report.
+This phase introduces:
+� Interview scoring matrix
+� Category score calculation
+� Risk band classification
+� Explanation engine for signals and verification guidance
+No modification to the existing evaluation engine, billing system, audit layer, or API security architecture.
+
+Interview Questionnaire Status
+The interview questionnaire structure has been frozen.
+Reference file:
+RERA_Interview_Questionnaire_v1_1_Frozen_Mar9_2026 
+RERA_Interview_Questionnaire_v1�
+Total questions:
+Q1�Q6   Project Information
+Q7�Q8   Developer Legitimacy
+Q9�Q10  Project Compliance
+Q11�Q12 Title & Land
+Q13�Q14 Financial Exposure
+Q15�Q16 LGU & Environmental Context
+Only Q7�Q16 participate in scoring.
+Q1�Q6 provide contextual metadata.
+
+Risk Category Model
+The scoring system produces five category scores required by the evaluation engine.
+Categories and weights are defined in the Interview Structure Context document. 
+RERA_Interview_Structure_Contex�
+Category
+Weight
+Developer Legitimacy
+25%
+Project Compliance
+30%
+Title & Land
+25%
+Financial Exposure
+10%
+LGU & Environmental
+10%
+Engine keys:
+developer_legitimacy
+project_compliance
+title_land
+financial_exposure
+lgu_environment
+All categories must produce values or evaluation validation fails.
+
+Category Scoring Logic
+Each category is computed from interview questions using weighted scoring.
+Example:
+developer_legitimacy =
+(Q7 * 0.7) + (Q8 * 0.3)
+
+project_compliance =
+(Q9 * 0.6) + (Q10 * 0.4)
+
+title_land =
+(Q11 * 0.6) + (Q12 * 0.4)
+
+financial_exposure =
+(Q13 * 0.4) + (Q14 * 0.6)
+
+lgu_environment =
+(Q15 * 0.5) + (Q16 * 0.5)
+All category scores range from 0�100.
+
+Final Score Calculation
+The overall risk score is calculated using category weights.
+final_score =
+(developer_legitimacy * 0.25)
++ (project_compliance * 0.30)
++ (title_land * 0.25)
++ (financial_exposure * 0.10)
++ (lgu_environment * 0.10)
+Final score range:
+0 � 100
+
+Risk Band Classification
+Risk bands translate numeric score into consumer-readable interpretation.
+Score
+Risk Band
+80�100
+Lower Risk
+60�79
+Moderate Risk
+40�59
+Elevated Risk
+0�39
+High Risk
+Risk bands are descriptive and do not determine legality or regulatory compliance.
+
+Explanation Engine
+The Explanation Engine converts specific interview answers into structured report explanations.
+Three output groups are generated:
+Key Risk Signals
+Information Gaps
+Due Diligence Suggestions
+Signals are triggered by responses such as:
+� Missing License to Sell
+� No development permit shown
+� Weak or unverified land title
+� Early deposit requirements
+� Environmental hazards
+� LGU development restrictions
+Explanation messages remain neutral to reduce defamation risk.
+
+Report Output Structure
+The evaluation report will contain four primary sections.
+1. Final Score and Risk Band
+2. Category Breakdown
+3. Key Risk Signals
+4. Suggested Due Diligence Steps
+Reports remain advisory and educational in tone.
+
+Architectural Position
+This phase does not modify:
+Evaluation engine core logic
+Credit ledger system
+Billing services
+Audit event logging
+Idempotency protection
+JWT authentication
+API routing
+These components remain part of the integrity-hardened system architecture. 
+26-0306 P RERA_Master_Context_v2
+The interview scoring layer operates above the evaluation engine as a deterministic interpretation module.
+
+Planned Code Modules
+Implementation will introduce the following modules in the reports application:
+reports/interview_scoring.py
+reports/risk_band.py
+reports/explanation_engine.py
+Responsibilities:
+interview_scoring.py
+    ? question scoring tables
+    ? category score calculations
+    ? final score computation
+
+risk_band.py
+    ? risk band classification
+
+explanation_engine.py
+    ? signal generation
+    ? information gap detection
+    ? due diligence suggestions
+These modules will integrate into EvaluateProjectView without modifying billing or audit flows.
+
+System State After Phase 4A (Projected)
+RERA will then include:
+Structured Interview Input
+Deterministic Risk Scoring
+Category-Based Evaluation
+Risk Band Classification
+Automated Explanation Layer
+This completes the core decision-support logic of the platform.
+
+RERA � Phase 4A Planning: Interview Scoring & Risk Interpretation Layer
+Date: March 9, 2026
+Status: Design Locked (Implementation Pending)
+
+Objective
+Define the deterministic scoring architecture that converts the structured interview questionnaire
+into a risk-based evaluation report. This phase introduces the interview scoring matrix, category
+score calculation, risk band classification, and explanation engine.
+
+Interview Questionnaire Status
+The interview questionnaire structure has been frozen (RERA_Interview_Questionnaire_v1_1_Frozen_Mar9_2026).
+
+Question Groups:
+Q1�Q6   Project Information
+Q7�Q8   Developer Legitimacy
+Q9�Q10  Project Compliance
+Q11�Q12 Title & Land
+Q13�Q14 Financial Exposure
+Q15�Q16 LGU & Environmental Context
+
+Only Q7�Q16 participate in scoring. Q1�Q6 provide contextual metadata.
+
+Risk Category Model
+Categories and weights:
+
+Developer Legitimacy � 25%
+Project Compliance � 30%
+Title & Land � 25%
+Financial Exposure � 10%
+LGU & Environmental Context � 10%
+
+Engine keys:
+developer_legitimacy
+project_compliance
+title_land
+financial_exposure
+lgu_environment
+
+Category Scoring Logic
+
+developer_legitimacy = (Q7 * 0.7) + (Q8 * 0.3)
+project_compliance = (Q9 * 0.6) + (Q10 * 0.4)
+title_land = (Q11 * 0.6) + (Q12 * 0.4)
+financial_exposure = (Q13 * 0.4) + (Q14 * 0.6)
+lgu_environment = (Q15 * 0.5) + (Q16 * 0.5)
+
+All category scores range from 0�100.
+
+Final Score Calculation
+
+final_score =
+(developer_legitimacy * 0.25) +
+(project_compliance * 0.30) +
+(title_land * 0.25) +
+(financial_exposure * 0.10) +
+(lgu_environment * 0.10)
+
+Final score range: 0�100.
+
+Risk Band Classification
+
+80�100  Lower Risk
+60�79   Moderate Risk
+40�59   Elevated Risk
+0�39    High Risk
+
+Explanation Engine
+
+The explanation engine generates three output groups:
+1. Key Risk Signals
+2. Information Gaps
+3. Due Diligence Suggestions
+
+Signals may be triggered by:
+- Missing License to Sell
+- No development permit shown
+- Weak or unverified title
+- Early deposit requirements
+- Environmental hazards
+- LGU restrictions
+
+Report Output Structure
+
+1. Final Score and Risk Band
+2. Category Breakdown
+3. Key Risk Signals
+4. Suggested Due Diligence Steps
+
+Architectural Position
+
+This phase does not modify:
+- Evaluation engine logic
+- Billing system
+- Credit ledger
+- Audit event logging
+- Idempotency protection
+- JWT authentication
+- API routing
+
+Planned Code Modules
+
+reports/interview_scoring.py
+reports/risk_band.py
+reports/explanation_engine.py
+
+Responsibilities
+
+interview_scoring.py
+- Question scoring tables
+- Category score calculations
+- Final score computation
+
+risk_band.py
+- Risk band classification
+
+explanation_engine.py
+- Signal generation
+- Information gap detection
+- Due diligence suggestions
+
+Engineering Log Entry
+
+Phase 4A � Interview Scoring Engine (Design Locked)
+
+Interview questionnaire finalized.
+Scoring matrix defined.
+Category weights aligned with evaluation engine.
+Risk band classification defined.
+Explanation engine logic defined.
+
+Implementation scheduled for next development thread:
+RERA � Phase 4A: Interview Scoring Engine Implementation
+RERA � Phase 4A: Interview Scoring & Explanation Engine
+
+
+Date: March 9, 2026 (Manila Time)
+Status: IMPLEMENTED, VERIFIED, FROZEN
+
+Objective
+
+Introduce a deterministic scoring system that converts buyer interview responses into structured risk evaluation inputs for the core evaluation engine.
+
+Scope Discipline
+
+Phase 4A introduces:
+
+� Interview Scoring Engine
+� Risk Band Classification
+� Explanation Engine
+� Integration with evaluation endpoint
+
+Phase 4A does NOT modify:
+
+� Core evaluation engine logic
+� Billing system
+� Credit ledger
+� Audit logging
+� Idempotency protection
+� JWT authentication
+� API routing structure
+
+
+Interview Questionnaire
+
+Frozen Structure:
+
+Q1�Q6 Project metadata (non-scoring)
+Q7�Q8 Developer Legitimacy
+Q9�Q10 Project Compliance
+Q11�Q12 Title & Land
+Q13�Q14 Financial Exposure
+Q15�Q16 LGU & Environmental Context
+
+
+Risk Category Weights
+
+developer_legitimacy 25%
+project_compliance 30%
+title_land 25%
+financial_exposure 10%
+lgu_environment 10%
+
+
+Category Calculation
+
+developer_legitimacy = (Q7 � 0.7) + (Q8 � 0.3)
+project_compliance = (Q9 � 0.6) + (Q10 � 0.4)
+title_land = (Q11 � 0.6) + (Q12 � 0.4)
+financial_exposure = (Q13 � 0.4) + (Q14 � 0.6)
+lgu_environment = (Q15 � 0.5) + (Q16 � 0.5)
+
+
+Final Score
+
+final_score =
+(developer_legitimacy � 0.25) +
+(project_compliance � 0.30) +
+(title_land � 0.25) +
+(financial_exposure � 0.10) +
+(lgu_environment � 0.10)
+
+
+Risk Bands
+
+80�100 Lower Risk
+60�79 Moderate Risk
+40�59 Elevated Risk
+0�39 High Risk
+
+
+Explanation Engine
+
+Produces three report sections:
+
+� signals
+� information_gaps
+� suggestions
+
+
+Evaluation Pipeline (Final)
+
+Interview Answers
+?
+Interview Scoring Engine
+?
+Category Scores
+?
+Evaluation Engine
+?
+Risk Band Classification
+?
+Explanation Engine
+?
+Billing Deduction
+?
+Structured API Report
+
+
+API Response Format
+
+{
+request_id
+timestamp_utc
+report {
+structure_version
+total_score
+risk_band
+category_breakdown
+license_to_sell_present
+signals
+information_gaps
+suggestions
+}
+billing_type
+}
+
+
+Validation Performed
+
+? Positive interview scenario
+? High-risk interview scenario
+? Billing deduction verified
+? Ledger integrity confirmed
+? Explanation engine verified
+? API output schema confirmed
+
+
+Git Commit
+
+Phase 4A: Interview scoring engine integrated with evaluation pipeline and explanation engine
+
+
+System Classification After Phase 4A
+
+Integrity-Hardened
+Versioned
+Retry-Protected
+PostgreSQL-Backed
+Environment-Disciplined
+Operationally Observable
+Revenue-Policy-Stabilized
+Interview-Aware Evaluation Core
+RERA � Phase 4B: Interview Save & Resume Architecture (Data Layer)
+Date: March 9, 2026
+Status: Implemented
+Objective
+Introduce persistence and structural support for the user interview workflow.
+This phase enables interviews to be stored, resumed, and later submitted for
+evaluation without modifying the existing evaluation engine or billing system.
+The architecture intentionally separates interview drafting from evaluation
+execution, ensuring that incomplete interviews do not interact with the credit
+ledger, audit system, or idempotent evaluation endpoint.
+
+New Model Introduced
+InterviewSession
+Purpose:
+Store partial or completed interview responses prior to evaluation.
+Fields:
+id (UUID PK)
+
+user (FK to User)
+
+interview_version (string)
+
+responses (JSON)
+
+status (draft | ready | submitted)
+
+created_at
+
+updated_at
+Status meanings:
+draft       ? interview in progress
+ready       ? interview complete but not yet submitted
+submitted   ? evaluation request already executed
+InterviewSession records are independent from:
+* EvaluationRequest
+* EvaluationReport
+* CreditTransaction
+* AuditEvent
+This separation protects billing integrity and prevents premature evaluation
+execution.
+
+Admin Inspection Support
+InterviewSession is registered in Django Admin for development and operational
+inspection.
+Admin configuration exposes:
+id
+user
+status
+interview_version
+created_at
+This allows the operator to verify interview persistence without interacting
+with the evaluation pipeline.
+
+Interview Question Registry
+A centralized registry was introduced to define interview question metadata.
+New module:
+reports/interview_registry.py
+Registry contents include:
+* question identifiers
+* category mapping
+* scoring weights
+* answer scoring conversion
+Example entry:
+q7 ? developer_legitimacy (weight 0.7)
+q8 ? developer_legitimacy (weight 0.3)
+This registry becomes the single source of truth for interview structure.
+Benefits:
+centralized interview definition
+future questionnaire expansion support
+version-aware scoring
+removal of hard-coded question logic
+
+Registry Integration into Scoring Layer
+The scoring engine was upgraded to support registry-driven category calculations.
+New helper:
+compute_category_scores(responses, interview_version)
+The scoring flow now supports:
+responses JSON
+     ?
+question registry lookup
+     ?
+category score computation
+     ?
+existing final score calculation
+Legacy hard-coded scoring functions remain intact to preserve backward
+compatibility with the frozen Phase 4A scoring logic.
+
+Question Identifier Standardization
+All interview question identifiers were standardized to lowercase format:
+q7
+q8
+q9
+...
+q16
+This ensures consistency across:
+* interview responses JSON
+* registry definitions
+* scoring logic
+* future API payloads
+This eliminates case sensitivity issues such as:
+q7 ? Q7
+
+Architectural Guarantees Maintained
+Phase 4B does not modify the following core systems:
+evaluation engine
+credit ledger
+billing service
+audit event logging
+idempotency protection
+JWT authentication
+API routing
+Interview drafting operates entirely outside the revenue-protected evaluation
+pipeline.
+
+System State After Phase 4B
+The backend now includes:
+InterviewSession persistence layer
+versioned interview registry
+registry-driven scoring compatibility
+admin inspection capability
+consistent question identifiers
+The system is ready for the next phase.
+
+Next Phase
+Phase 4C � Interview API & Workflow Layer
+This phase will introduce the API endpoints required to drive the interview
+workflow:
+POST /api/v1/interview/start
+PATCH /api/v1/interview/save
+GET /api/v1/interview/<id>
+POST /api/v1/interview/submit
+These endpoints will enable the user-facing Save & Resume experience and connect
+interview submission to the deterministic evaluation engine.
+
+RERA � Phase 4C: Interview Workflow API
+Date: March 10, 2026 (Manila Time)
+Status: IMPLEMENTED, VERIFIED, FROZEN
+
+Objective
+Introduce the API workflow required to support the Save & Resume interview process and connect interview sessions to the scoring engine.
+Phase 4C enables the interview to be:
+� created
+� saved progressively
+� resumed
+� submitted for scoring
+This phase finalizes the application-layer workflow for the buyer questionnaire.
+Evaluation billing and report creation are not yet triggered in this phase.
+
+API Endpoints Introduced
+POST   /api/v1/interview/start/
+PATCH  /api/v1/interview/<interview_id>/save/
+GET    /api/v1/interview/<interview_id>/
+POST   /api/v1/interview/<interview_id>/submit/
+These endpoints allow the frontend to implement a full questionnaire experience without interacting with the evaluation billing pipeline prematurely.
+
+Interview Lifecycle
+Interview sessions now follow a defined lifecycle controlled by InterviewStatus.
+draft ? initial interview state
+ready ? interview completed (reserved for future validation logic)
+submitted ? scoring executed and interview locked
+Lifecycle progression:
+start ? draft
+save ? draft
+submit ? submitted
+Submitted interviews cannot be modified.
+
+Workflow Architecture
+After Phase 4C the interview system operates as follows:
+InterviewSession
+?
+responses JSON stored progressively
+?
+submit interview
+?
+calculate_category_scores()
+?
+calculate_final_score()
+?
+scoring result returned
+This scoring output is the deterministic input required by the evaluation engine.
+
+Security Guarantees
+Each endpoint enforces:
+interview.user == request.user
+Authentication requirement:
+IsAuthenticated
+This prevents unauthorized access to interview sessions.
+
+Routing Adjustments
+Interview workflow routes added:
+/api/v1/interview/start/
+/api/v1/interview/<uuid>/save/
+/api/v1/interview/<uuid>/
+/api/v1/interview/<uuid>/submit/
+To prevent UUID route collision, the report retrieval endpoint was updated to:
+/api/v1/reports/<uuid>
+This isolates interview identifiers from evaluation report identifiers.
+
+Database Impact
+No schema changes introduced in this phase.
+Interview persistence continues through:
+InterviewSession
+Fields:
+id (UUID PK)
+user (FK)
+interview_version
+responses (JSON)
+status
+created_at
+updated_at
+This table was introduced in Phase 4B.
+
+Evaluation System Status
+After Phase 4C the backend supports:
+Interview responses
+?
+Category score computation
+?
+Final score calculation
+The following components are not yet connected:
+EvaluationRequest
+EvaluationReport
+CreditTransaction
+AuditEvent
+These will be integrated in the next phase.
+
+System Classification Update
+The RERA backend now qualifies as:
+Integrity-Hardened
+Retry-Protected
+Interview-Aware
+Workflow-Enabled
+PostgreSQL-Backed
+Monitoring-Aware
+Evaluation-Ready Core
+
+Next Phase
+Phase 4D � Interview ? Evaluation Engine Integration
+This phase will connect:
+Interview submission
+?
+EvaluationRequest creation
+?
+Billing deduction
+?
+EvaluationReport generation
+?
+Explanation engine
+?
+Final API report response
+
+RERA � Phase 4E: Interview Workflow Hardening
+
+Date: March 10, 2026
+Status: Completed
+
+
+Objective
+
+Harden the interview workflow to ensure evaluation execution occurs only under valid conditions and that interview responses cannot be altered after evaluation.
+
+
+Protections Introduced
+
+1. Empty Interview Guard
+   Submission rejected when responses are empty.
+
+2. Required Question Enforcement
+   Questions Q7�Q16 must exist before evaluation can run.
+
+3. Credit Availability Enforcement
+   Evaluation blocked when user credit balance is zero.
+
+4. Post-Submission Immutability
+   Submitted interviews cannot be modified.
+
+
+System Behavior After Phase 4E
+
+Interview workflow now operates as:
+
+Start Interview
+?
+Save responses (draft)
+?
+Submit interview
+?
+Validation layer
+?
+Evaluation engine
+?
+Credit deduction
+?
+Audit events
+?
+Evaluation report generated
+?
+Interview status ? submitted
+?
+Interview locked
+
+
+Architectural Impact
+
+No changes were made to:
+
+� evaluation engine
+� billing ledger
+� audit system
+� idempotency protection
+� JWT authentication
+� API routing structure
+
+
+System Classification Update
+
+RERA backend now qualifies as:
+
+Integrity-Hardened  
+Interview-Validated  
+Billing-Protected  
+Audit-Traceable  
+Evaluation-Deterministic Core
+
+
+RERA � Master Context Update
+Phase 4F � Report Retrieval & Evaluation History API
+Date: March 11, 2026 (Manila Time)
+Status: Implemented, Verified, and Frozen
+Objective
+Introduce a structured API layer allowing authenticated users to retrieve generated evaluation reports and view their past evaluation history without modifying the evaluation pipeline, billing system, or audit infrastructure.
+This phase completes the report access layer of the RERA backend.
+
+Implementation
+Two API endpoints were implemented inside the reports application.
+1?? Report Retrieval Endpoint
+Endpoint:
+GET /api/v1/reports/<request_id>/
+Purpose:
+Retrieve the complete evaluation report associated with a specific evaluation request.
+Security Enforcement:
+Reports are restricted to the authenticated user via query filtering:
+Report.objects.get(request_id=request_id, user=request.user)
+This guarantees:
+� No cross-user report access
+� Proper HTTP 404 behavior when report is absent
+� Clean API ownership enforcement
+Returned structure:
+{
+  "request_id": "<uuid>",
+  "timestamp_utc": "<timestamp>",
+  "report": {
+      "structure_version": ...
+      "total_score": ...
+      "risk_band": ...
+      "category_breakdown": {...}
+      "license_to_sell_present": true|false
+  }
+}
+
+2?? Evaluation History Endpoint
+Endpoint:
+GET /api/v1/reports/
+Purpose:
+Return the authenticated user�s previously generated evaluation reports.
+Implementation:
+Report.objects.filter(user=request.user)
+      .only("request_id", "timestamp_utc", "risk_band")
+      .order_by("-timestamp_utc")
+Optimizations introduced:
+� .only() query optimization
+� newest reports returned first
+� minimal payload for dashboard use
+Response format:
+[
+  {
+    "request_id": "<uuid>",
+    "timestamp_utc": "<timestamp>",
+    "risk_band": "Moderate Risk"
+  }
+]
+
+Architectural Impact
+Phase 4F does not modify:
+� evaluation engine
+� interview scoring logic
+� credit ledger system
+� audit logging infrastructure
+� idempotency protection
+� JWT authentication layer
+The phase adds read-only access to reports already generated by the evaluation pipeline.
+This preserves all integrity guarantees established in previous phases.
+
+Backend Workflow (Now Complete)
+The RERA platform backend now supports the full buyer workflow:
+Interview
+   ?
+Interview persistence
+   ?
+Interview submission
+   ?
+Evaluation engine execution
+   ?
+Credit deduction
+   ?
+Audit logging
+   ?
+Report generation
+   ?
+Report retrieval
+   ?
+Evaluation history access
+This completes the backend functional architecture required for MVP launch.
+Phase 4 Status After Phase 4F
+Completed phases:
+Phase 4A � Interview Scoring Engine
+Phase 4B � Interview Persistence
+Phase 4C � Interview Workflow API
+Phase 4D � Interview ? Evaluation Integration
+Phase 4E � Interview Workflow Hardening
+Phase 4F � Report Retrieval & Evaluation History API
+Remaining work for Phase 4:
+Frontend interview workflow completion
+Frontend report display
+Frontend evaluation history UI
+No additional backend features are required for MVP.
+
+Future Features & Functionalities (Deferred)
+The following enhancements were intentionally excluded from the MVP scope and may be implemented in later phases.
+Report & Dashboard Enhancements
+� Pagination for evaluation history endpoint
+� Aggregated dashboard statistics (evaluation count, risk distribution)
+� Structured report explanation expansion (signals / due-diligence suggestions)
+� Enhanced report metadata fields
+
+User Experience Improvements
+� User dashboard endpoint
+� Report filtering and sorting
+� Search across past evaluations
+� Exportable report formats (PDF / downloadable summary)
+
+Analytical Capabilities
+� Evaluation trend tracking per user
+� Risk distribution insights
+� Developer risk comparison tools
+
+System Enhancements
+� Dedicated reporting micro-layer
+� report caching layer for high-traffic usage
+� asynchronous report explanation generation
+RERA_Master_Context_v2
+Section Update
+New Section: Frontend Architecture Initialization
+Insert Summary
+React Frontend Introduced
+The RERA system now includes a dedicated React frontend created using Vite.
+The frontend resides in a separate frontend directory within the repository and communicates with the Django backend through REST API endpoints.
+System structure now follows a decoupled architecture:
+React Frontend (Vite)
+       ?
+       ?
+Django REST API
+       ?
+       ?
+PostgreSQL Database
+Primary API base:
+http://127.0.0.1:8000/api/v1/
+This allows the frontend to handle all user interface logic while Django operates strictly as the application API and evaluation engine.
+
+Section Update
+Evaluation Flow Architecture
+The product flow was finalized as:
+Visitor arrives
+?
+Start Evaluation (no signup required)
+?
+Complete Interview
+?
+Signup required
+?
+Purchase Report
+?
+Generate Report
+This decision prioritizes conversion optimization, allowing users to become invested in the evaluation before being asked to create an account.
+Phase 5 � React Interview Engine (Initial Implementation)
+Status: In Progress
+Date: March 11, 2026
+Phase 5 introduced the initial React-based interview interface and connected it to the Django backend interview API.
+The React frontend successfully performs the following operations:
+� Start a new interview session
+� Retrieve interview session data from the backend
+� Display interview metadata (ID, status, responses)
+� Capture user input for interview questions
+� Autosave interview responses to the backend API
+� Persist responses in PostgreSQL JSON fields
+� Retrieve previously saved responses through the interview API
+Autosave behavior was implemented through a short debounce timer to avoid excessive API calls during typing.
+The React interface now communicates with the following backend endpoints:
+POST  /api/v1/interview/start/
+GET   /api/v1/interview/<uuid>/
+PATCH /api/v1/interview/<uuid>/save/
+This establishes the core interview persistence pipeline:
+React UI
+?
+Django REST API
+?
+InterviewSession model
+?
+PostgreSQL JSON responses
+The system now supports save-and-resume interview sessions at the API level.
+The current UI supports starting interviews and autosaving answers.
+Future updates will add explicit resume functionality in the React interface.
+
+2?? Master Context Update
+Add this to:
+26-0311 F RERA_Master_Context_v2.docx
+
+Phase 5 � React Interview Engine
+Date: March 12, 2026
+Status: Completed
+Objective
+Replace the temporary hardcoded interview UI with a scalable dynamic rendering architecture capable of supporting questionnaire evolution without frontend restructuring.
+
+Implementation
+The interview interface now uses a centralized question registry:
+frontend/src/interview/questions.js
+Each question object contains:
+id
+label
+type
+options (if select)
+section
+A reusable React component:
+QuestionRenderer.jsx
+renders UI inputs dynamically based on the question configuration.
+The interview UI is generated using:
+QUESTIONS.map(question => <QuestionRenderer ... />)
+This allows the questionnaire to expand without rewriting UI components.
+
+Autosave Integration
+Interview responses are saved automatically via:
+PATCH /api/v1/interview/<id>/save/
+Autosave triggers on each answer change and persists responses inside the InterviewSession model.
+
+Session Restore
+To prevent loss of interview progress after page refresh:
+� Interview session ID stored in browser localStorage
+� useEffect restores session on page load
+� loadInterview(id) retrieves saved responses from backend
+This ensures interview continuity during user sessions.
+
+System Capability After Phase 5
+The platform now supports the complete user workflow:
+Start Interview
+      ?
+Dynamic Question Rendering
+      ?
+Autosave Responses
+      ?
+Session Restore
+      ?
+Submit Interview
+      ?
+Evaluation Engine
+      ?
+Risk Report
+The React interview interface is now production-ready.
+1?? Master Context File
+Update this file:
+26-0311 F RERA_Master_Context_v2.docx
+Add a new section at the bottom titled:
+Phase 5 � Dynamic Interview Renderer
+Paste a condensed version like this:
+
+Phase 5 � Dynamic Interview Renderer
+Completed: March 12, 2026
+The React interview interface was upgraded from a hardcoded form implementation to a dynamic rendering architecture driven by a centralized questionnaire definition.
+Interview questions are defined in:
+frontend/src/interview/questions.js
+A reusable component (QuestionRenderer.jsx) renders UI inputs dynamically based on the question configuration.
+Key features implemented:
+* Dynamic interview rendering using QUESTIONS.map()
+* Autosave via PATCH /api/v1/interview/<id>/save/
+* Debounced autosave (300 ms) to reduce API traffic
+* Interview session persistence using localStorage
+* Automatic interview restoration on page reload
+* Response hydration using setResponses(data.responses)
+* Safe input fallback (value={responses[question.id] || ""})
+The frontend interview engine is now stable and production-ready.
+?? Phase 6 � Interview Navigation & UX Layer
+
+Date: March 12, 2026
+Status: Completed
+Objective
+Improve the usability of the interview workflow by introducing guided
+navigation, progress visibility, and a review step prior to evaluation
+submission.
+
+Implemented Capabilities
+
+� Single-question interview rendering
+� Forward / backward navigation
+� Section titles reflecting interview structure
+� Visual progress indicator
+� Progress bar reflecting interview completion
+� Review screen displaying all answers prior to submission
+
+UX Flow
+User starts interview
+Interview session loaded
+?
+Questions presented sequentially
+?
+Responses autosaved to backend
+?
+Progress tracked visually
+?
+Final question reached
+?
+Review screen displays responses
+?
+User confirms before submission
+
+
+Safety Benefit
+
+The review step reduces the likelihood of accidental evaluation submissions,
+which is important because evaluation submission triggers:
+
+� evaluation engine execution
+� billing credit deduction
+� report generation
+� audit logging
+
+
+System Impact
+
+Phase 6 introduces **no backend modifications** and operates entirely within
+the React frontend.
+
+
+System Classification Update
+
+Integrity-Hardened
+Versioned
+Retry-Protected
+PostgreSQL-Backed
+Environment-Disciplined
+Operationally Observable
+Concurrency-Safe
+Monitoring-Aware
+Frontend-Guided Evaluation Platform
+
+Update � Master Context File
+Add a new subsection under Frontend Architecture.
+Report Access and Routing (Phase 7 Update)
+The frontend report viewer now operates as a dedicated route.
+Route structure:
+/report/:request_id
+Example:
+http://localhost:5173/report/fe9553cd-df8f-4487-be74-8e30b42e78b0
+Routing is implemented using React Router.
+ReportView component retrieves the report identifier using:
+useParams()
+Automatic report loading is triggered through:
+useEffect()
+This eliminates the need for development test buttons and allows direct access to reports via URL.
+Example logic:
+const { request_id } = useParams();
+
+useEffect(() => {
+    loadReport();
+}, [request_id]);
+
+Report Rendering Model
+Reports are generated immediately after interview submission.
+Current report structure:
+total_score
+risk_band
+category_breakdown
+signals
+information_gaps
+suggestions
+Frontend rendering logic currently supports full report display.
+
+Planned Monetization Model
+The application will implement a freemium diagnostic model.
+Workflow:
+Interview
+?
+Submit Evaluation
+?
+Evaluation Engine
+?
+Report Generated
+?
+User sees teaser
+?
+Payment unlocks full report
+Free Teaser View
+Displayed immediately:
+Total Score
+Risk Band
+Paid Report View
+Unlocked after payment:
+Category Breakdown
+Key Risk Signals
+Information Gaps
+Due Diligence Suggestions
+This design allows users to see the overall risk assessment before deciding to purchase the detailed analysis.
+
+Phase Status Summary
+Current completed phases:
+Phase 1 � Interview Architecture
+Phase 2 � Evaluation Engine
+Phase 3 � Scoring Logic
+Phase 4 � API Workflow
+Phase 5 � Dynamic Interview Renderer
+Phase 6 � Interview UX and Navigation
+Phase 7 � Report Display UI and Routing
+Current phase:
+Phase 8 � Report Paywall and Monetization
+
+Why This Update Matters
+Your Master Context file defines the system architecture.
+Without updating it, future development could assume:
+manual report loading
+instead of the current model:
+route-based report access
+/report/<request_id>
+Keeping this accurate prevents architectural drift.
+
+One Final Observation (important)
+Your system now has the complete technical spine of the product:
+Interview Engine
+Evaluation Engine
+Report Generation
+API Layer
+Frontend Report Viewer
+Routing
+Phase 8 is no longer core engineering � it is monetization and product experience.
+That�s a very different type of work.
+
+System state now:
+Phase 7 � Complete
+Phase 8 � Ready
+// ...existing code...
+
+RERA � Master Context Update
+Date: March 18, 2026 (Manila Time)
+Status: Stabilization Complete, Phase 8 Preparation Complete
+
+Summary
+System was rolled back to last known working commit and re-validated end-to-end using Postman.
+Codebase is now stable again and ready to resume Phase 8 implementation.
+
+Changes Completed
+1) Billing/Subscription Stabilization
+- Removed duplicate Subscription model definition (runtime model re-registration warning resolved).
+- Updated subscription checks to use billing_date (replaced old end_date references).
+- Verified no remaining runtime references to old fields (plan_type/start_date/end_date) outside migrations/backups.
+
+2) Phase 8 Foundation
+- Added billing/report_access.py (ReportAccessControl helper).
+- Added PayMongo service scaffold (billing/paymongo_service.py).
+- Added monetization models and applied migrations:
+  - CreditPurchase
+  - Subscription (updated structure)
+
+3) Configuration Hygiene
+- PayMongo env lookup kept in settings_base.py only.
+- Removed duplicate PayMongo setting declarations from settings_dev.py and settings_prod.py.
+- Verified no hardcoded PayMongo keys in Python source files.
+
+4) Debug Cleanup
+- Removed temporary debug print from reports/views.py.
+
+Validation Results (Postman + Django)
+- python manage.py check -> clean
+- POST /api/v1/interview/start/ -> 201
+- PATCH /api/v1/interview/<id>/save/ -> 200
+- POST /api/v1/interview/<id>/submit/ (no responses) -> 400
+- POST /api/v1/interview/<id>/submit/ (incomplete) -> 400 + missing_questions
+- POST /api/v1/interview/<id>/submit/ (funded, complete) -> 200 + request_id/report
+- Re-submit same interview -> 400 (Interview already submitted)
+- GET /api/v1/reports/ -> 200
+- GET /api/v1/reports/<request_id>/ -> 200
+
+Billing Behavior Confirmed
+- Insufficient balance path returns 402.
+- With available credits, submission succeeds and report is generated.
+- No duplicate report creation on re-submit attempts.
+
+Current Classification
+Integrity-Hardened, Versioned, Retry-Protected, PostgreSQL-Backed, Environment-Disciplined, Operationally Observable, Revenue-Policy-Stabilized Core (Phase 8 prep complete).
+// ...existing code...
+
+RERA � Master Context Update
+Date: March 18, 2026 (EOD, Manila Time)
+Status: Backend Clean & Verified. Frontend Drift Detected.
+
+Summary
+Full backend integrity audit completed. System is operationally sound.
+Frontend discovered with zero auth infrastructure � identified as blocker for Phase 8 frontend.
+
+Phase 8 Backend - COMPLETE & VERIFIED ?
+- billing/report_access.py (access control)
+- billing/paymongo_service.py (PayMongo integration)
+- billing/views.py (3 endpoints: initiate, confirm, balance, activate subscription)
+- billing/urls.py (all routes registered)
+- CreditPurchase + Subscription models + migrations
+- Report unlock gating in reports/views.py
+- All endpoints Postman-validated
+
+Integrity Audit Results
+- python -m compileall: PASS
+- manage.py check: PASS (0 issues)
+- makemigrations --check: PASS (no pending)
+- manage.py test: 0 tests (expected, no test suite yet)
+- Git conflict markers: NONE
+- Import sweep: PASS (all core modules load)
+- URL wiring: PASS (all 5 billing endpoints resolve)
+- Backup artifacts: CLEANED (rules_broken_backup.py.py removed)
+- Working tree: CLEAN
+
+Authenticated API Smoke Test Results
+- POST /api/v1/billing/credits/purchase/initiate/ (missing package): 400 ?
+- GET /api/v1/billing/credits/balance/: 200 ?
+- POST /api/v1/billing/subscription/activate/ (missing id): 400 ?
+
+Frontend State - DRIFT DETECTED ??
+- Framework: Vite + React
+- API file: frontend/src/api/apiClient.js (19 lines)
+- Current endpoints: only startInterview() 
+- Auth layer: MISSING (no token storage, no Bearer header injection, no login endpoint)
+- Phase 8 billing UX: NOT IMPLEMENTED
+- Impact: Frontend cannot call any authenticated endpoint
+
+Git Commit Chain (Phase 8)
+- d429a0f Phase 8 Step 8: Add subscription activation endpoint
+- a67ab7b Phase 8 Step 7: Gate report detail with access control metadata
+- e4c414f Phase 8 Step 6: Add credit balance endpoint
+- b76a2b8 Phase 8 Step 5: Add credit purchase initiate and confirm endpoints
+- 961a2ff Phase 8 prep: add report access control and remove debug print
+
+Safe Restore Points
+- tag: backend-integrity-clean-20260318
+- branch: phase8-frontend-bridge (current, clean)
+- The original phase8-backend-mvp-20260318 (earlier, also safe)
+
+Current Classification
+Integrity-Hardened, Versioned, Retry-Protected, PostgreSQL-Backed, Environment-Disciplined, Operationally Observable, Revenue-Policy-Stabilized Core (Phase 8 backend complete). Frontend authentication layer pending implementation.
+
+RERA Master Context Update
+Date: March 19, 2026 (Manila Time)
+Status: Phase 8 Frontend and Backend Bridge COMPLETE and COMMITTED
+
+Summary
+- Frontend paywall bridge implemented end-to-end with authenticated report access.
+- Backend now persists explanation sections and interview context for report retrieval.
+- Subscription and credit monetization UX validated for both full-access and locked-access users.
+
+Shipped Scope (March 19)
+- Auth and session handling in frontend API client with token refresh retry behavior.
+- Login-gated interview submit flow while preserving anonymous interview start.
+- Report paywall with blurred locked previews and per-section LOCKED badges.
+- Billing controls in report page (Buy Credits, confirm purchase, activate subscription).
+- Recovery action for inaccessible report path (Load My Latest Report).
+- Teaser enhancements: Project Name, City/Municipality, Region, and subscription days remaining.
+- Persisted report fields in backend model: signals, information_gaps, suggestions, project_name, city, location.
+- GetReport response extended with access metadata and context payload.
+
+Validation Results (March 19)
+- Django system check: PASS.
+- Frontend lint: PASS.
+- Frontend production build: PASS.
+- Authenticated smoke checks: PASS.
+   - Subscription path: can_view_full_report=True, subscription_active=True, context fields present.
+   - Credit path: can_view_full_report=False, locked_sections returned as expected.
+
+Checkpoint Commit
+- ef3b9eddd206e80fa22a9bcf307889f3f83061ac
+- Message: Phase 8 frontend/backend: persist report explanations, context teaser, and paywall polish
+
+Current Classification
+Integrity-Hardened, Monetization-Integrated, Access-Controlled, UX-Validated Phase 8 system ready for Phase 9 design port.
+
+RERA Master Context Update
+Date: March 19, 2026 (Manila Time)
+Status: Phase 9 UI Port and Context-Aware Interview Refinement COMPLETE and COMMITTED
+
+Summary
+- Phase 9 UI port completed and committed.
+- Context-aware interview behavior for private sale flow completed and committed.
+- Global branding footer "Powered by HeptaGeeks" added to landing and app shell pages.
+
+Shipped Scope (March 19, latest checkpoints)
+- Commit 2dcd76a:
+   - Frontend port of dashboard, report surfaces, and itemized interview flow.
+- Commit cea31b3:
+   - Context-aware interview question behavior and helper refinements.
+   - Shared footer branding added to landing and internal pages.
+
+Validation
+- Frontend production build after latest shell/footer updates: PASS.
+
+Deployment Readiness Snapshot
+- Current readiness estimate: 74 percent.
+- Primary remaining gaps:
+   - automated regression tests for critical billing and paywall paths
+   - production infrastructure wiring (domain, DNS, SSL, secrets, host and CORS policy)
+   - staging to production release drill with migration rollback validation
+   - alerting and incident runbook finalization
+
+Current Classification
+Integrity-Hardened, Monetization-Integrated, Access-Controlled, UX-Validated, Context-Aware Frontend system with deployment-hardening tasks pending.
+
+RERA Master Context Update
+Date: March 20, 2026 (Manila Time)
+Status: Phase 10A Frontend Hardening and QA Baseline COMPLETE and COMMITTED
+
+Summary
+- March 20 closed the main frontend hardening gap between validated features and repeatable deployment checks.
+- The product now supports an anonymous teaser-first evaluation flow, with authentication deferred to buy/unlock actions.
+- Frontend and backend regression checks are now executable through a single QA runner.
+- Route guards, redirect preservation, and clearer network failure handling are now enforced on the frontend.
+
+Shipped Scope (March 20)
+- Commit 0720304:
+   - Integrated the landing and interview UX guide package.
+   - Added Tailwind-based landing/interview presentation upgrades and context-aware helper/signal rendering.
+- Commit 5d1da48:
+   - Removed a conflicting global anchor override that was breaking the landing layout.
+- Commit 34de3d0:
+   - Moved authentication from post-submit to buy/unlock actions.
+   - Enabled anonymous teaser report delivery before registration.
+- Commit 0aab60e:
+   - Refined landing headline, CTA hierarchy, trust-strip wording, and conversion copy.
+- Commit 1b8dd6f:
+   - Added pytest to backend requirements.
+   - Added Vitest plus React Testing Library to the frontend.
+   - Added qa.ps1 and VS Code tasks for one-command QA execution.
+- Commit bfac529:
+   - Added protected frontend route coverage for dashboard, billing, and account pages.
+   - Preserved return-path redirects through login and report unlock actions.
+   - Normalized frontend network failures into user-readable API errors.
+   - Added frontend regression tests for auth guards, login redirect flow, teaser report gating, and interview preview submission state.
+
+Validation Results (March 20)
+- Django system check: PASS.
+- Backend pytest: PASS (14 tests).
+- Frontend Vitest: PASS (8 tests).
+- Frontend lint: PASS.
+- Frontend production build: PASS.
+- qa.ps1 full QA battery: PASS.
+
+Current Classification
+Integrity-Hardened, Monetization-Integrated, Access-Controlled, Context-Aware, Teaser-First Conversion system with executable regression coverage and one-command QA baseline.

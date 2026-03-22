@@ -1,0 +1,171 @@
+RERA LANDING PAGE REVISION NOTES
+Version: 1.1
+Date: March 20, 2026
+
+========================================
+OBJECTIVE
+========================================
+Improve conversion, clarity, and visual hierarchy of the landing page
+without changing backend logic.
+
+========================================
+1. HEADLINE IMPROVEMENT
+========================================
+
+Current:
+Check Real Estate Risk Before You Commit.
+
+Update to:
+Check Real Estate Risk Before You Commit Your Money.
+
+Reason:
+- Adds emotional weight
+- Highlights financial stakes
+- Improves conversion intent
+
+
+========================================
+2. CTA (CALL-TO-ACTION) IMPROVEMENTS
+========================================
+
+Primary Button:
+Current:
+Start Free Risk Check
+
+Update:
+Start Free Risk Check →
+
+Enhancements:
+- Increase button size slightly
+- Add subtle shadow
+- Add hover scale effect (scale-105)
+- Ensure high contrast vs background
+
+Micro-copy below CTA (split into 2 lines):
+
+✔ No account required
+✔ Takes 3–5 minutes
+
+
+========================================
+3. RIGHT PANEL (SAMPLE RESULT CARD)
+========================================
+
+Add below risk description:
+
+💡 Full breakdown available after evaluation
+
+---
+
+Update "Full Report Includes" section:
+
+Current:
+Plain text
+
+Update:
+🔒 Full Report Includes:
+✔ Key risk signals
+✔ Missing documents
+✔ Due diligence checklist
+
+Enhancements:
+- Use checkmarks
+- Improve spacing
+- Slightly darker text for readability
+
+
+========================================
+4. TRUST STRIP IMPROVEMENT
+========================================
+
+Current:
+Used to evaluate:
+
+Update:
+Used to evaluate real property transactions:
+
+Keep items:
+✔ Pre-selling developments
+✔ Private land transactions
+✔ Developer-led projects
+
+Reason:
+- Adds authority
+- Clarifies scope
+
+
+========================================
+5. "HOW IT WORKS" SECTION
+========================================
+
+Title Update:
+Current:
+How RERA Works
+
+Update:
+How You Get Your Risk Score
+
+---
+
+Content Updates:
+
+1. Answer guided questions
+→ About the property and transaction
+
+2. We analyze risk factors
+→ Across compliance, title, and financial exposure
+
+3. Get your risk score instantly
+→ With clear signals and next steps
+
+
+========================================
+6. VISUAL HIERARCHY IMPROVEMENTS
+========================================
+
+- Increase spacing between:
+  • Headline
+  • Paragraph
+  • Bullet list
+
+- Slightly increase bullet font size or opacity
+
+- Improve left-side readability
+
+
+========================================
+7. INTERACTION ENHANCEMENTS
+========================================
+
+Buttons:
+- Add hover scale (scale-105)
+- Add smooth transition (transition-all)
+
+Card:
+- Add stronger shadow on hover
+- Slight elevation effect
+
+
+========================================
+8. GENERAL NOTES
+========================================
+
+- No backend changes required
+- No routing changes required
+- All updates are frontend-only
+- Maintain existing structure
+
+========================================
+IMPLEMENTATION PRIORITY
+========================================
+
+1. Headline update
+2. CTA improvements
+3. Right panel enhancements
+4. Trust strip update
+5. How it works refinement
+6. Visual spacing polish
+
+========================================
+END OF DOCUMENT
+========================================

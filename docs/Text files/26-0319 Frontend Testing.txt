@@ -1,0 +1,28 @@
+26-0319 Frontend Testing
+
+Observations: 
+
+We need a landing page.  
+
+
+Context Layer Implementation
+CLI works
+CLI does not show when sale is offered by Developer
+
+
+Helper Implementation
+I only saw the helper once. 
+Is there a way to show these through a question mark symbol that if hovered through, will show content  of help?  
+
+
+UI Revisions: 
+Logout or Signout button should be beside user info
+
+Additional Functionalities: 
+Print report button after payment
+email report button after payment
+
+
+Others:
+I noticed that LGU/Environmental was at 0 for the Evaluation ID: 2a924d24-643d-426e-b52d-b9bceee57775
+Shouldn't this have a weight attached to it? 

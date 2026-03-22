@@ -1,0 +1,211 @@
+RERA CUSTOMER JOURNEY UX DOCUMENT
+Version: 1.0
+Date: March 20, 2026
+
+--------------------------------------------------
+MASTER FLOW (CORE SYSTEM)
+--------------------------------------------------
+
+Landing Page
+    ↓
+Start Evaluation (Anonymous Allowed)
+    ↓
+Interview (Autosave + Guided UX)
+    ↓
+Review Screen
+    ↓
+Submit Evaluation
+    ↓
+Authentication Gate (if not logged in)
+    ↓
+Evaluation Engine Execution
+    ↓
+Teaser Report (Free)
+    ↓
+Paywall Decision
+    ↓
+Full Report Unlock (Credits / Subscription)
+    ↓
+Report History / Dashboard
+
+
+--------------------------------------------------
+1. FIRST-TIME USER FLOW
+--------------------------------------------------
+
+1. Landing Page
+- Clear value proposition
+- CTA: Start Free Risk Check
+- No login required
+
+2. Interview Start
+- Anonymous session created
+- Immediate engagement
+
+3. Interview Flow
+- One-question navigation
+- Autosave enabled
+- Progress tracking
+- Context-aware help
+
+4. Review Screen
+- Full answer summary
+- User confirmation before submission
+
+5. Submit → Authentication Gate
+- User required to login/register
+- Prevents drop-off before engagement
+
+6. Evaluation Execution
+- Backend scoring engine runs
+- Credit/subscription check enforced
+
+7. Teaser Report (Free)
+- Displays:
+    • Total Score
+    • Risk Band
+
+8. Paywall
+- Locks:
+    • Category breakdown
+    • Risk signals
+    • Information gaps
+    • Due diligence suggestions
+
+9. Full Report Unlock
+- Triggered by:
+    • Credit purchase OR
+    • Active subscription
+
+10. Post-Access Actions
+- View full report
+- Print report
+- Email report (future feature)
+
+
+--------------------------------------------------
+2. RETURN CUSTOMER FLOW
+--------------------------------------------------
+
+Entry Points:
+- Login
+- Dashboard
+- Resume Interview
+- View History
+
+A. New Evaluation
+Dashboard → Start Evaluation → Interview → Submit → Report
+
+B. Resume Interview
+Dashboard → Resume Draft → Continue → Submit
+
+C. View Reports
+Dashboard → Report History → Select Report
+
+
+--------------------------------------------------
+3. SINGLE CREDIT USER FLOW
+--------------------------------------------------
+
+Before Submission:
+- Display credit balance
+
+On Submission:
+- Deduct 1 credit (atomic, safe)
+
+After Evaluation:
+- If balance = 0:
+    → Prompt credit purchase
+
+System Guarantees:
+- No duplicate deduction
+- No negative balance
+- Retry-safe billing
+
+
+--------------------------------------------------
+4. PACKAGED CREDITS FLOW
+--------------------------------------------------
+
+Purchase:
+- User buys credit bundle (e.g., 5, 10)
+
+Usage Loop:
+Evaluate → Deduct Credit → Repeat
+
+UX Requirements:
+- Always show remaining credits
+- Clear feedback after each deduction
+
+
+--------------------------------------------------
+5. SUBSCRIPTION FLOW
+--------------------------------------------------
+
+Activation:
+- User activates subscription
+
+Behavior:
+- Unlimited evaluations (within policy)
+- No credit deduction
+
+UX Indicators:
+- Subscription Active
+- Days Remaining
+
+Access:
+- Full report automatically unlocked
+
+
+--------------------------------------------------
+6. HISTORICAL REPORT FLOW
+--------------------------------------------------
+
+Dashboard → Report History
+
+Features:
+- List of past evaluations
+- Display:
+    • Project Name
+    • Date
+    • Risk Band
+
+View Report:
+- Route: /report/<request_id>
+- Ownership enforced
+- Auth required
+
+Future Enhancements:
+- Filters (risk level, date)
+- Search functionality
+
+
+--------------------------------------------------
+GLOBAL UX PRINCIPLES
+--------------------------------------------------
+
+1. No Surprise Billing
+- Always show cost before evaluation
+
+2. State Visibility
+- Always show:
+    • Credit balance
+    • Subscription status
+
+3. Trust Preservation
+- Neutral, non-accusatory tone
+- Structured, evidence-based output
+
+4. Friction Placement
+- Login AFTER interview
+- Payment AFTER teaser
+
+5. System Integrity Alignment
+- UX must reflect:
+    • Deterministic scoring
+    • Immutable billing
+    • Audit traceability
+
+--------------------------------------------------
+END OF DOCUMENT
+--------------------------------------------------

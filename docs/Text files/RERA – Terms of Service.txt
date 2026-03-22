@@ -1,0 +1,327 @@
+**RERA – Terms of Service**
+
+Last Updated: March 2026
+
+---
+
+## 1. Acceptance of Terms
+
+By accessing or using the RERA (Real Estate Risk Assessment) platform (“Service”), you agree to be bound by these Terms of Service.
+
+If you do not agree, you must not use the Service.
+
+---
+
+## 2. Nature of the Service
+
+RERA is a **decision-support tool** that provides **risk-based assessments** of real estate projects based on user-provided information and structured evaluation models.
+
+RERA:
+
+* DOES NOT verify documents independently
+* DOES NOT guarantee legal accuracy
+* DOES NOT provide legal, financial, or investment advice
+* DOES NOT determine legality, compliance, or fraud
+
+All outputs are **informational and educational only**.
+
+---
+
+## 3. User Responsibility
+
+You agree that:
+
+* All information you provide is accurate to the best of your knowledge
+* You will not rely solely on RERA outputs when making property decisions
+* You will conduct independent due diligence and consult qualified professionals
+
+You are solely responsible for any decisions made using the Service.
+
+---
+
+## 4. Account & Access
+
+* Certain features require account registration
+* You are responsible for safeguarding your credentials
+* You are responsible for all activity under your account
+
+RERA is not liable for unauthorized access due to user negligence.
+
+---
+
+## 5. Billing & Credits
+
+RERA operates on a **credit-based system**.
+
+* Each evaluation consumes credits
+* Credits are **non-refundable once used**
+* Credits may expire (if applicable)
+* No duplicate charges will occur under normal system operation
+
+Refunds:
+
+* Only granted under exceptional circumstances
+* Must be approved manually by RERA
+
+The system enforces **immutable billing records** for financial integrity 
+
+---
+
+## 6. Report Access & Paywall
+
+RERA may provide:
+
+* Free access to summary outputs (e.g., score and risk band)
+* Paid access to full reports
+
+Access to full report details requires payment or active entitlement.
+
+---
+
+## 7. Limitation of Liability
+
+To the maximum extent permitted by law:
+
+RERA shall NOT be liable for:
+
+* Any financial loss
+* Property purchase decisions
+* Misinterpretation of results
+* Incomplete or inaccurate user inputs
+* System downtime or interruptions
+
+All use is at your own risk.
+
+---
+
+## 8. No Warranty
+
+The Service is provided **“AS IS”** and **“AS AVAILABLE”**.
+
+RERA makes no warranties regarding:
+
+* Accuracy
+* Completeness
+* Reliability
+* Fitness for a particular purpose
+
+---
+
+## 9. Prohibited Use
+
+You agree not to:
+
+* Abuse the system (e.g., automated scraping, flooding)
+* Attempt to reverse-engineer the evaluation logic
+* Use the system for defamation or malicious claims
+
+Violations may result in account suspension.
+
+---
+
+## 10. Audit & System Integrity
+
+RERA maintains **immutable audit logs and financial records** to ensure:
+
+* Billing accuracy
+* System traceability
+* Dispute resolution capability 
+
+These logs are internal and not publicly exposed.
+
+---
+
+## 11. Data Retention
+
+RERA may retain:
+
+* Interview responses
+* Evaluation reports
+* Billing records
+* Audit logs
+
+Retention is required for:
+
+* System operation
+* Financial records
+* Dispute handling
+
+---
+
+## 12. Termination
+
+RERA reserves the right to:
+
+* Suspend or terminate accounts
+* Restrict access
+* Deny service
+
+At its sole discretion.
+
+---
+
+## 13. Changes to Terms
+
+RERA may update these Terms at any time.
+
+Continued use constitutes acceptance of updated Terms.
+
+---
+
+## 14. Governing Law
+
+These Terms shall be governed by the laws of the Republic of the Philippines.
+
+---
+
+## 15. Contact
+
+For inquiries:
+
+[Insert Contact Email]
+
+---
+
+
+
+**RERA – Dispute & Refund Policy**
+
+Last Updated: March 2026
+
+---
+
+## 1. Overview
+
+This policy governs billing disputes, refunds, and adjustments related to the RERA platform.
+
+RERA operates on a **credit-based system**, where each evaluation consumes credits.
+
+---
+
+## 2. General Refund Policy
+
+Credits are **non-refundable once used**.
+
+Refunds are NOT provided for:
+
+* Completed evaluations
+* User dissatisfaction with results
+* Misinterpretation of reports
+* Incorrect user input
+
+RERA reports are informational and do not guarantee outcomes.
+
+---
+
+## 3. Eligible Refund Cases
+
+Refunds may be considered ONLY under the following conditions:
+
+### a. System Error
+
+* Duplicate charge due to system failure
+* Failed evaluation with credit deducted
+
+### b. Payment Failure
+
+* Payment processed but credits not issued
+
+### c. Administrative Correction
+
+* Verified billing error by RERA
+
+All refunds require internal verification.
+
+---
+
+## 4. Non-Eligible Cases
+
+Refunds will NOT be granted for:
+
+* “I changed my mind”
+* “The result is not what I expected”
+* Incorrect or incomplete questionnaire answers
+* Lack of understanding of the report
+
+
+---
+
+## 5. Dispute Process
+
+To file a dispute:
+
+1. Submit request via email
+2. Include:
+
+   * Account email
+   * Request ID (if applicable)
+   * Description of issue
+
+RERA will:
+
+* Investigate using audit logs
+* Review billing records
+* Respond within a reasonable timeframe
+
+RERA maintains **immutable audit and billing records** for dispute verification 
+
+---
+
+## 6. Resolution Outcomes
+
+Possible outcomes:
+
+* Refund issued
+* Credit restored
+* No action (if claim invalid)
+
+All decisions are final after review.
+
+---
+
+## 7. Refund Method
+
+Refunds, if approved, may be:
+
+* Returned via original payment method
+* Converted into platform credits
+
+At RERA’s discretion.
+
+---
+
+## 8. Abuse & Fraud
+
+RERA reserves the right to:
+
+* Deny refund requests
+* Suspend accounts
+* Block abusive users
+
+If patterns of abuse or fraudulent disputes are detected.
+
+---
+
+## 9. Chargebacks
+
+Users are encouraged to contact RERA before initiating chargebacks.
+
+Unresolved chargebacks may result in:
+
+* Account suspension
+* Permanent access restriction
+
+---
+
+## 10. Contact
+
+Submit disputes to:
+
+[Insert Support Email]
+
+---
+
+**End of Policy**
+
+
+**End of Terms**

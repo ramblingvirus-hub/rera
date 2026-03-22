@@ -1,0 +1,124 @@
+RERA INTERVIEW UX UPGRADE PACKAGE
+Version: 1.0
+Date: March 20, 2026
+
+========================================
+PART 1 — QUESTION SCHEMA (questions.js)
+========================================
+
+export const QUESTIONS = [
+  {
+    id: "q7",
+    label: "Does the project have a License to Sell?",
+    type: "select",
+    options: ["Yes", "No", "Not Sure"],
+
+    section: "Developer Legitimacy",
+
+    helper:
+      "A License to Sell is issued by DHSUD and allows the developer to legally sell units.",
+
+    signal: {
+      trigger: "No",
+      message:
+        "⚠️ This may indicate the project is not authorized for sale.",
+    },
+  },
+];
+
+========================================
+PART 2 — TOOLTIP COMPONENT
+========================================
+
+import { useState } from "react";
+
+export function Tooltip({ content }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative inline-block ml-2">
+      <button
+        onClick={() => setOpen(!open)}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className="text-sm bg-gray-200 text-gray-700 rounded-full w-5 h-5 flex items-center justify-center"
+      >
+        ?
+      </button>
+
+      {open && (
+        <div className="absolute z-10 w-64 p-3 text-sm bg-white text-gray-700 rounded-lg shadow-lg top-7 left-0">
+          {content}
+        </div>
+      )}
+    </div>
+  );
+}
+
+========================================
+PART 3 — QUESTION RENDERER
+========================================
+
+import { Tooltip } from "./Tooltip";
+
+export default function QuestionRenderer({
+  question,
+  value,
+  onChange,
+}) {
+  return (
+    <div className="max-w-xl mx-auto">
+
+      {/* SECTION */}
+      <p className="text-sm text-gray-500 mb-2">
+        Section: {question.section}
+      </p>
+
+      {/* QUESTION */}
+      <div className="flex items-center mb-4">
+        <h2 className="text-xl font-semibold">
+          {question.label}
+        </h2>
+        {question.helper && <Tooltip content={question.helper} />}
+      </div>
+
+      {/* INPUT */}
+      {question.type === "select" && (
+        <select
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full border rounded-lg p-3"
+        >
+          <option value="">Select an answer</option>
+          {question.options.map((opt) => (
+            <option key={opt}>{opt}</option>
+          ))}
+        </select>
+      )}
+
+      {/* SIGNAL */}
+      {question.signal &&
+        value === question.signal.trigger && (
+          <div className="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-sm">
+            {question.signal.message}
+          </div>
+        )}
+    </div>
+  );
+}
+
+========================================
+PART 4 — IMPLEMENTATION NOTES
+========================================
+
+1. Replace existing QuestionRenderer.jsx
+2. Add Tooltip.jsx component
+3. Update questions.js structure
+4. Ensure props:
+   - question
+   - value
+   - onChange
+
+========================================
+END
+========================================

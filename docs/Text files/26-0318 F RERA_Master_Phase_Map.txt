@@ -1,0 +1,529 @@
+RERA Master Phase Map
+Last Updated: 2026-03-05
+
+Phase 1 � Core Evaluation Engine
+Development of the real-estate risk scoring model
+Category scoring structure implemented
+Evaluation report generation
+Baseline API endpoint for evaluation
+Phase 2 � Ledger & Billing Foundations
+Immutable credit ledger design
+CreditTransaction model implemented
+AuditEvent system introduced
+Service-layer billing abstraction created
+Phase 3 � Revenue Activation
+JWT authentication layer
+Evaluation endpoint protected
+Billing deduction tied to evaluation lifecycle
+Idempotency protection added
+Phase 3G � Revenue Flow Simulation & Freeze Validation
+Credit purchase simulation
+Multiple credit deductions tested
+Idempotency replay protection validated
+Idempotency conflict protection validated (HTTP 409)
+Credits drained to zero
+Insufficient credit enforcement validated (HTTP 402)
+Audit logging verified
+Phase 3H � Operational Safety & Abuse Guardrails (Next Phase)
+Phase 3H � Operational Safety & Abuse Guardrails (Completed)
+
+Implemented:
+
+� Explicit HTTP method restriction for evaluation endpoint
+� Idempotency key cleanup command
+� Row-level locking for credit deduction
+
+Purpose:
+
+� Protect evaluation endpoint from accidental exposure
+� Prevent long-term idempotency table growth
+� Eliminate concurrency race conditions in credit ledger
+
+Result:
+
+System billing layer now guarantees
+transaction-safe credit deduction under parallel requests.
+PHASE MAP UPDATE
+
+March 6, 2026 
+Update the Phase Map entry.
+Current:
+Phase 3H � Operational Safety & Abuse Guardrails
+Add below it:
+
+Phase 3I � Operational Monitoring & Anomaly Detection
+Status: Completed
+Implemented:
+� Operational monitoring command
+� Billing velocity detection
+� Validation failure detection
+� Evaluation request velocity detection
+� Per-user credit activity inspection
+� System health aggregation
+Purpose:
+Provide founder-level operational visibility before revenue activation.
+Phase 3J � Monitoring Automation
+Status: Completed
+Implemented:
+� Monitoring command logging integration
+� Healthy system monitoring logs (INFO level)
+� Anomaly detection logs (ERROR level)
+� Persistent anomaly evidence written to logs/errors.log
+� Monitoring command prepared for scheduler-based automation
+Purpose:
+Ensure operational anomaly detection results are persistently recorded when monitoring runs automatically without an interactive console.
+Result:
+Operational monitoring system is now automation-ready, enabling safe execution through external schedulers (cron, Windows Task Scheduler, container schedulers, or home server automation).
+Phase 4 � Frontend 
+Phase 4B � Interview Save & Resume Architecture
+Status: Completed
+
+Implemented:
+
+� InterviewSession persistence model
+� Django admin inspection support
+� Question registry architecture
+� Registry-driven scoring compatibility
+� Standardized question identifiers
+
+Purpose:
+
+Enable interviews to be stored and resumed without triggering evaluation
+or billing flows.
+
+Outcome:
+
+Backend now supports draft interview persistence and is prepared for
+API-driven interview workflow.
+Phase 4C � Interview Workflow API
+Status: Completed
+Date: March 10, 2026
+Purpose:
+Implement the API layer supporting the interview workflow.
+Delivered capabilities:
+� Interview creation
+� Progressive answer saving
+� Interview resume
+� Interview submission for scoring
+Key system addition:
+Interview workflow endpoints
+POST   /interview/start
+PATCH  /interview/<id>/save
+GET    /interview/<id>
+POST   /interview/<id>/submit
+Architectural result:
+The backend now supports a stateful interview process separated from the evaluation billing pipeline.
+Evaluation integration will be completed in Phase 4D.
+
+
+Phase 4F � Report Retrieval & Evaluation History API
+
+Status: Completed
+Date: March 11, 2026
+
+Implemented:
+
+� Report retrieval endpoint
+� User evaluation history endpoint
+� Ownership enforcement for reports
+� Query optimization for history listing
+
+Purpose:
+
+Provide secure read access to generated evaluation reports and enable
+users to review their past project assessments.
+
+Outcome:
+
+The RERA backend now supports the complete interview ? evaluation ?
+report ? retrieval workflow required for MVP launch.
+RERA_Master_Phase_Map
+Add new phase entry:
+Phase 5 � Frontend Interview Engine (Initiated)
+Objective:
+Implement the React interface for the RERA evaluation system including:
+� Dashboard interface
+� Interview question rendering
+� Response capture
+� API submission to backend
+� Interview session lifecycle management
+Phase dependencies:
+React + Vite frontend environment
+Django REST API
+InterviewSession model
+Evaluation pipeline
+Current status:
+Frontend environment initialized
+Backend API connected
+Anonymous interview sessions enabled
+Phase state:
+ACTIVE
+
+Phase 4D � Interview ? Evaluation Engine Integration
+
+Status: Completed
+Date: March 10, 2026
+
+Purpose
+
+Connect interview submission to the hardened evaluation pipeline.
+
+Implementation
+
+InterviewSession responses are passed to the evaluation endpoint through
+an internal DRF request using APIRequestFactory.
+
+The existing evaluation pipeline remains unchanged and continues to handle:
+
+� scoring
+� evaluation engine execution
+� billing deduction
+� audit lifecycle events
+� report generation
+
+Outcome
+
+The backend now supports a full workflow:
+
+InterviewSession
+?
+submit interview
+?
+evaluation pipeline
+?
+credit deduction
+?
+report generation
+
+System State After Phase 4D
+
+Interview workflow fully integrated with evaluation engine.
+
+The platform now supports the complete buyer evaluation flow.
+
+Phase 4E � Interview Workflow Hardening
+Status: Completed
+Date: March 10, 2026
+
+Purpose
+
+Protect the interview workflow from invalid submissions and prevent modification of interviews after evaluation execution.
+
+Delivered protections
+
+� empty interview guard
+� required question validation (Q7�Q16)
+� credit availability enforcement
+� post-submission interview immutability
+
+Outcome
+
+The evaluation pipeline now runs only when interview input is complete and the interview record becomes immutable after evaluation.
+
+Phase 4E completes the backend safety architecture for the interview-driven evaluation workflow.
+
+
+
+
+System
+User dashboard
+Evaluation submission interface
+Credit purchase UI
+Report viewing and history
+Phase 5 � Launch Preparation
+Production infrastructure hardening
+Security review
+Operational monitoring setup
+Initial user onboarding
+
+
+Phase 6 � Interview Navigation & UX
+
+Status: Completed
+Date: March 12, 2026
+
+Objective
+
+Transform the raw interview question renderer into a guided user experience
+that leads buyers through the due-diligence questionnaire in a structured,
+comprehensible flow.
+
+This phase focuses purely on frontend usability and does not modify the
+evaluation engine, billing pipeline, or backend APIs.
+
+
+Implemented
+
+� Single-question navigation interface
+� Next / Back interview navigation controls
+� Section-based interview grouping
+� Progress indicator ("Question X of 16")
+� Visual progress bar for completion tracking
+� Dynamic section titles based on interview index
+� Review screen prior to evaluation submission
+
+
+UX Flow
+
+Start Interview
+?
+Question navigation
+?
+Autosave responses
+?
+Progress indicator
+?
+Section grouping
+?
+Final question reached
+?
+Review screen
+?
+Submit evaluation
+
+
+Architectural Impact
+
+No changes made to:
+
+� Interview persistence API
+� Evaluation engine
+� Billing and credit deduction
+� Audit event logging
+� Idempotency layer
+� PostgreSQL schema
+
+
+Result
+
+The interview interface now functions as a guided due-diligence workflow
+rather than a static form.
+
+Users are able to complete the questionnaire, review their answers, and
+submit the evaluation request safely.
+
+The frontend interview system is now MVP-ready.
+
+
+Phase 7 � Report Display UI
+Status: In Progress
+Date Started: March 13, 2026
+Objective
+Implement the frontend report viewer that retrieves and displays evaluation results generated by the backend evaluation engine.
+Initial Implementation Completed
+� React report viewer component created (ReportView.jsx)
+� JWT authenticated API request implemented
+� Backend endpoint /api/v1/reports/<request_id>/ successfully consumed
+� Report payload parsing verified
+� Rendering of total_score and risk_band confirmed
+Temporary Development Utilities
+� Manual �Load Report (Test)� button used to trigger API retrieval
+� Hardcoded request_id used during initial integration testing
+Next Steps
+� Display category breakdown
+� Display risk signals
+� Display information gaps
+� Display due diligence suggestions
+� Implement routing /report/<request_id>
+� Automatically load report using URL parameter
+� Remove temporary test utilities
+
+File: 26-0311 P RERA_Master_Phase_Map
+Update Phase 7 section.
+Phase 7 � Report Display UI
+Status: Complete
+Delivered capabilities:
+* React report viewer component
+* API integration with report endpoint
+* JWT authenticated retrieval
+* Dynamic route handling
+Route implemented:
+/report/:request_id
+Report page automatically loads evaluation report based on URL parameter.
+Example:
+/report/fe9553cd-df8f-4487-be74-8e30b42e78b0
+Phase 7 milestone commit:
+phase7-routing-complete
+
+Phase 8 � Report Paywall & Monetization
+Next phase objective:
+Implement freemium access model.
+Free view:
+Total Score
+Risk Band
+Paid view:
+Category Breakdown
+Risk Signals
+Information Gaps
+Due Diligence Suggestions
+Payment gateway will unlock full report access.
+
+
+// ...existing code...
+
+Phase 8 � Report Paywall & Monetization
+Status: IN PROGRESS (Started March 18, 2026)
+
+Completed in this session
+- Backend foundations prepared:
+  - Report access control helper (billing/report_access.py)
+  - PayMongo integration scaffold (billing/paymongo_service.py)
+  - Monetization model updates + migrations applied
+- Runtime stability restored after rollback:
+  - Subscription model duplication removed
+  - Old subscription field mismatch fixed (billing_date adopted)
+  - Debug trace line removed from reports/views.py
+- End-to-end backend flow revalidated in Postman.
+
+Verified endpoints
+- POST /api/v1/interview/start/ -> 201
+- PATCH /api/v1/interview/<id>/save/ -> 200
+- POST /api/v1/interview/<id>/submit/ -> 400/402/200 (state-dependent, expected)
+- GET /api/v1/reports/ -> 200
+- GET /api/v1/reports/<request_id>/ -> 200
+
+Next planned step (resume point)
+- Implement Phase 8 Step 5:
+  - Credit purchase endpoint (PayMongo-backed)
+  - Subscription activation/validation endpoint
+  - Report unlock decision wiring to access-control response
+
+
+// ...existing code...
+
+Phase 8 � Report Paywall & Monetization
+Status: BACKEND COMPLETE, FRONTEND PENDING (March 18, 2026 EOD)
+
+Completed (Backend)
+? Report access control helper (billing/report_access.py)
+? PayMongo integration scaffold (billing/paymongo_service.py)
+? Monetization models + migrations (CreditPurchase, Subscription)
+? Credit purchase initiate endpoint (POST /api/v1/billing/credits/purchase/initiate/)
+? Credit purchase confirm endpoint (POST /api/v1/billing/credits/purchase/confirm/)
+? Credit balance endpoint (GET /api/v1/billing/credits/balance/)
+? Subscription activation endpoint (POST /api/v1/billing/subscription/activate/)
+? Report unlock gating (GetReportView wired with ReportAccessControl)
+? Full system integrity audit (PASS)
+
+Verified Postman Tests
+- All 4 endpoints return expected status codes (400/200/201)
+- Auth gating working (401 for unauthenticated)
+- Validation logic intact
+
+Pending (Frontend)
+? Phase 8 Frontend Bridge:
+  1. Auth token management (localStorage + Bearer header injection)
+  2. Login/logout UI component
+  3. Credit purchase UI + PayMongo client-side integration
+  4. Subscription activation UI
+  5. Report unlock paywall display
+  6. Credit balance display
+  7. End-to-end Postman + browser testing
+
+Estimated Frontend Scope: 2-3 hours
+
+Git Tags (Safe Restore Points)
+- backend-integrity-clean-20260318 (current, audit-verified)
+- phase8-backend-mvp-20260318 (earlier milestone)
+
+Next Session Entry Point
+File: d:\Desktop\RERA\frontend\src\api\apiClient.js
+Task: Add auth token management + wire all Phase 8 billing endpoints
+
+Phase 8 - Report Paywall and Monetization
+Status: COMPLETE (March 19, 2026)
+
+Completed (Frontend + Backend Bridge)
+- Auth token management and refresh flow integrated in frontend API client.
+- Login/logout UI integrated in interview and report views.
+- Submit flow now requires authentication while interview start remains open.
+- Report paywall implemented with blurred locked previews and LOCKED section badges.
+- Billing controls integrated in report page (Buy Credits, confirm purchase, activate subscription).
+- Access metadata surfaced in report response:
+  - can_view_full_report
+  - credit_balance
+  - subscription_active
+  - subscription_days_remaining
+  - locked_sections
+- Report context surfaced in teaser:
+  - project_name
+  - city
+  - location/region
+- Explanation sections persisted and retrievable:
+  - signals
+  - information_gaps
+  - suggestions
+
+Migrations Added
+- reports/migrations/0006_add_explanation_fields_and_context.py
+- reports/migrations/0007_add_city_field.py
+
+Verification Snapshot
+- manage.py check: PASS
+- frontend lint: PASS
+- frontend build: PASS
+- subscription full-access and credit locked-access smoke checks: PASS
+
+Checkpoint Commit
+- ef3b9eddd206e80fa22a9bcf307889f3f83061ac
+
+Next Planned Phase (Phase 9)
+- Port report/interview paywall surfaces to finalized website design system.
+- Keep monetization and access-control logic unchanged.
+- Add explanatory fallback text for high-risk reports when explanation arrays are empty.
+
+Phase 9 - Website Design Port
+Status: COMPLETE (March 19, 2026)
+Delivered capabilities:
+- Frontend dashboard and report surfaces ported to the finalized website design direction.
+- Interview flow surfaced as a structured itemized experience aligned with the new UI shell.
+- Existing monetization and access control behavior preserved while updating UI presentation.
+
+Phase 9A - Context-Aware Interview Refinement and Global Branding Footer
+Status: COMPLETE (March 19, 2026)
+Delivered capabilities:
+- Context-aware interview rendering and private-sale interpretation refinements integrated.
+- Global footer branding "Powered by HeptaGeeks" added to landing and internal app pages.
+- Build validation completed after shell and footer updates.
+Checkpoint commits:
+- 2dcd76a Frontend: port Phase 9 dashboard/report UI and itemized interview flow
+- cea31b3 Implement context-aware interview flow and add HeptaGeeks footer branding
+
+Phase 10 - Deployment Hardening and Release Readiness
+Status: NEXT
+Objective:
+- Convert validated product features into production-ready deployment posture.
+Scope:
+- Domain, DNS, SSL, and environment secret wiring
+- Production host and CORS policy lock
+- Staging release rehearsal with migration rollback verification
+- Monitoring alert routing and incident runbook completion
+- Critical-path automated regression coverage for billing and paywall access
+
+Phase 10A - Frontend Hardening, QA Baseline, and Teaser-First Conversion Flow
+Status: Completed
+Date: March 20, 2026
+
+Implemented:
+- Tailwind-based landing and interview UX guide port plus landing revision polish.
+- Anonymous teaser report delivery before authentication.
+- Authentication moved to buy/unlock actions instead of post-submit.
+- Backend pytest dependency pinned in requirements.
+- Frontend Vitest plus React Testing Library introduced.
+- One-command qa.ps1 runner and VS Code QA tasks added.
+- Consistent frontend route protection for dashboard, billing, and account pages.
+- Redirect preservation through login and report unlock actions.
+- Frontend network error normalization for unreachable backend conditions.
+- Regression tests for auth guards, login redirect flow, teaser report gating, and interview preview submission.
+
+Purpose:
+Stabilize the frontend conversion and monetization path while establishing repeatable validation before deployment execution.
+
+Result:
+RERA now has executable frontend/backend regression coverage, one-command QA execution, and a validated teaser-first funnel ready for the next deployment-hardening slice.
+
+Phase 10B - Session Recovery and Staging Smoke Validation
+Status: Next
+Objective:
+- Preserve user flow across session expiry during billing/report actions.
+- Validate the teaser, login, purchase, and report unlock path through a full staging smoke pass.

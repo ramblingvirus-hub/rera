@@ -1,0 +1,295 @@
+RERA – Interview Context Model Specification
+Version: v1 (Private Sale Initial)
+Date: March 19, 2026 (Manila Time)
+Status: Design Document – Implementation Ready
+
+---------------------------------------------------
+1. PURPOSE
+---------------------------------------------------
+The Interview Context Model defines how questionnaire responses are interpreted based on transaction type and contextual signals.
+
+It does NOT modify:
+- the scoring engine logic
+- the questionnaire structure
+- database schema
+
+It ENABLES:
+- context-aware interpretation of answers
+- conditional logic activation
+- enhanced explanation generation
+
+This layer improves real-world accuracy of risk evaluation without compromising system integrity.
+
+---------------------------------------------------
+2. SCOPE BOUNDARIES
+---------------------------------------------------
+This layer MUST NOT:
+- modify evaluate_project_v1()
+- change database schema
+- introduce new required scoring inputs
+- interfere with billing, audit, or idempotency systems
+
+This layer MAY:
+- reinterpret answers
+- activate conditional UI questions
+- inject explanation signals
+- optionally adjust scoring weights (controlled)
+
+---------------------------------------------------
+3. CONTEXT TRIGGERS
+---------------------------------------------------
+Primary Trigger Source:
+
+Question: Q6 (How is the property being offered?)
+
+Possible Values:
+- developer_project
+- private_sale
+- broker_listing
+
+Current Implementation Scope:
+- private_sale ONLY
+
+---------------------------------------------------
+4. CONTEXT PROFILE: PRIVATE SALE
+---------------------------------------------------
+Trigger Condition:
+responses["q6"] == "private_sale"
+
+Context Classification:
+Transaction between private parties without developer-led project structure.
+
+Primary Risk Shift:
+FROM:
+- regulatory compliance (permits, LTS, ECC)
+
+TO:
+- ownership legitimacy
+- title integrity
+- transfer process clarity
+
+---------------------------------------------------
+5. QUESTION INTERPRETATION RULES
+---------------------------------------------------
+
+Q7 – License to Sell (LTS)
+Default Meaning:
+- Developer permit to legally sell units
+
+Private Sale Interpretation:
+- Usually NOT applicable
+- If present → suspicious signal
+- If absent → normal
+
+---------------------------------------------------
+
+Q9 – Development Permit
+Default Meaning:
+- LGU approval for project development
+
+Private Sale Interpretation:
+- Relevant ONLY if land is being developed
+- Low importance for existing residential resale
+
+---------------------------------------------------
+
+Q10 – ECC (Environmental Compliance Certificate)
+Default Meaning:
+- Environmental regulatory compliance
+
+Private Sale Interpretation:
+- Relevant ONLY for land conversion or development
+- Low importance for completed properties
+
+---------------------------------------------------
+
+Q11 – Title Type
+Private Sale Interpretation:
+- CRITICAL signal
+- Primary determinant of ownership legitimacy
+
+---------------------------------------------------
+
+Q12 – Title Verification
+Private Sale Interpretation:
+- HIGH importance
+- Must be strongly weighted in explanation layer
+
+---------------------------------------------------
+
+6. SUPPLEMENTAL QUESTIONS (UI ONLY)
+---------------------------------------------------
+
+These questions are NOT part of scoring engine (v1)
+They are used for:
+- explanation engine
+- future scoring expansion
+
+Trigger:
+responses["q6"] == "private_sale"
+
+Questions:
+
+PS1:
+"Is the seller the registered owner on the title?"
+Type: yes_no_not_sure
+
+PS2:
+"Has a copy of the title been shown?"
+Type: yes_no_not_sure
+
+PS3:
+"What type of title is presented?"
+Options:
+- Individual Title
+- Mother Title
+- Tax Declaration
+- Rights Only
+
+PS4:
+"Has the seller explained the ownership transfer process?"
+Type: yes_no_not_sure
+
+PS5:
+"Is a licensed broker involved?"
+Type: yes_no_not_sure
+
+---------------------------------------------------
+7. SCORING ADJUSTMENT RULES (OPTIONAL – PHASE 2)
+---------------------------------------------------
+
+NOTE:
+Do NOT implement during initial rollout.
+This is a controlled enhancement layer.
+
+Adjustments:
+
+Developer Legitimacy:
+- Reduce weight of Q7 (LTS)
+- Increase reliance on Q8
+
+Project Compliance:
+- Reduce weight if no development context
+
+Title & Land:
+- Increase interpretive importance (not formula change yet)
+
+---------------------------------------------------
+8. EXPLANATION ENGINE RULES
+---------------------------------------------------
+
+When context = private_sale:
+
+Add Signals:
+
+- "Transaction is structured as a private sale without developer regulatory safeguards."
+- "Ownership of the property has not been clearly verified."
+- "Title documentation may be incomplete or unclear."
+
+Add Information Gaps:
+
+- "Registered ownership has not been confirmed."
+- "Title authenticity has not been verified."
+- "Transfer process is unclear."
+
+Add Suggestions:
+
+- "Request a certified true copy of the title."
+- "Verify ownership with the Registry of Deeds."
+- "Ensure a notarized Deed of Sale is prepared."
+- "Engage a licensed real estate broker or legal professional."
+
+---------------------------------------------------
+9. IMPLEMENTATION MAPPING
+---------------------------------------------------
+
+Backend:
+
+NEW FILE:
+reports/context_rules.py
+
+Function:
+
+def get_context_profile(responses):
+    if responses.get("q6") == "private_sale":
+        return "private_sale"
+    return "default"
+
+---------------------------------------------------
+
+Explanation Engine Integration:
+
+File:
+reports/explanation_engine.py
+
+Add:
+
+context = get_context_profile(responses)
+
+if context == "private_sale":
+    apply_private_sale_logic(responses)
+
+---------------------------------------------------
+
+Frontend:
+
+File:
+questions.js
+
+Add conditional rendering:
+
+if (responses.q6 === "Private Sale") {
+    showPrivateSaleQuestions = true;
+}
+
+---------------------------------------------------
+
+10. IMPLEMENTATION SEQUENCE
+---------------------------------------------------
+
+STEP 1:
+Create this document in /docs/
+
+STEP 2:
+Create reports/context_rules.py
+
+STEP 3:
+Hook context detection into explanation_engine.py
+
+STEP 4:
+Add conditional UI rendering for supplemental questions
+
+STEP 5:
+TEST:
+- private sale flow
+- developer flow (no regression)
+
+STEP 6:
+COMMIT
+
+---------------------------------------------------
+11. NON-GOALS (IMPORTANT)
+---------------------------------------------------
+
+Do NOT:
+- modify database schema
+- change scoring engine inputs
+- introduce new API endpoints
+- break interview validation rules
+
+---------------------------------------------------
+12. FUTURE EXTENSIONS
+---------------------------------------------------
+
+Next Context Profiles:
+- broker_listing
+- developer_project refinement
+
+Future Capabilities:
+- dynamic scoring weights per context
+- context-driven risk models
+- adaptive questionnaires
+
+---------------------------------------------------
+
+END OF DOCUMENT

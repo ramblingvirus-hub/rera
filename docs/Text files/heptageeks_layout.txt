@@ -1,0 +1,110 @@
+HEPTAGEEK UI LAYOUT SPECIFICATION
+=================================
+
+CORE STRUCTURE
+--------------
++--------------------------------------------------+
+| HEADER                                           |
++---------+----------------------------------------+
+| SIDEBAR | MAIN CONTENT                           |
++---------+----------------------------------------+
+
+
+HEADER LAYOUT
+-------------
+[☰] [HeptaGeek Logo]   [Search Bar........]   [Credits] [Notifications] [User Avatar]
+
+Elements:
+- ☰ : Toggle sidebar
+- Logo : HeptaGeek parent branding
+- Search : Global search (future-ready)
+- Credits : Billing visibility (important)
+- Notifications : Optional
+- Avatar : User menu
+
+
+SIDEBAR STRUCTURE
+-----------------
+[ Dashboard ]
+
+--- AI TOOLS ---
+[ RERA ]
+[ Future Tool 1 ]
+[ Future Tool 2 ]
+
+--- MANAGEMENT ---
+[ Reports ]
+[ Billing ]
+[ History ]
+
+--- SYSTEM ---
+[ Settings ]
+[ Help ]
+
+
+MAIN CONTENT AREA
+-----------------
+[ Page Title ]            [ Primary Action Button ]
+
+[ Content Block / Card ]
+[ Content Block / Card ]
+
+
+RESPONSIVE BEHAVIOR
+-------------------
+Desktop:
+- Sidebar visible
+
+Mobile:
+- Sidebar becomes overlay (triggered by ☰)
+
+
+DESIGN PRINCIPLES
+-----------------
+- Keep sidebar width: 220px–260px
+- Use grouping labels
+- Highlight active item
+- Clear primary action per page
+- Consistent spacing
+
+
+BRANDING STRATEGY (IMPORTANT)
+----------------------------
+
+HeptaGeek = Parent Brand (Umbrella)
+RERA = Product Brand
+
+Recommended Approach:
+
+1. Use HeptaGeek as the SYSTEM identity
+   - Appears in header (logo, platform identity)
+
+2. Let RERA have its OWN PRODUCT identity
+   - Own logo
+   - Own color accents
+   - Own page styling inside content area
+
+Example:
+
+Header:
+[HeptaGeek Logo]
+
+Sidebar:
+RERA (icon + name)
+
+Main Content:
+RERA branding (title, colors, report UI)
+
+Why this works:
+- HeptaGeek builds trust across products
+- RERA feels like a serious standalone tool
+- Future tools can follow same structure
+
+DO NOT:
+- Merge names into "HeptaGeek RERA" everywhere
+- It weakens product identity
+
+Instead:
+"Powered by HeptaGeek" (subtle branding)
+
+END

@@ -1,0 +1,174 @@
+**RERA – Privacy Policy (Philippine Data Privacy Act Compliant)**
+
+Last Updated: March 2026
+
+---
+
+## 1. Introduction
+
+RERA (Real Estate Risk Assessment Platform) complies with the **Data Privacy Act of 2012 (Republic Act No. 10173)** and its implementing rules and regulations.
+
+This policy explains how personal data is collected, used, stored, and protected.
+
+---
+
+## 2. Personal Data Collected
+
+### a. Personal Information
+
+* Email address
+* Account credentials
+
+### b. User-Submitted Data
+
+* Real estate project details
+* Developer and property information
+* Questionnaire responses
+
+### c. System Data
+
+* Evaluation results and risk scores
+* Request identifiers (request_id)
+* Usage logs
+
+### d. Financial Data
+
+* Credit transactions
+* Payment references
+* Subscription status
+
+---
+
+## 3. Purpose of Processing
+
+Personal data is processed for:
+
+* Generating risk evaluation reports
+* Managing user accounts
+* Processing payments and credits
+* Maintaining audit and billing integrity
+* Preventing fraud and abuse
+* Improving system performance
+
+Processing is limited to what is necessary for these purposes.
+
+---
+
+## 4. Legal Basis for Processing
+
+RERA processes personal data based on:
+
+* **Consent** – when users submit data and use the platform
+* **Contractual necessity** – to deliver evaluation services
+* **Legitimate interest** – for system security, fraud prevention, and audit integrity
+
+---
+
+## 5. Data Sharing
+
+Personal data may be shared with:
+
+* Payment processors (e.g., PayMongo)
+* Infrastructure and hosting providers
+* Government authorities when legally required
+
+RERA does NOT sell personal data.
+
+---
+
+## 6. Data Retention
+
+RERA retains data for as long as necessary for:
+
+* Service operation
+* Legal compliance
+* Financial record keeping
+* Dispute resolution
+
+Important:
+
+Certain data **cannot be deleted immediately**, including:
+
+* Billing records
+* Audit logs
+* Evaluation records linked to financial transactions
+
+These are required for system integrity and defensibility.
+
+---
+
+## 7. User Rights (Under RA 10173)
+
+You have the right to:
+
+* Be informed about data processing
+* Access your personal data
+* Correct inaccurate data
+* Object to processing (where applicable)
+* Request deletion or blocking
+* File a complaint with the National Privacy Commission (NPC)
+
+Requests may be subject to system and legal limitations.
+
+---
+
+## 8. Security Measures
+
+RERA implements:
+
+* JWT-based authentication
+* Encrypted data transmission (HTTPS)
+* Immutable audit logging
+* Access control enforcement
+* Rate limiting and abuse detection
+
+These safeguards protect against unauthorized access and data tampering.
+
+---
+
+## 9. Data Protection Officer
+
+RERA designates a Data Protection Officer (DPO) responsible for privacy compliance.
+
+Contact:
+
+[Insert DPO Name / Email]
+
+---
+
+## 10. Breach Notification
+
+In the event of a data breach affecting personal data, RERA will:
+
+* Investigate immediately
+* Notify affected users when required
+* Report to the National Privacy Commission if applicable
+
+---
+
+## 11. Cross-Border Data Transfer
+
+If data is processed outside the Philippines:
+
+* Appropriate safeguards will be implemented
+* Data protection standards will be maintained
+
+---
+
+## 12. Changes to Policy
+
+RERA may update this Privacy Policy.
+
+Users will be notified of significant changes where required.
+
+---
+
+## 13. Contact
+
+For privacy concerns:
+
+[Insert Contact Email]
+
+---
+
+**End of Privacy Policy**

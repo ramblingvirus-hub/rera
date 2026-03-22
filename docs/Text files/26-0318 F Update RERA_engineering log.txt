@@ -1,0 +1,2444 @@
+PROJECT NAME:
+RERA � Real Estate Risk Assessment Platform
+
+PROJECT PURPOSE:
+A structured, rules-based evaluation system that scores real estate projects
+based on regulatory compliance, financial stability, documentation completeness,
+and risk categories.
+
+LONG-TERM VISION:
+� Become a standardized evaluation layer for property risk.
+� API-driven architecture.
+� Scalable subscription model.
+� Modular scoring engine.
+� Payment integration (future-ready).
+
+---------------------------------------------------
+CURRENT DEVELOPMENT STAGE
+---------------------------------------------------
+
+STATUS:
+Active build phase.
+
+PHASE ROADMAP:
+
+Phase 1 � Core Evaluation Engine (Completed)
+Phase 2A � Product Layer (Completed)
+Phase 2B � Credits & Subscription Enforcement (Completed)
+Phase 2C � Access Control & API Hardening (Current)
+Phase 3 � External API Exposure & Security Scaling (Future)
+Phase 4 � Production Deployment & Infrastructure Scaling (Future)
+
+---------------------------------------------------
+TECH STACK
+---------------------------------------------------
+
+Backend:
+� Python
+� Modular function-based architecture
+� Local server for development
+� Git for version control
+
+Architecture Principles:
+� Deterministic scoring logic
+� Backward compatibility preserved
+� Modular validation layers
+� Clean separation between:
+    - Evaluation logic
+    - Access control
+    - Subscription enforcement
+    - API layer
+
+---------------------------------------------------
+CORE SYSTEM COMPONENTS
+---------------------------------------------------
+
+1. evaluation_engine.py
+   - evaluate_project_v1(category_scores, license_to_sell_present=True)
+   - CATEGORY_WEIGHTS (global constant)
+   - REQUIRED_CATEGORIES = set(CATEGORY_WEIGHTS.keys())
+
+2. Credits & Subscription Layer
+   - Credit consumption per evaluation
+   - Subscription validation before execution
+
+3. Access Control (Phase 2C � In Progress)
+   - Authentication enforcement
+   - Authorization validation
+   - License-to-sell requirement enforcement
+   - Input validation & API hardening
+
+---------------------------------------------------
+BUSINESS LOGIC RULES
+---------------------------------------------------
+
+� Projects are scored across weighted categories.
+� License to Sell is required for compliant evaluation.
+� Missing required categories should trigger validation errors.
+� Backward compatibility must be preserved.
+� Subscription must be validated before evaluation execution.
+� Credits must decrement safely and atomically.
+
+---------------------------------------------------
+KNOWN CONSTRAINTS
+---------------------------------------------------
+
+� No breaking changes to evaluate_project_v1().
+� Security must be layered (not embedded inside scoring logic).
+� Future API exposure expected.
+� Design for scale, even if current usage is small.
+
+---------------------------------------------------
+CURRENT WORKING STATE
+---------------------------------------------------
+
+� Git initialized and committing.
+� Evaluation engine functional.
+� Credits & subscription enforcement operational.
+� Local server running.
+� Payment gateway research parked (GCash / Maya potential).
+
+---------------------------------------------------
+CURRENT OBJECTIVE
+---------------------------------------------------
+
+Stabilize Phase 2C:
+Implement a clean access control and API hardening layer
+without contaminating core evaluation logic.
+
+?? RERA � Development Log
+Date: Feb 20, 2026
+Phase: 2C � Access Control & API Hardening
+Status: In Progress
+
+? 1?? Environment Discipline Reinforced
+* Virtual environment activation clarified
+* Confirmed (venv) activation habit
+* Server restart discipline reinforced
+* Session workflow standardized
+You�re now operating with proper environment hygiene.
+
+? 2?? Permission Discipline Audit (Completed)
+Audited:
+* reports/views.py
+* billing/views.py
+* Global REST_FRAMEWORK settings
+Findings:
+* IsAuthenticated enforced globally
+* No AllowAny overrides
+* No per-view permission overrides
+* No public billing endpoints
+* No accidental function-based API leaks
+Result:
+Authentication boundary intact. No exposure found.
+
+? 3?? Throttling Implemented (Baseline Protection)
+Added to settings.py:
+'DEFAULT_THROTTLE_CLASSES': [
+    'rest_framework.throttling.UserRateThrottle',
+    'rest_framework.throttling.AnonRateThrottle',
+],
+'DEFAULT_THROTTLE_RATES': {
+    'user': '100/hour',
+    'anon': '20/hour',
+},
+Server restarted successfully.
+No runtime errors.
+Baseline rate limiting now active.
+
+? 4?? Engine Validation Chain Traced (Important Structural Insight)
+During throttle testing, encountered 400 Bad Request.
+Root cause traced methodically:
+* Payload keys mismatch
+* evaluate_project_v1 enforces strict category equality
+* REQUIRED_CATEGORIES = set(CATEGORY_WEIGHTS.keys())
+* Exact keys extracted from engine
+* Confirmed schema:
+o developer_legitimacy
+o project_compliance
+o title_land
+o financial_exposure
+o lgu_environment
+Outcome:
+* Validation logic confirmed working correctly
+* Engine integrity verified
+* No silent schema drift
+* Strict input discipline preserved
+This was not wasted time.
+This confirmed your validation architecture is solid.
+
+?? Architectural State After Today�s Work
+RERA now has:
+* JWT authentication
+* Ownership enforcement
+* Ledger-based billing
+* Atomic deduction logic
+* Strict engine validation
+* Global permission enforcement
+* Baseline API throttling
+* Zero accidental exposure
+You are not building a hobby app.
+You are building a defendable SaaS core.
+
+?? Next Logical Steps in Phase 2C
+When you resume:
+1. Actually trigger and verify HTTP 429 throttling
+2. Harden JWT config (token lifetime + rotation)
+3. Remove SessionAuthentication (prepare for prod mode)
+4. Add HTTP method restrictions explicitly
+5. Implement consistent error handler (no raw exception strings)
+One layer at a time.
+
+FEBRUARY 23, 2026 
+
+Active API endpoint inventory (Phase 2C)
+PART 1 � Phase 2C Completion Summary (Master Context Entry)
+You will paste this into your Master Context file.
+Use this structure exactly.
+
+RERA � Phase 2C: Access Control & API Hardening
+Completion Date: February 23, 2026
+Start Time: 8:00 AM
+Objective
+Harden authentication, throttle abuse, remove session coupling, enforce stateless API behavior, and standardize error responses.
+
+1. Authentication Hardening
+* Removed SessionAuthentication
+* Enforced JWT-only authentication
+* Configured:
+o Access token lifetime: 15 minutes
+o Refresh token lifetime: 7 days
+o Refresh token rotation enabled
+o Blacklist after rotation enabled
+* Applied and migrated token_blacklist
+* Verified:
+o Token refresh works
+o Rotation invalidates old refresh token
+o Wrong token type rejected
+o Invalid token rejected
+o Replay attack prevented
+Status: VERIFIED
+
+2. Throttling Enforcement
+* Global throttle classes enabled:
+o UserRateThrottle
+o AnonRateThrottle
+* Default rates:
+o user: 100/hour
+o anon: 20/hour
+* Verified:
+o Throttle triggers correctly
+o Retry-After header present
+o 429 response captured
+o Standardized error schema applied
+Status: VERIFIED
+
+3. Production Surface Hardening
+* Disabled Browsable API when DEBUG = False
+* Confirmed JSON-only rendering in production mode
+* Enforced ALLOWED_HOSTS when DEBUG = False
+* Verified behavior through simulated production configuration
+Status: VERIFIED
+
+4. Standardized Error Handling
+* Implemented centralized custom exception handler
+* Unified error schema:
+{
+  "error": {
+    "type": "...",
+    "code": "...",
+    "message": "..."
+  }
+}
+* Verified for:
+o 401 authentication errors
+o JWT validation errors
+o 429 throttling errors
+Status: VERIFIED
+
+Phase 2C Result
+Access control layer is now:
+* Stateless
+* Token-based
+* Rotationally secure
+* Throttle-protected
+* Production-aware
+* Error-schema consistent
+Phase 2C declared structurally complete.
+
+
+?? RERA � Phase 2D: Minimum Defensible Integrity (MDI) Layer
+Completion Status: Design Locked
+Date: February 23, 2026 (Manila Time)
+Objective: Pre-Revenue Structural Hardening Before Payment Integration
+
+Purpose
+Phase 2D establishes the Minimum Defensible Integrity (MDI) Layer to ensure:
+* Accounting immutability
+* Revenue defensibility
+* Structured audit traceability
+* Founder-level inspection capability
+* Clean abstraction for future payment integration
+This phase does not introduce new product features.
+This phase strengthens internal integrity before real revenue flows.
+
+Scope Discipline
+Phase 2D is intentionally limited to MDI only.
+It does not include:
+* Analytics dashboards
+* Institutional observability tooling
+* Full system logging
+* Payment gateway integration
+* API expansion beyond necessity
+Future operational scaling belongs to Phase 3.
+
+Module 1 � Ledger Immutability Enforcement (Locked)
+Objective:
+Ensure CreditTransaction functions as a true accounting ledger.
+Rules:
+* No update allowed on existing ledger rows.
+* No deletion allowed.
+* Corrections must occur via compensating transactions.
+* Enforced at model level (MDI scope).
+* DB-level triggers deferred to Phase 3 if required.
+Result:
+Append-only accounting integrity preserved.
+
+Module 2 � MDI Audit Logging (Locked)
+Objective:
+Log only events that affect money or report generation.
+AuditEvent Model:
+Fields:
+* id
+* user (nullable)
+* event_type (indexed)
+* severity (INFO / WARNING / CRITICAL)
+* request_id (UUID, indexed)
+* metadata (JSONField)
+* timestamp (auto_now_add)
+Audit events are append-only and immutable.
+Strict Event Types (Phase 2D):
+* EVALUATION_ATTEMPT
+* EVALUATION_SUCCESS
+* EVALUATION_VALIDATION_FAIL
+* BILLING_SUBSCRIPTION_APPLIED
+* BILLING_CREDIT_DEDUCTED
+* BILLING_INSUFFICIENT_CREDIT
+* THROTTLE_TRIGGERED
+Request Correlation:
+* Server-generated UUID per evaluation request.
+* Used to group billing + evaluation events.
+* Enables dispute investigation and traceability.
+Scope Limitation:
+* No full system logging.
+* No middleware-wide event capture.
+* Only enforcement-level logging.
+
+Module 3 � Admin Inspection Layer (Locked)
+Objective:
+Provide internal inspection capability without expanding API surface.
+Implementation:
+* Django Admin registration only.
+* Read-only access for:
+o AuditEvent
+o CreditTransaction
+o Subscription
+Restrictions:
+* No delete permission.
+* No change permission.
+* All fields read-only for ledger and audit models.
+Purpose:
+* Dispute investigation
+* Balance inspection
+* Audit trace lookup
+* No programmatic admin API (deferred to Phase 3)
+
+Module 4 � Payment-Ready Credit Purchase Abstraction (Locked)
+Objective:
+Create a single controlled entry point for credit creation before payment integration.
+Location:
+billing/services.py
+Primary Function:
+create_credit_purchase(user, credit_amount, expiry_date, reference_id, source)
+Responsibilities:
+* Validate inputs
+* Insert purchase ledger row
+* Create corresponding audit event
+* Return updated balance
+Design Principle:
+* Pure accounting abstraction.
+* No pricing bundle logic embedded.
+* No payment provider logic embedded.
+* All money-related logic centralized inside billing/ app.
+Future Use:
+* Payment gateway webhook
+* Manual admin credit grant
+* Refund abstraction
+
+Architectural Position After Phase 2D (Design)
+RERA now includes:
+* Deterministic evaluation engine
+* Strict validation enforcement
+* JWT-based stateless authentication
+* Ownership isolation
+* Atomic credit deduction
+* Subscription enforcement
+* Throttling + hardened API layer
+* Immutable ledger model
+* Structured audit logging (MDI)
+* Admin inspection capability
+* Payment-ready accounting abstraction
+System State:
+Revenue-ready foundation with integrity safeguards in place.
+
+Strategic Intent
+Phase 2D is defined as:
+�Minimum Defensible Integrity Layer Before Revenue.�
+This phase prioritizes:
+* Accounting safety
+* Dispute defensibility
+* Structured traceability
+* Founder-level operational visibility
+It deliberately avoids scope expansion into Phase 3 observability or institutional tooling.
+
+End of Phase 2D Design Entry.
+
+February 24, 2026
+?? RERA Master Context Update
+Phase 2D � Credit Enforcement & Audit Hardening
+Module 1 & Module 2 (Core Completed)
+
+?? Phase 2D � Module 1: Ledger Immutability (Completed)
+Objective
+Enforce strict immutability on financial ledger entries to prevent retroactive modification or deletion of credit transactions.
+Implementation
+* Overrode save() in CreditTransaction model:
+o Raises exception if instance already exists (no updates allowed).
+* Overrode delete():
+o Raises exception unconditionally.
+* All credit transactions are append-only.
+* All financial state changes must occur via new entries.
+Result
+* Ledger is tamper-resistant at model level.
+* Prevents silent credit manipulation.
+* Foundation for financial defensibility established.
+
+?? Phase 2D � Module 2: AuditEvent Infrastructure (Core Completed)
+Objective
+Introduce immutable, structured audit logging across evaluation lifecycle.
+Architecture Introduced
+1?? New App: audit
+* Model: AuditEvent
+* Immutable (save + delete guarded)
+* UUID primary key
+* Correlation request_id
+* JSON metadata field
+* Timestamped
+* Registered in Django Admin (read-only)
+2?? Centralized Logging Service
+File: audit/services.py
+Function:
+log_audit_event(...)
+Purpose:
+* Central entry point for audit logging
+* Prevents scattered model calls
+* Enables future async migration (Celery-ready)
+
+?? Request Correlation Design
+* request_id = uuid.uuid4() generated at start of evaluation
+* Same request_id used for:
+o EVALUATION_ATTEMPT
+o EVALUATION_SUCCESS
+o Report storage
+o Billing reference (if credit-based)
+* Correlation integrity verified
+Bug Found & Fixed:
+* Duplicate UUID generation inside transaction block
+* Caused mismatched attempt/success IDs
+* Removed secondary UUID generation
+* Trace integrity restored
+
+? Currently Implemented Audit Events
+Event Type
+Status
+EVALUATION_ATTEMPT
+?
+EVALUATION_SUCCESS
+?
+Both verified in Django Admin.
+
+?? Temporary Dev Adjustment
+SessionAuthentication temporarily re-enabled for browser testing:
+'rest_framework.authentication.SessionAuthentication'
+? Must be removed before end-of-day freeze.
+Production posture remains JWT-only.
+
+?? Phase 2D Status
+Module 1: Complete
+Module 2 (Core Infrastructure): Complete
+Audit Wiring (Partial): In Progress
+Remaining audit hooks:
+* Validation failure
+* Insufficient credit
+* Credit deduction
+* Subscription applied
+Estimated remaining effort: Low.
+
+?? Architectural Notes
+* Audit logging currently synchronous.
+* Designed for future async migration (Celery / queue).
+* request_id prepared for future middleware-based correlation.
+* Metadata schema currently flexible (JSON) � structured enforcement may be added in Phase 3.
+
+Integrity Level Achieved
+System now guarantees:
+* Immutable financial ledger
+* Immutable audit trail
+* Correlated evaluation lifecycle
+* Structured event logging
+* Defensible billing traceability
+This marks the transition from functional MVP to integrity-hardened system.
+
+That�s your clean Master Context entry.
+Now:
+Open a new thread titled:
+RERA � Phase 2D: Audit Wiring Completion
+And we finish the remaining hooks quickly and cleanly.
+Top of Form
+
+?? RERA � Master Context Update
+Phase 2D � Audit Wiring Completion
+Date: February 24, 2026 (Manila Time)
+Status: Structurally Complete (Pending Lifecycle Test)
+You can paste this into the Mother Context file.
+
+?? Phase 2D � Audit Wiring Completion
+Objective
+Complete lifecycle-level audit coverage across:
+* Evaluation attempts
+* Validation failures
+* Billing enforcement
+* Credit deductions
+* Subscription application
+* Throttle protection
+Ensure correlation integrity via single request_id origin.
+
+?? Correlation Discipline
+* request_id = str(uuid.uuid4()) generated at the start of EvaluateProjectView.post()
+* No secondary UUID generation inside billing
+* No secondary UUID generation inside audit services
+* Billing deduction reuses evaluation request_id
+* Throttle events generate independent UUID (pre-evaluation event class)
+Correlation integrity preserved.
+
+?? Completed Audit Hooks
+1?? EVALUATION_ATTEMPT
+Logged immediately after request_id generation.
+Purpose: Anchor lifecycle tracking.
+
+2?? EVALUATION_VALIDATION_FAIL
+Logged on ValueError raised by evaluation engine.
+Severity: WARNING
+Includes: error message metadata
+
+3?? BILLING_INSUFFICIENT_CREDIT
+Logged when user has no active subscription and insufficient balance.
+Severity: WARNING
+Includes: current_balance metadata
+
+4?? BILLING_SUBSCRIPTION_APPLIED
+Logged when active subscription is used instead of credit.
+Severity: INFO
+No deduction event triggered.
+
+5?? BILLING_CREDIT_DEDUCTED
+Logged inside transaction.atomic() block immediately after usage ledger insert.
+Severity: INFO
+Metadata: amount = -1
+Audit event is atomic with ledger mutation.
+Accounting and audit cannot drift.
+
+6?? EVALUATION_SUCCESS
+Already implemented.
+Now properly correlated with attempt and billing event.
+
+7?? THROTTLE_TRIGGERED
+Logged inside custom exception handler.
+Severity: WARNING
+Generated independent UUID.
+Does not interfere with evaluation lifecycle correlation.
+
+?? System State After Phase 2D
+RERA now guarantees:
+* Immutable financial ledger (model-level enforcement)
+* Immutable audit trail
+* Correlated evaluation lifecycle
+* Correlated billing lifecycle
+* Atomic credit deduction
+* Subscription enforcement traceability
+* Throttle event visibility
+* No silent financial mutation possible
+* No untracked evaluation possible
+System classification:
+Integrity-Hardened Pre-Revenue Core
+
+? Pending
+* Full lifecycle manual test (scheduled next session)
+* No additional scope expansion
+* No Phase 3 observability yet
+* No async audit migration yet
+Phase 2D declared structurally complete.
+Bottom of Form
+
+?? RERA � Master Context Update
+Phase 2D � Lifecycle Validation Complete
+Date: February 25, 2026 (Manila Time)
+Status: Fully Validated & Frozen
+You may paste this into the Mother Context file.
+
+?? Phase 2D � Empirical Lifecycle Validation
+All audit and billing flows were manually executed and verified end-to-end.
+1?? Validation Failure Flow
+* Invalid payload submitted
+* HTTP 400 returned
+* EVALUATION_ATTEMPT logged
+* EVALUATION_VALIDATION_FAIL logged
+* No credit deducted
+* No success event created
+Verified in Django Admin.
+
+2?? Insufficient Credit Flow
+* Valid payload submitted
+* User without subscription and without credits
+* HTTP 402 returned
+* EVALUATION_ATTEMPT logged
+* BILLING_INSUFFICIENT_CREDIT logged
+* No ledger mutation
+Verified in Django Admin.
+
+3?? Subscription Success Flow
+* Valid payload submitted
+* Active subscription detected
+* HTTP 200 returned
+* billing_type = "subscription"
+* EVALUATION_ATTEMPT logged
+* BILLING_SUBSCRIPTION_APPLIED logged
+* EVALUATION_SUCCESS logged
+* No credit deduction
+Verified in Django Admin.
+
+4?? Credit Success Flow (Atomic Deduction)
+* Credits created via create_credit_purchase()
+* Valid payload submitted
+* HTTP 200 returned
+* billing_type = "credit"
+* EVALUATION_ATTEMPT logged
+* BILLING_CREDIT_DEDUCTED logged
+* EVALUATION_SUCCESS logged
+* Usage ledger row (-1) created
+* request_id identical across all lifecycle events
+* Ledger + audit confirmed atomic
+Verified in Django Admin.
+
+5?? Throttle Protection Flow
+* Throttle temporarily lowered to 2/min
+* Third request returned HTTP 429
+* THROTTLE_TRIGGERED logged
+* Retry-After header present
+* Throttle settings restored to production baseline
+Verified in Django Admin.
+
+?? Integrity Guarantees Confirmed
+* Immutable ledger enforced
+* Immutable audit trail enforced
+* Correlated request lifecycle verified
+* Atomic billing integrity verified
+* No silent credit mutation possible
+* No silent evaluation possible
+* Throttle enforcement auditable
+* UUID integrity preserved across layers
+
+?? Phase 2D Status
+Design: Complete
+Implementation: Complete
+Lifecycle Validation: Complete
+Throttle Validation: Complete
+Integrity Level: Hardened Pre-Revenue Core
+Phase 2D officially frozen
+
+?? RERA � Master Context Update
+Phase 3 � External API Exposure & Security Scaling (Planning Locked)
+Date: February 25, 2026 (Manila Time)
+Status: Planning Phase � Design Locked, Build Not Started
+Precondition: Phase 2D Fully Validated & Frozen
+
+?? Phase 3 Objective
+Transition RERA from:
+Authenticated internal Django API
+Into:
+Versioned, externally consumable, institution-ready API layer
+Without breaking:
+* evaluate_project_v1()
+* Ledger immutability
+* Audit immutability
+* Atomic billing logic
+* Subscription enforcement
+* Backward compatibility
+Phase 3 introduces API surface discipline and scalability controls, not product features.
+
+?? Architectural Position Before Phase 3
+From current canonical schema and endpoint inventory 
+RERA_Master_Schema_and_Future_R�
+:
+Active API Surface (Pre-Phase 3)
+POST   /api/token/
+POST   /api/token/refresh/
+POST   /evaluate/
+GET    /
+GET    /<uuid>/
+Admin: /admin/
+Dev-only: /login/ , /logout/
+Risks identified:
+* Endpoints not versioned
+* Root-level routes exposed
+* No idempotency protection
+* SQLite still active (dev)
+* No API client layer
+* JSONField overuse risk
+* Audit and ledger growth risk
+
+?? Phase 3 � Locked Modules
+Phase 3 is divided into controlled modules.
+No scope expansion beyond these.
+
+?? Module 1 � API Versioning & Namespace Migration (Mandatory First Step)
+Change Required
+All application endpoints must move under versioned namespace.
+From:
+/evaluate/
+/<uuid>/
+To:
+/api/v1/evaluate/
+/api/v1/reports/
+/api/v1/reports/<uuid>/
+JWT routes remain:
+/api/token/
+/api/token/refresh/
+Purpose
+* Protect against future breaking changes
+* Allow parallel v2 release later
+* Prevent contract drift
+* Eliminate root-level routes
+Production Freeze Impact
+Addresses requirement from Production Freeze Checklist 
+RERA_Production_Freeze_Checklist
+:
+? All endpoints properly namespaced
+? No unintended root-level routes
+
+?? Module 2 � Idempotency Protection Layer (High Priority)
+Problem
+Current system prevents race conditions (atomic billing)
+But does NOT prevent duplicate retry processing.
+Risk identified in Risk Register 
+RERA_Master_Schema_and_Future_R�
+:
+Missing Idempotency Layer
+New Model (Planned)
+IDEMPOTENCY_KEY
+
+- id (PK)
+- user_id (FK ? auth_user, indexed)
+- key (unique, indexed)
+- request_hash (char)
+- response_snapshot (JSONField)
+- created_at (indexed)
+Behavior
+1. Client sends:
+Idempotency-Key: <uuid>
+2. System checks:
+o If key exists ? return stored response
+o If not ? process normally ? store response
+Guarantee
+* No double evaluation
+* No double charge
+* Retry-safe API contract
+
+?? Module 3 � API Client Model (Institutional Layer)
+Current system uses JWT only.
+For B2B exposure, introduce:
+API_CLIENT
+
+- id (PK)
+- name
+- api_key_hash
+- is_active
+- rate_limit_override
+- created_at
+Purpose
+* Institutional integrations
+* Partner access
+* Per-client throttling
+* Separation from user-level JWT
+JWT = user-level access
+API key = institutional-level access
+Layered, not replaced.
+
+?? Module 4 � Throttle Scaling Upgrade
+Current throttle (Phase 2C):
+UserRateThrottle
+AnonRateThrottle
+user: 100/hour
+anon: 20/hour
+Phase 3 upgrade:
+* Per-API-client throttle
+* Burst + sustained limits
+* Endpoint-level throttles
+Example target model:
+burst: 100/min
+sustained: 1000/hour
+Purpose:
+* Prevent scraping
+* Prevent abuse
+* Protect evaluation engine resources
+
+?? Module 5 � Request Correlation Middleware
+Currently:
+request_id = uuid4() generated inside EvaluateProjectView.
+Phase 3 improvement:
+Move UUID generation to middleware.
+Benefits:
+* Correlates auth failures
+* Correlates throttle events
+* Correlates billing
+* Correlates evaluation
+* System-wide trace ID
+Removes manual per-view UUID generation.
+Backward compatibility preserved.
+
+?? Module 6 � PostgreSQL Migration (Required Before Exposure)
+SQLite is development-only.
+Per PostgreSQL Migration Playbook 
+RERA_PostgreSQL_Migration_Playb�
+:
+Before external exposure:
+? Migrate to PostgreSQL
+? Verify constraints
+? Verify indexes
+? Validate lifecycle flows
+? Confirm no schema drift
+Revenue should NOT run on SQLite.
+
+?? Module 7 � Audit & Ledger Scaling Preparation
+From Risk Register 
+RERA_Master_Schema_and_Future_R�
+:
+Future risks:
+* Ledger table growth
+* AuditEvent table growth
+Phase 3 action (design-level only):
+Add composite indexes:
+(user_id, created_at)
+(request_id, timestamp)
+Document partitioning strategy for:
+* AuditEvent (monthly partition)
+* CreditTransaction (archival partition)
+No immediate partitioning required.
+Design only.
+
+?? Module 8 � JSONField Structural Awareness
+Risk identified 
+RERA_Master_Schema_and_Future_R�
+:
+* category_breakdown
+* triggered_findings
+* metadata
+Remain JSON for MVP.
+Phase 3 stance:
+* No migration now.
+* Structured reporting tables deferred to Phase 4+.
+* Analytics not part of Phase 3 scope.
+Scope discipline enforced.
+
+?? Updated Canonical Project Structure (Post-Phase 3 Planning)
+Root: RERA/
+
+- config/
+- reports/
+- billing/
+- audit/
+- rera_core/
+- api_clients/        ? NEW (Phase 3)
+- middleware/         ? NEW (Phase 3)
+- idempotency/        ? NEW (Phase 3)
+- tests/
+
+?? System Classification After Phase 3 (Projected)
+Current (Post Phase 2D):
+Integrity-Hardened Pre-Revenue Core
+After Phase 3:
+Versioned, Contract-Stable, Externally Consumable Risk API
+
+?? Explicitly Out of Scope (Phase 3 Discipline)
+No:
+* Analytics dashboards
+* AI parsing
+* Public project listings
+* Institutional dashboards
+* Dynamic recommendations
+* Scoring engine changes
+* Risk weight modifications
+Phase 3 = exposure hardening only.
+
+?? Phase 3 Completion Criteria
+Phase 3 considered structurally complete when:
+? All endpoints under /api/v1/
+? No root-level routes
+? PostgreSQL live
+? Idempotency layer active
+? Middleware request_id active
+? API client model implemented
+? Advanced throttling verified
+? Production Freeze checklist fully satisfied 
+RERA_Production_Freeze_Checklist
+
+?? Strategic Position
+Phase 3 is where RERA becomes:
+* Defendable
+* Stable
+* Integration-ready
+* Institutional-grade
+This is not feature expansion.
+This is contract stabilization.
+
+?? RERA � Master Context Update
+Phase 3A � API Versioning & Namespace Migration
+Date: February 25, 2026 (18:05:00)
+Status: Structurally Complete
+
+Objective
+Establish versioned API contract under /api/v1/ and eliminate all root-level business routes before external exposure or revenue activation.
+No logic changes permitted.
+No billing, audit, or engine modification allowed.
+Pure routing discipline.
+
+Changes Implemented
+1?? Version Namespace Activated
+Created:
+reports/urls_v1.py
+Wired in config/urls.py:
+path("api/v1/", include("reports.urls_v1")),
+All business endpoints now live under /api/v1/.
+
+2?? Root-Level Business Routes Removed
+Removed:
+POST   /evaluate/
+GET    /
+GET    /<uuid>/
+Root (/) now returns 404.
+No unintended route exposure.
+
+3?? Active API Surface (Post-Phase 3A)
+POST   /api/token/
+POST   /api/token/refresh/
+
+POST   /api/v1/evaluate/
+GET    /api/v1/reports/
+GET    /api/v1/reports/<uuid>/
+
+Admin: /admin/
+
+Dev-only (Temporary � Remove Before Freeze):
+/login/
+/logout/
+
+4?? Validation Performed
+Confirmed:
+* Evaluation succeeds (200)
+* Report retrieval succeeds (200)
+* Report listing succeeds (200)
+* 400 validation still enforced
+* JWT routes unaffected
+* Billing deduction intact
+* Audit logging intact
+* Root-level route sealed (404)
+No regression observed.
+
+Architectural Position After Phase 3A
+RERA is now:
+* Versioned
+* Contract-bound
+* Namespace-controlled
+* Cleanly segmented between auth and business endpoints
+Classification:
+Integrity-Hardened, Versioned Pre-Revenue Core
+
+Explicit Non-Changes
+Phase 3A did NOT modify:
+* evaluate_project_v1()
+* Ledger immutability
+* Audit immutability
+* Subscription enforcement
+* Credit deduction atomicity
+* request_id correlation
+* Throttling configuration
+* JWT configuration
+No core system logic touched.
+
+Freeze Reminder
+Before Production Freeze:
+* Remove /login/
+* Remove /logout/
+* Remove SessionAuthentication
+(Deferred � Dev convenience only.)
+
+?? RERA � Master Context Update
+Phase 3B � Idempotency Layer Implementation
+Date: February 26, 2026 (Manila Time)
+Status: Structurally Complete & Validated
+
+?? Objective
+Prevent duplicate evaluation processing and double billing under retry conditions while preserving:
+* Evaluation engine integrity
+* Ledger immutability
+* Audit immutability
+* Atomic billing logic
+* Backward compatibility
+This phase introduces retry-safe API behavior without modifying core scoring or billing logic.
+
+?? Module Overview
+New app introduced:
+idempotency/
+Components:
+* IdempotencyKey model
+* Deterministic request hashing utility
+* Response snapshot storage
+* Composite DB constraint enforcement
+
+?? IdempotencyKey Model (Final Structure)
+Fields:
+* id (UUID PK)
+* user (FK ? auth_user, indexed)
+* key (CharField, indexed)
+* request_hash (SHA256 hash of normalized payload)
+* response_snapshot (JSONField)
+* created_at (indexed)
+Composite Constraint
+UNIQUE (user_id, key)
+Ensures idempotency key uniqueness per user (multi-tenant safe).
+Global uniqueness removed.
+
+?? Behavioral Contract
+Client supplies:
+Idempotency-Key: <uuid>
+System behavior:
+1. If key does not exist:
+o Process request normally
+o Create report
+o Deduct credit (if applicable)
+o Store response snapshot
+o Persist IdempotencyKey record
+2. If key exists and request hash matches:
+o Return stored response snapshot
+o Do NOT re-run evaluation
+o Do NOT deduct credit again
+3. If key exists and request hash differs:
+o Return HTTP 409 Conflict
+o No evaluation performed
+o No billing mutation
+
+?? Validation Scenarios Executed
+? Normal request without header (no record created)
+? First idempotent request (record stored)
+? Replay same key + same payload (same request_id returned)
+? Replay same key + different payload (409 Conflict)
+? No duplicate report creation
+? No duplicate billing deduction
+? DB-level composite constraint verified
+All flows validated empirically.
+
+?? Architectural Guarantees After Phase 3B
+RERA now guarantees:
+* Retry-safe evaluation endpoint
+* Financial protection under network retry
+* No duplicate report generation
+* No double-charge under replay
+* Deterministic response contract
+* DB-level idempotency enforcement
+* Backward compatibility preserved
+System classification upgraded to:
+Integrity-Hardened, Versioned, Retry-Protected Pre-Revenue Core
+
+?? Explicit Non-Changes
+Phase 3B did NOT modify:
+* evaluate_project_v1()
+* Ledger immutability logic
+* Audit immutability logic
+* Atomic billing block
+* Subscription enforcement
+* JWT configuration
+* Throttling configuration
+No contamination of core system layers.
+
+? Deferred Enhancements (Future Phase)
+* TTL cleanup strategy
+* Background purge job
+* Middleware-level request correlation
+* Async storage
+* PostgreSQL partitioning
+Not required for correctness.
+1?? MASTER CONTEXT UPDATE
+(For 
+26-0226 RERA_Master_Context_v1 �
+)
+Append this at the end of the file.
+
+?? RERA � Master Context Update
+Phase 3C � Production Infrastructure & Operational Hardening
+Date: February 26, 2026 (Manila Time)
+Status: Step 1�3 Completed
+Objective
+Begin production hardening of infrastructure layer without modifying:
+* Evaluation engine
+* Ledger immutability
+* Audit immutability
+* Idempotency layer
+* Billing logic
+This phase targets operational discipline only.
+
+?? Step 1 � Authentication Surface Lock (Completed)
+* Removed SessionAuthentication
+* Deleted /login/ and /logout/ routes
+* Confirmed JWT-only access
+* Verified:
+o 401 without token
+o 200 with valid token
+* Postman-based API validation performed
+* No regression in evaluation or billing flow
+System now strictly token-based.
+
+?? Step 2 � SECRET_KEY Externalized (Completed)
+* Removed hardcoded SECRET_KEY
+* Configured SECRET_KEY = os.environ.get("SECRET_KEY")
+* Validated environment-variable-based boot
+* Confirmed server fails safely if variable missing
+* Confirmed JWT signing unaffected
+System no longer contains embedded secret.
+Production-aligned configuration achieved.
+
+?? Step 3 � Dependency Freeze (Completed)
+* Generated requirements.txt
+* Verified inclusion of:
+o Django
+o djangorestframework
+o simplejwt
+o python-dotenv
+* Dependency state reproducible
+
+?? Infrastructure Position After Step 3
+RERA is now:
+* JWT-only
+* Secret-externalized
+* Dependency-frozen
+* Version-controlled cleanly
+* Infrastructure-stabilized
+Next Phase 3C module:
+PostgreSQL Migration Execution (separate thread).
+
+That completes the Master Context update.
+
+February 28, 2026 Update: 
+?? MASTER CONTEXT STATUS
+Reference: 
+26-0226 RERA_Master_Context_v1 �
+Phase 3C � Production Infrastructure & Operational Hardening
+Step 1 � Authentication Surface Lock
+Status: ? Completed
+* SessionAuthentication removed
+* /login/ and /logout/ removed
+* JWT-only surface confirmed
+* 401 enforcement verified
+Step 2 � SECRET_KEY Externalized
+Status: ? Completed
+* Hardcoded SECRET_KEY removed
+* Environment variable enforced
+* Django refuses boot if missing (verified)
+Today�s move confirmed this working correctly.
+Step 3 � Dependency Freeze
+Status: ? Completed
+* requirements.txt used to rebuild environment
+* Clean reinstall validated
+* No missing packages
+Step 4 � PostgreSQL Installation
+Status: ? Installed
+* PostgreSQL 16.13 installed locally
+* PATH configured
+* psql accessible globally
+* No Django config changes yet
+No migration executed.
+
+Current Master Context State
+System classification remains:
+Integrity-Hardened, Versioned, Retry-Protected Pre-Revenue Core
+PostgreSQL driver not yet installed.
+DATABASES config still SQLite.
+No production switch performed.
+
+?? 1?? MASTER CONTEXT UPDATE
+Reference: 
+26-0226 RERA_Master_Context_v1 �
+Append this at the end of the file:
+
+?? RERA � Phase 3C Update
+Date: February 28, 2026 (Manila Time)
+Status: Infrastructure Prepared � PostgreSQL Migration Not Yet Executed
+?? Environment Recovery & Hardening
+Following relocation of project from Drive C ? Drive D:
+* Virtual environment rebuilt cleanly
+* Old venv deleted (non-portable across drive letters)
+* New venv created via python -m venv venv
+* Dependencies reinstalled from requirements.txt
+* SECRET_KEY environment enforcement verified
+* Django boot confirmed
+* No schema drift detected
+This confirms reproducible environment discipline.
+
+?? PostgreSQL Installation (Preparation Only)
+* PostgreSQL 16.13 installed locally
+* PATH configured globally
+* psql --version verified
+* pgAdmin operational
+* No DATABASES config changes made
+
+?? PostgreSQL Driver Installed
+* psycopg[binary] installed (version 3.3.3)
+* requirements.txt updated
+* No settings.py modifications
+* No migrations executed
+
+?? System Classification (Unchanged)
+System remains:
+Integrity-Hardened, Versioned, Retry-Protected Pre-Revenue Core
+PostgreSQL migration execution deferred to next session.
+
+
+
+?? MASTER CONTEXT UPDATE
+(16:18:00)
+
+?? RERA � Phase 3C Update
+Date: March 2, 2026 (Manila Time)
+Status: PostgreSQL Controlled Dry Run � Completed & Validated
+?? Objective
+Execute and validate migration from SQLite to PostgreSQL without modifying:
+* Evaluation engine
+* Ledger immutability logic
+* Audit immutability logic
+* Idempotency layer
+* Billing atomic block
+?? Infrastructure Execution
+* PostgreSQL 16.13 installed locally
+* Dedicated database created: rera_db
+* Dedicated DB user created: rera_user
+* Schema privileges corrected (public schema grant)
+* psycopg driver operational
+* settings.py switched to PostgreSQL engine
+* SQLite config preserved (commented, reversible)
+?? Migration Execution
+* All migrations applied successfully
+* UUID constraints enforced correctly
+* Strict schema validation confirmed
+?? Full Lifecycle Validation (Empirical)
+Validated on PostgreSQL:
+* JWT authentication flow
+* Evaluation validation failure flow
+* Insufficient credit flow (402)
+* Credit purchase creation
+* Atomic credit deduction
+* Report persistence
+* Audit correlation integrity
+* Idempotency layer intact
+Ledger verified:
+* Purchase row (+5)
+* Usage row (-1)
+* Append-only behavior preserved
+Audit verified:
+* EVALUATION_ATTEMPT
+* BILLING_CREDIT_DEDUCTED
+* EVALUATION_SUCCESS
+* Shared request_id correlation confirmed
+?? Observations
+* PostgreSQL enforced stricter UUID validation than SQLite (expected & correct)
+* No lifecycle regressions detected
+* No transaction integrity issues observed
+?? System Classification Upgrade
+System now classified as:
+Integrity-Hardened, Versioned, Retry-Protected, PostgreSQL-Backed Core
+SQLite retained only as historical development artifact.
+?? OFFICIAL DECLARATION
+Phase 3C � PostgreSQL Migration Execution
+Status: CLOSED
+Date: March 2, 2026 (Manila Time)
+Closure Basis:
+* PostgreSQL engine switch executed
+* Schema migrated
+* Privileges corrected
+* Full lifecycle validated
+* Ledger immutability confirmed
+* Audit immutability confirmed
+* Idempotency validated
+* JWT + evaluation flow validated
+* Code committed
+* Schema and Freeze documents updated
+No regression detected.
+SQLite preserved only as historical artifact.
+Phase 3C objective fully satisfied.
+
+?? 1?? MASTER CONTEXT UPDATE
+(Append to end of 
+26-0302 RERA_Master_Context_v1 �
+)
+
+?? RERA � Phase 3D: Environment Configuration Hardening
+Date: March 2, 2026 (Manila Time)
+Status: Completed & Validated
+?? Objective
+Eliminate environment ambiguity and enforce explicit configuration layering without modifying:
+* Evaluation engine
+* Ledger immutability
+* Audit immutability
+* Idempotency layer
+* Billing atomic logic
+This phase addressed configuration discipline only.
+
+?? Structural Changes Implemented
+1?? Settings Converted to Package
+Replaced single settings.py with structured package:
+config/
+  settings/
+    __init__.py
+    settings_base.py
+    settings_dev.py
+    settings_prod.py
+
+2?? Neutral Base Configuration
+settings_base.py now contains:
+* Shared configuration only
+* No DEBUG definition
+* No ALLOWED_HOSTS definition
+* No environment branching logic
+Browsable API conditional removed from base.
+
+3?? Production Layer
+settings_prod.py defines:
+* DEBUG = False
+* Strict ALLOWED_HOSTS
+* JSON-only API renderer
+Production-safe posture enforced.
+
+4?? Development Layer
+settings_dev.py defines:
+* DEBUG = True
+* Local ALLOWED_HOSTS
+* Browsable API enabled
+Development mode requires explicit activation.
+
+5?? Environment Selection via Environment Variable
+config/settings/__init__.py now selects configuration via:
+RERA_ENV
+Logic:
+* Default ? "prod" (safe default)
+* If RERA_ENV=dev ? development mode activated
+No file editing required to switch environments.
+
+?? Runtime Validation Performed
+Verified:
+* Default boot ? DEBUG=False
+* $env:RERA_ENV="dev" ? DEBUG=True
+* ALLOWED_HOSTS correctly resolved per environment
+* Server boots cleanly in both modes
+* No configuration drift
+
+?? System Classification (Updated)
+System now classified as:
+Integrity-Hardened, Versioned, Retry-Protected, PostgreSQL-Backed, Environment-Disciplined Core
+Phase 3D officially closed.
+
+?? Phase 3E � Logging Baseline & Operational Visibility
+Date: March 3, 2026 (Manila Time)
+Status: Structurally Complete & Validated
+?? Objective
+Establish structured logging and persistent ERROR capture without introducing third-party dependencies or production tooling complexity.
+
+?? Implementation Summary
+* Structured logging formatter introduced
+* Console logging standardized to:
+[timestamp] LEVEL logger_name message
+* django.server logger explicitly configured
+* django.request logger explicitly configured at ERROR level
+* Dedicated file handler added:
+logs/errors.log
+* ERROR-level request-cycle exceptions persisted to disk
+* Startup import exceptions confirmed outside request-cycle logging scope (expected behavior)
+
+?? Validation Performed
+? Structured INFO log confirmed at server boot
+? WARNING log confirmed for 401 requests
+? Controlled 500 request-cycle error triggered
+? ERROR-level stack trace written to logs/errors.log
+? Test crash removed and normal behavior restored
+
+?? Architectural Impact
+No modification to:
+* Evaluation engine
+* Ledger logic
+* Audit immutability
+* JWT configuration
+* Idempotency layer
+* Database schema
+Purely operational observability enhancement.
+
+?? System Classification (Revised)
+System now classified as:
+Integrity-Hardened, Versioned, Retry-Protected, PostgreSQL-Backed, Environment-Disciplined, Operationally Observable Core
+
+
+?? RERA � Phase 3F: Backup Strategy & Disaster Recovery Baseline
+Date: March 3, 2026 (Manila Time)
+Status: Completed & Restore Validated
+Objective
+Establish minimum viable disaster recovery capability prior to revenue activation.
+Implementation
+� backups/ directory created
+� Full PostgreSQL pg_dump executed
+� Timestamped SQL snapshot generated
+� File integrity verified (size check)
+� Restore drill executed into temporary database
+� Tables verified via \dt
+� reports_report row count validated
+� Temporary DB dropped after validation
+� Disaster recovery playbook documented
+Recovery Guarantee
+System can now:
+� Restore full database from snapshot
+� Recreate schema
+� Recreate ledger state
+� Recreate audit trail
+� Recreate report data
+Scope Discipline
+No automation introduced.
+No cloud replication introduced.
+Baseline survivability established.
+
+
+
+
+
+RERA � Phase 3G: Revenue Flow Structural Hardening (Part 1)
+Date: March 4, 2026 (Manila Time)
+Status: Structural Enforcement Complete � Refund Policy Locked
+?? Objective
+Simplify entitlement model prior to revenue activation and establish enforceable refund discipline without introducing FIFO complexity or multi-lot accounting.
+
+?? Entitlement Policy (Frozen)
+Credit Packages
+* Only one active credit purchase allowed at a time.
+* Credit stacking prohibited.
+* Credit purchase blocked if subscription is active.
+* Credits must be fully consumed before new purchase.
+* Packages are non-refundable.
+* Refund allowed only if:
+o Admin-triggered
+o Zero usage has occurred
+o Full purchase reversal only
+o Exceptional financial correction only
+Subscriptions
+* Non-refundable for active billing period.
+* Cancellation affects renewal only.
+* Credit purchase blocked while subscription active.
+
+?? Structural Enforcement Implemented
+1?? Stacking Guard Added
+Inside create_credit_purchase():
+* Block purchase if has_active_subscription(user) is True.
+* Block purchase if calculate_user_balance(user) > 0.
+2?? Purchase Reference ID Enforcement
+* Every purchase now guaranteed to have UUID reference_id.
+* If not provided, generated automatically.
+3?? Ledger-Audit Separation
+* deduct_credit() now:
+o Fetches active purchase.
+o Inherits purchase reference_id.
+o Performs ledger mutation only.
+* Audit logging moved to view layer.
+* Audit request_id remains evaluation-based.
+* Ledger reference_id now purchase-based.
+
+?? Architectural Result
+RERA entitlement model simplified to three states:
+1. Subscription Active
+2. Credit Package Active
+3. No Entitlement
+No overlap permitted.
+No lot allocation required.
+No FIFO required.
+Purchase-level refund enforceability now structurally possible.
+
+System classification updated to:
+Integrity-Hardened, Versioned, Retry-Protected, PostgreSQL-Backed, Environment-Disciplined, Operationally Observable, Revenue-Policy-Stabilized Core
+
+RERA Master Context Update
+Context Update Date: 2026-03-05
+
+System Overview
+RERA is a risk evaluation engine for real estate developments. The system processes structured evaluation inputs and produces a standardized risk report while enforcing strict billing and audit integrity.
+Architecture Status
+The following architectural layers are operational:
+� PostgreSQL-backed data layer
+� Immutable credit ledger
+� Billing service abstraction
+� JWT authentication
+� Idempotent evaluation endpoint
+� Structured audit event logging
+Billing Architecture
+The billing model uses a credit-based system. Purchases create ledger entries with a unique reference_id. Each evaluation consumes one credit and produces a usage ledger entry that inherits the purchase reference_id, enabling full purchase traceability.
+Revenue Protection Guarantees
+The system now guarantees:
+� No duplicate charges under request retries
+� Replay-safe API requests via Idempotency-Key
+� Payload conflict detection returning HTTP 409
+� Billing enforcement returning HTTP 402 when balance is zero
+� Full audit traceability for billing events
+Phase 3G Completion Summary
+Revenue flow dry-run simulation was completed successfully. The system executed purchase creation, multiple credit deductions, idempotency replay protection, idempotency conflict detection, and insufficient credit enforcement. All ledger and audit validations passed.
+Next Development Phase
+Recommended next phase: Operational Safety & Abuse Guardrails (rate limiting, anomaly detection, and operational monitoring).
+
+March 5, 2026 � Phase 3H Operational Guardrails
+
+Implemented three operational safety mechanisms:
+
+1. Explicit HTTP method lock on evaluation endpoint
+   to prevent accidental method exposure.
+
+2. IdempotencyKey cleanup management command to
+   control long-term table growth.
+
+3. Row-level locking in credit deduction logic
+   using select_for_update() inside transaction.atomic().
+
+This resolves a potential race condition where concurrent
+requests could read the same credit balance and create
+duplicate usage rows.
+
+The fix ensures that credit packages behave as a
+serialized resource under concurrent access.
+
+All changes verified via server restart and successful
+evaluation execution.
+
+No schema changes introduced.
+No migration required.
+
+March 6, 2026
+Phase 3I � Operational Monitoring & Anomaly Detection
+Implemented a management command providing operational visibility into system behavior.
+Monitoring now detects:
+� abnormal credit consumption
+� repeated validation failures
+� excessive evaluation request velocity
+Added system health aggregation and Manila-time reporting.
+This completes the observability layer prior to production freeze.
+
+Engineering Log Entry
+Add to RERA Engineering Log
+Phase 4A � Interview Scoring Engine (Design Locked)
+
+Interview questionnaire finalized.
+Scoring matrix defined.
+Category weights aligned with evaluation engine.
+Risk band classification defined.
+Explanation engine logic defined.
+
+Implementation scheduled for next development thread.
+
+
+RERA � Phase 4A Planning: Interview Scoring & Risk Interpretation Layer
+Date: March 9, 2026
+Status: Design Locked (Implementation Pending)
+
+Objective
+Define the deterministic scoring architecture that converts the structured interview questionnaire
+into a risk-based evaluation report. This phase introduces the interview scoring matrix, category
+score calculation, risk band classification, and explanation engine.
+
+Interview Questionnaire Status
+The interview questionnaire structure has been frozen (RERA_Interview_Questionnaire_v1_1_Frozen_Mar9_2026).
+
+Question Groups:
+Q1�Q6   Project Information
+Q7�Q8   Developer Legitimacy
+Q9�Q10  Project Compliance
+Q11�Q12 Title & Land
+Q13�Q14 Financial Exposure
+Q15�Q16 LGU & Environmental Context
+
+Only Q7�Q16 participate in scoring. Q1�Q6 provide contextual metadata.
+
+Risk Category Model
+Categories and weights:
+
+Developer Legitimacy � 25%
+Project Compliance � 30%
+Title & Land � 25%
+Financial Exposure � 10%
+LGU & Environmental Context � 10%
+
+Engine keys:
+developer_legitimacy
+project_compliance
+title_land
+financial_exposure
+lgu_environment
+
+Category Scoring Logic
+
+developer_legitimacy = (Q7 * 0.7) + (Q8 * 0.3)
+project_compliance = (Q9 * 0.6) + (Q10 * 0.4)
+title_land = (Q11 * 0.6) + (Q12 * 0.4)
+financial_exposure = (Q13 * 0.4) + (Q14 * 0.6)
+lgu_environment = (Q15 * 0.5) + (Q16 * 0.5)
+
+All category scores range from 0�100.
+
+Final Score Calculation
+
+final_score =
+(developer_legitimacy * 0.25) +
+(project_compliance * 0.30) +
+(title_land * 0.25) +
+(financial_exposure * 0.10) +
+(lgu_environment * 0.10)
+
+Final score range: 0�100.
+
+Risk Band Classification
+
+80�100  Lower Risk
+60�79   Moderate Risk
+40�59   Elevated Risk
+0�39    High Risk
+
+Explanation Engine
+
+The explanation engine generates three output groups:
+1. Key Risk Signals
+2. Information Gaps
+3. Due Diligence Suggestions
+
+Signals may be triggered by:
+- Missing License to Sell
+- No development permit shown
+- Weak or unverified title
+- Early deposit requirements
+- Environmental hazards
+- LGU restrictions
+
+Report Output Structure
+
+1. Final Score and Risk Band
+2. Category Breakdown
+3. Key Risk Signals
+4. Suggested Due Diligence Steps
+
+Architectural Position
+
+This phase does not modify:
+- Evaluation engine logic
+- Billing system
+- Credit ledger
+- Audit event logging
+- Idempotency protection
+- JWT authentication
+- API routing
+
+Planned Code Modules
+
+reports/interview_scoring.py
+reports/risk_band.py
+reports/explanation_engine.py
+
+Responsibilities
+
+interview_scoring.py
+- Question scoring tables
+- Category score calculations
+- Final score computation
+
+risk_band.py
+- Risk band classification
+
+explanation_engine.py
+- Signal generation
+- Information gap detection
+- Due diligence suggestions
+
+Engineering Log Entry
+
+Phase 4A � Interview Scoring Engine (Design Locked)
+
+Interview questionnaire finalized.
+Scoring matrix defined.
+Category weights aligned with evaluation engine.
+Risk band classification defined.
+Explanation engine logic defined.
+
+Implementation scheduled for next development thread:
+RERA � Phase 4A: Interview Scoring Engine Implementation
+
+Update for Engineering Log
+Add this entry to RERA_engineering log.
+
+March 9, 2026
+Phase 4B � Interview Save & Resume Architecture (Data Layer) implemented.
+Completed:
+InterviewSession model introduced
+Interview session persistence implemented
+Admin inspection configuration added
+Question registry architecture introduced
+Scoring module upgraded for registry compatibility
+Interview question identifiers standardized to lowercase
+Result:
+Interview responses can now be stored independently from the evaluation
+pipeline, enabling Save & Resume functionality without affecting billing,
+audit, or idempotency protections.
+Next Work:
+Phase 4C � Interview API workflow endpoints
+2026-03-10 � Phase 4C Completed
+Interview workflow API implemented and verified.
+Endpoints added:
+POST   /api/v1/interview/start/
+PATCH  /api/v1/interview/<id>/save/
+GET    /api/v1/interview/<id>/
+POST   /api/v1/interview/<id>/submit/
+Functionality achieved:
+� InterviewSession creation
+� Progressive response storage
+� Resume interview capability
+� Submission triggering scoring engine
+Routing fix implemented:
+Report retrieval endpoint moved to:
+/api/v1/reports/<uuid>
+to avoid collision with interview UUID routes.
+Evaluation pipeline remains isolated from interview drafting to preserve:
+� credit ledger integrity
+� idempotency protection
+� audit traceability
+Next engineering objective:
+Phase 4D � Interview submission integration with evaluation pipeline
+
+Result
+Your system is now architecturally stable up to Phase 4C.
+You now have:
+Billing engine
+Evaluation engine
+Scoring engine
+Interview persistence
+Interview workflow API
+Monitoring + anomaly detection
+Only one core integration remains before the platform becomes production-complete.
+
+March 10, 2026 (Manila Time)
+
+Phase 4D � Interview ? Evaluation Engine Integration
+
+Status: IMPLEMENTED, VERIFIED, FROZEN
+
+Objective
+
+Connect the interview workflow system to the existing evaluation pipeline
+without duplicating billing, audit, or scoring logic.
+
+Implementation
+
+The SubmitInterviewView endpoint was extended to internally invoke the
+existing EvaluateProjectView using DRF's APIRequestFactory.
+
+Interview responses stored in InterviewSession.responses are converted into
+the evaluation payload format expected by the evaluation endpoint:
+
+{
+"answers": {...}
+}
+
+The evaluation pipeline executes normally, preserving:
+
+� idempotency protection
+� credit ledger deduction
+� audit lifecycle events
+� evaluation report creation
+
+Authentication context is forwarded by passing the Authorization header
+to the internal evaluation request.
+
+Behavior
+
+POST /api/v1/interview/<id>/submit/
+
+Now performs:
+
+InterviewSession.responses
+?
+internal evaluation request
+?
+evaluation engine execution
+?
+credit deduction
+?
+audit logging
+?
+report generation
+?
+interview status locked (submitted)
+
+Verification Performed
+
+? Interview responses saved and retrieved
+? Interview submission triggered evaluation pipeline
+? Report generated successfully
+? Interview status changed to "submitted"
+? Credit deduction verified in ledger
+? Audit events recorded:
+
+EVALUATION_ATTEMPT
+BILLING_CREDIT_DEDUCTED
+EVALUATION_SUCCESS
+
+Architectural Impact
+
+No modification to:
+
+� evaluation engine logic
+� credit ledger system
+� billing service layer
+� idempotency protection
+� audit logging infrastructure
+� JWT authentication
+
+The interview workflow now acts as a structured input layer that safely
+invokes the hardened evaluation pipeline.
+
+Result
+
+The platform now supports a complete buyer workflow:
+
+Interview
+?
+Evaluation
+?
+Risk Report
+
+Phase 4D completes the functional backend architecture required for
+the RERA evaluation workflow.
+Date: March 10, 2026
+Phase: 4E � Interview Workflow Hardening
+Status: Implemented and Verified
+
+Objective
+
+Introduce workflow protections ensuring the interview system cannot trigger unsafe evaluation or billing behavior.
+
+This phase focuses on validating interview completeness and preventing post-evaluation mutation of interview data.
+
+
+Protections Implemented
+
+1. Empty Interview Submission Guard
+Interviews with no responses are rejected.
+
+2. Required Question Validation
+Submission requires responses for Q7�Q16, the questions used by the scoring engine.
+
+3. Credit Availability Enforcement
+Evaluation cannot execute if user credit balance is zero.
+
+4. Interview Immutability After Submission
+PATCH /interview/<id>/save now blocks updates once interview status is "submitted".
+
+Error returned:
+HTTP 400
+"Interview already submitted"
+
+
+Verification Performed
+
+Negative path tests:
+
+� Empty interview ? blocked
+� Partial interview ? blocked
+� Insufficient credit ? blocked
+� Attempted edit after submission ? blocked
+
+Positive path test:
+
+� Complete interview submitted
+� Evaluation engine executed
+� Credit deducted from ledger
+� Audit events created
+� Evaluation report generated
+� Interview status set to "submitted"
+
+
+Architectural Outcome
+
+The interview workflow is now protected against:
+
+� incomplete evaluation input
+� accidental billing triggers
+� post-evaluation mutation of interview data
+
+These safeguards preserve the integrity guarantees of the RERA evaluation pipeline.
+
+Phase 4E is now complete.
+
+Date: March 11, 2026
+
+Phase 4F � Report Retrieval & Evaluation History API
+
+Implemented:
+
+� GET /api/v1/reports/<request_id>/
+� GET /api/v1/reports/
+
+Security:
+
+� ownership enforcement via request.user
+� 404 protection for non-owned reports
+
+Optimization:
+
+� query-level field restriction using .only()
+
+Verification:
+
+� Postman tests returned HTTP 200
+� report retrieval validated
+� report history validated
+� authentication enforcement confirmed
+
+No modifications to evaluation engine, billing system,
+ledger integrity, idempotency layer, or audit logging.
+
+Phase 4F declared complete and frozen.
+
+RERA_Engineering_Log
+Entry � March 11, 2026
+Frontend Initialization & Backend Stabilization
+Actions completed:
+� React frontend created using Vite
+� Frontend connected to Django REST API
+� Interview start endpoint verified
+� Anonymous interview session support implemented
+� Backend dependency conflicts resolved
+� Development environment rebuilt using Python 3.11
+� Django version standardized to 5.2.x
+� CORS support installed and configured
+Key infrastructure state:
+Backend: Django 5.2.6
+Frontend: React + Vite
+Database: PostgreSQL
+API: /api/v1/
+System operational:
+React ? Django ? PostgreSQL pipeline active
+
+Update � Engineering Log (March 11)
+Major milestone achieved
+The React frontend was successfully connected to the Django backend interview API.
+Verified capabilities:
+� Interview session creation
+� Retrieval of interview session data
+� Autosave of interview responses
+� Persistent storage of responses in PostgreSQL
+� Retrieval of saved responses via API
+Key debugging issues resolved during this phase:
+� Python 3.14 compatibility issues ? downgraded to Python 3.11
+� AnonymousUser assignment errors in InterviewSession creation
+� API permission configuration adjustments
+� React state synchronization with interview responses
+� Autosave throttling issues
+The system now supports end-to-end interview persistence.
+Remaining tasks in Phase 5:
+� Resume interview UI
+� Dynamic question rendering
+� Interview navigation logic
+� Submit interview endpoint integration
+
+Phase Status Summary
+Phase
+Status
+Phase 1 � Foundations
+Complete
+Phase 2 � Core Engine
+Complete
+Phase 3 � Monitoring
+Complete
+Phase 4 � Interview Evaluation Engine
+Complete
+Phase 5 � React Interview Engine
+In Progress
+
+Where we stop today
+You have successfully built:
+RERA Interview Persistence Engine
+React UI
+?
+REST API
+?
+InterviewSession
+?
+PostgreSQL
+That is one of the most technically complex parts of the system.
+
+Tomorrow's starting point
+We resume with:
+Phase 5 � Dynamic Interview Renderer
+Goal:
+Instead of hardcoding Q1, Q2, Q3, etc., React will load the questionnaire and render questions automatically.
+That will reduce the UI code dramatically and unlock the full interview system.
+
+1?? Engineering Log Update
+Add this entry to:
+26-0311 F Update RERA_engineering log.docx
+Entry
+Date: March 12, 2026
+Phase: Phase 5 � Dynamic Interview Renderer
+Status: Completed and Verified
+Summary
+The React interview interface was upgraded from a hardcoded form layout to a dynamic rendering architecture driven by a centralized questionnaire definition.
+A question registry (questions.js) was introduced, allowing interview questions to be defined as structured objects containing identifiers, labels, input types, and optional answer choices.
+A reusable QuestionRenderer React component was implemented to automatically generate the appropriate UI input element (text field or select dropdown) based on the question definition.
+The interview UI now renders dynamically using:
+QUESTIONS.map(...)
+This removes the need for manually coded input fields and allows future questionnaire expansion without modifying the UI structure.
+Additional functionality implemented:
+� Autosave integration with backend API
+� PATCH requests to /api/v1/interview/<id>/save/ triggered on answer change
+� Interview responses persisted to PostgreSQL via the InterviewSession model
+� Browser localStorage used to store active interview session ID
+� Automatic session restoration on page reload via useEffect
+� GET request to /api/v1/interview/<id>/ restores responses and interview state
+Verification performed:
+� Interview session creation confirmed
+� Dynamic questions rendered correctly
+� Autosave PATCH requests verified in Django logs
+� Database persistence confirmed via refresh test
+� Interview session automatically restored after browser refresh
+� Old hardcoded input UI removed
+Architectural Result:
+The frontend interview system is now fully dynamic and schema-driven.
+Future interview updates require modifications only to the question registry file rather than UI code.
+
+2?? Engineering Log
+Update this file:
+26-0311 F Update RERA_engineering log.docx
+Add this entry:
+
+March 12, 2026
+Completed Phase 5 � Dynamic Interview Renderer.
+Replaced hardcoded interview inputs with a schema-driven question renderer. Implemented autosave persistence, debounced API calls, interview session restoration via localStorage, and response hydration during reload.
+Verified full pipeline:
+Start Interview
+?
+Dynamic Rendering
+?
+Autosave
+?
+Session Restore
+?
+Submit Interview
+?
+Evaluation Engine
+Interview UI now functions as a stable frontend engine.
+Engineering Log Entry
+Date: March 12, 2026
+
+Phase 6 � Interview Navigation & UX
+
+Completed implementation of guided interview navigation.
+
+Key improvements:
+
+� Converted static question rendering to single-question flow
+� Implemented Next / Back navigation
+� Added interview progress indicator and progress bar
+� Added dynamic section grouping aligned with evaluation categories
+� Implemented review screen before evaluation submission
+� Resolved JSX structural errors caused by duplicated render blocks
+
+Final system behavior:
+
+Start Interview
+?
+Guided question navigation
+?
+Autosave responses
+?
+Progress tracking
+?
+Review answers
+?
+Submit evaluation
+
+The interview frontend now provides a structured due-diligence experience
+suitable for MVP release.
+
+Engineering Log Entry
+Date: March 13, 2026
+Phase: Frontend � Report Display UI Integration
+Work Completed
+� Created ReportView.jsx React component
+� Implemented authenticated API call to /api/v1/reports/<request_id>/
+� Added JWT token retrieval from localStorage
+� Resolved unauthorized API responses due to missing token
+� Verified API response structure in browser console
+� Corrected frontend state binding from setReport(data) to setReport(data.report)
+� Successfully rendered evaluation score and risk band in UI
+Key Integration Insight
+Backend response wraps the evaluation report inside a report object.
+Frontend must extract the nested object before binding state.
+Incorrect:
+setReport(data)
+Correct:
+setReport(data.report)
+Outcome
+Frontend now successfully retrieves and displays evaluation report data from the backend.
+
+4?? Files That Were Actually Modified
+For clarity, these are the code files changed today.
+New
+src/pages/ReportView.jsx
+Modified
+src/App.jsx
+Temporary testing utilities added:
+Show Report (Test)
+Load Report (Test)
+These will be removed after router-based report navigation is implemented.
+5?? Important Development Note (JWT)
+During development the access token lifetime was temporarily extended to reduce repeated authentication.
+Reminder scheduled:
+March 31, 2026 � Reset ACCESS_TOKEN_LIFETIME to 15 minutes
+This ensures production security posture is restored before deployment.
+
+File: 26-0313 P Update RERA_engineering log
+Add entry.
+Engineering Log Entry
+Date: March 13, 2026
+Phase: Frontend � Report Display UI
+Work Completed
+* Implemented ReportView.jsx
+* Added React Router integration
+* Implemented dynamic route:
+/report/:request_id
+* Extracted request_id via useParams()
+* Automatic report loading via useEffect
+* Removed development test buttons
+* Confirmed report retrieval and rendering pipeline
+Key Integration Code
+const { request_id } = useParams();
+
+useEffect(() => {
+  loadReport();
+}, [request_id]);
+Outcome
+Frontend report viewer now functions as a standalone route.
+Report retrieval is fully automated.
+
+4?? Repository State (Milestone)
+Your Git history now contains:
+phase7-routing-complete
+phase7-ui-baseline
+phase7-report-integration
+Meaning you can safely roll back to any stage.
+Example:
+git checkout phase7-ui-baseline
+
+5?? Current Product Architecture
+System pipeline now works end-to-end:
+Interview UI
+?
+Autosave responses
+?
+Interview submission
+?
+Evaluation engine
+?
+Report generation
+?
+Report storage
+?
+Report API
+?
+React report viewer
+?
+/report/<request_id>
+Core MVP architecture is now operational.
+
+6?? Next Development Phase
+Phase 8 � Report Paywall
+Implementation goals:
+* Teaser report mode
+* Paid report unlock
+* Payment gateway integration
+* Unlock full report sections
+Likely provider options:
+Stripe
+PayMongo
+
+// ...existing code...
+
+Engineering Log Entry
+Date: March 18, 2026 (Manila Time)
+Phase: Stabilization + Phase 8 Pre-Implementation Verification
+Status: Completed and Committed
+
+Work Completed
+- Rolled back to last known working commit.
+- Fixed runtime warning caused by duplicate Subscription model definition.
+- Repaired subscription field mismatch in billing service (end_date -> billing_date).
+- Added report access control helper module: billing/report_access.py.
+- Added PayMongo service scaffold: billing/paymongo_service.py.
+- Applied migrations for monetization-related model updates.
+- Removed temporary debug print from reports/views.py.
+- Standardized PayMongo env configuration placement in settings_base.py only.
+
+Verification Completed (Postman)
+- Interview start, save, submit, and re-submit guard behavior validated.
+- Report list and single report retrieval validated.
+- Insufficient funds path (402) validated.
+- Credit-funded successful submit path validated (200 with report payload).
+- No duplicate report created on second submit attempt.
+
+Operational Notes
+- Testing protocol confirmed: Postman-first verification.
+- No curl-based workflow used.
+- System returned to stable state and parked for next implementation block.
+
+Git
+- Changes committed after verification.
+// ...existing code...
+
+Engineering Log Entry
+Date: March 18, 2026 (EOD, Manila Time)
+Phase: Phase 8 Backend Complete + Full System Integrity Audit
+Status: Completed and Verified
+
+Work Completed (Phase 8 Backend)
+- Added billing/report_access.py (ReportAccessControl helper).
+- Added billing/paymongo_service.py (PayMongo integration scaffold).
+- Implemented 3 billing views:
+  - InitiateCreditPurchaseView (POST /api/v1/billing/credits/purchase/initiate/)
+  - ConfirmCreditPurchaseView (POST /api/v1/billing/credits/purchase/confirm/)
+  - CreditBalanceView (GET /api/v1/billing/credits/balance/)
+  - ActivateSubscriptionView (POST /api/v1/billing/subscription/activate/)
+- Wired report access gating in reports/views.py with ReportAccessControl.
+- Registered all 4 routes in billing/urls.py.
+- Applied CreditPurchase + Subscription model migrations.
+
+Full System Integrity Audit Completed
+? Python compilation check: PASS
+? Django system check: PASS (0 issues)
+? Migration check: PASS (no pending)
+? Test suite: 0 tests (expected baseline)
+? Git conflict markers: NONE in live source
+? Import sweep: All core modules load without error
+? URL routing: All 5 billing endpoints resolve correctly
+? Backup artifacts: Cleaned (removed rules_broken_backup.py)
+? Working tree: CLEAN (no uncommitted changes except logs/errors.log)
+
+Postman Validation (Authenticated)
+- POST /api/v1/billing/credits/purchase/initiate/ (missing package): 400 ?
+- GET /api/v1/billing/credits/balance/: 200 ?
+- POST /api/v1/billing/subscription/activate/ (missing id): 400 ?
+
+Frontend Drift Analysis
+Discovered during integrity sweep:
+- Frontend entry: frontend/src/api/apiClient.js (19 lines only)
+- Only endpoint: startInterview() [unauthenticated]
+- Missing: Bearer token infrastructure, auth interceptor, token storage
+- Missing: All billing/report endpoints
+- Impact: Frontend cannot call any authenticated backend endpoint
+
+This represents a **significant drift** from backend readiness.
+
+Commits (Phase 8 Final Sprint)
+- d429a0f Phase 8 Step 8: Add subscription activation endpoint
+- a67ab7b Phase 8 Step 7: Gate report detail with access control metadata
+- e4c414f Phase 8 Step 6: Add credit balance endpoint
+- b76a2b8 Phase 8 Step 5: Add credit purchase initiate and confirm endpoints
+- 961a2ff Phase 8 prep: add report access control and remove debug print
+
+Safe Restore Points
+- backend-integrity-clean-20260318 (current HEAD, GPG-ready for release)
+- phase8-frontend-bridge (working branch, clean)
+
+Next Session (Resume Point)
+Phase 8 Frontend Implementation:
+1. Add auth token management to frontend/src/api/apiClient.js
+2. Implement login/logout UI
+3. Wire billing endpoints (purchase, confirm, balance, activate subscription)
+4. Implement report unlock UI with paywall gating
+5. Test end-to-end with Postman first, then browser
+
+Estimated scope: 2-3 hours frontend work.
+---------------------------------------------------
+INSTRUCTIONS FOR HIGGINS
+---------------------------------------------------
+
+Assume full project continuity.
+Do not re-architect completed phases unless explicitly instructed.
+Preserve backward compatibility.
+Provide implementation-level guidance, not high-level theory.
+Call out architectural risks when detected
+Commands should always be slow, specific and explicit
+Do not assume that I have memorized using Django, Postman, DRF Browser and PostgreSQL
+Do things step by step and assume you are talking to a grade 5.  One step ? verify ? next step
+No bulk steps to ensure success of each step
+Always keep a record of successful endpoints
+Always remind to commit to git
+Include working endpoints in context file
+Always use Manila Time (+8 hours)
+We do this one step, verify, next step. No bulk instruction steps, no assumptions of my programming language. Instructions must ALWAYS be detailed, specific and with visual examples. 
+
+---------------------------------------------------
+ENGINEERING LOG ENTRY
+---------------------------------------------------
+Date: March 19, 2026 (Manila Time)
+Phase: Phase 8 Frontend and Backend Bridge Completion
+Status: Completed, Validated, and Committed
+
+Work Completed
+- Extended backend report persistence:
+   - Added Report model fields for signals, information_gaps, suggestions.
+   - Added Report context fields project_name, city, location.
+   - Saved explanation outputs and context at submit time.
+   - Returned persisted explanation sections and context in GetReport response.
+- Added subscription metadata helpers in report access control:
+   - get_active_subscription(user)
+   - get_subscription_days_remaining(user)
+- Updated frontend report page:
+   - Added teaser context display (Project Name, City/Municipality, Region).
+   - Reordered location display to City first, Region second, in side-by-side layout.
+   - Added subscription status display with days remaining.
+   - Added locked preview sections with LOCKED badges.
+   - Added billing controls and renamed CTA to Buy Credits.
+   - Added report recovery action (Load My Latest Report).
+- Updated interview flow:
+   - Region converted to dropdown selection list.
+
+Migrations Applied
+- reports.0006_add_explanation_fields_and_context
+- reports.0007_add_city_field
+
+Validation Completed
+- manage.py check: PASS
+- frontend lint: PASS
+- frontend build: PASS
+- Authenticated API smoke checks:
+   - Subscription path: full access + subscription metadata + context payload confirmed.
+   - Credit path: locked sections + paywall metadata confirmed.
+
+Checkpoint Commit
+- Hash: ef3b9eddd206e80fa22a9bcf307889f3f83061ac
+- Message: Phase 8 frontend/backend: persist report explanations, context teaser, and paywall polish
+
+Operational Notes
+- Legacy reports created before migration will not have newly added context fields populated.
+- New reports created after migration include project_name, city, and location.
+- Explanation sections reflect risk flags from answer patterns and may be empty for low-flag submissions.
+
+Next Step
+- Start Phase 9 design port for finalized website UI while preserving validated Phase 8 logic.
+
+---------------------------------------------------
+ENGINEERING LOG ENTRY
+---------------------------------------------------
+Date: March 19, 2026 (Manila Time)
+Phase: Phase 9 UI Port and Context-Aware Interview Refinement
+Status: Completed, Validated, and Committed
+
+Work Completed
+- Completed Phase 9 UI port and aligned report/dashboard/interview surfaces to the current shell direction.
+- Implemented context-aware interview refinements for private-sale flow behavior.
+- Added global footer branding "Powered by HeptaGeeks" to landing and all internal app pages.
+
+Checkpoint Commits
+- 2dcd76a Frontend: port Phase 9 dashboard/report UI and itemized interview flow
+- cea31b3 Implement context-aware interview flow and add HeptaGeeks footer branding
+
+Validation Completed
+- Frontend production build after latest shell and footer update: PASS.
+
+Release Readiness Snapshot
+- Estimated deployment readiness: 74 percent.
+- Remaining blockers:
+   - automated regression tests for billing and paywall critical paths
+   - production domain and SSL plus secrets wiring
+   - staging deployment rehearsal with rollback verification
+   - alert routing and incident runbook completion
+
+Next Step
+- Begin Phase 10 deployment hardening and release readiness execution.
+
+---------------------------------------------------
+ENGINEERING LOG ENTRY
+---------------------------------------------------
+Date: March 20, 2026 (Manila Time)
+Phase: Phase 10A - Frontend Hardening, QA Baseline, and Teaser-First Conversion Flow
+Status: Completed, Validated, and Committed
+
+Work Completed
+- Integrated the March 20 landing/interview UX guide package and aligned the landing funnel to the latest revision notes.
+- Fixed the landing visual regression caused by a legacy global anchor style override.
+- Changed the evaluation flow so anonymous users can complete the interview and view a teaser report before registration.
+- Moved the auth gate to buy/unlock actions on the report page instead of blocking immediately after submit.
+- Added backend pytest to the Python dependency set and confirmed function-style backend tests execute through pytest rather than manage.py test.
+- Added frontend Vitest plus React Testing Library setup.
+- Added initial and expanded frontend regression coverage for:
+   - landing rendering
+   - auth guards
+   - login redirect preservation
+   - teaser report gating and unlock redirects
+   - interview preview submission state
+- Added qa.ps1 as a one-command QA runner and added matching VS Code tasks for full QA, backend tests, and frontend tests.
+- Hardened frontend route protection:
+   - /dashboard now requires auth
+   - /billing now requires auth
+   - /account now requires auth
+- Added GuestRoute handling so authenticated users are redirected away from /login.
+- Preserved return-path redirects when login is triggered from protected pages or report unlock actions.
+- Normalized frontend network errors so backend-unreachable conditions return a user-readable message instead of a raw fetch failure.
+
+Checkpoint Commits
+- 0720304 Upgrade landing and interview UX from March 20 guides
+- 5d1da48 Fix landing link color conflict with Tailwind utilities
+- 34de3d0 Show anonymous teaser before auth and move gate to purchase actions
+- 0aab60e Refine landing page copy and conversion-focused UI polish
+- 1b8dd6f Add test infrastructure and one-command QA runner
+- bfac529 Harden frontend auth and teaser report flows
+
+Validation Completed
+- Django system check: PASS.
+- Backend pytest: PASS (14 passed).
+- Frontend Vitest: PASS (8 passed).
+- Frontend lint: PASS.
+- Frontend build: PASS.
+- qa.ps1 full QA battery: PASS.
+
+Operational Notes
+- Django's default unittest runner still reports 0 tests because active backend coverage currently lives in pytest-style function tests.
+- The teaser report path now remains accessible anonymously, but purchase and unlock actions consistently redirect through login with the original report path preserved.
+- Existing untracked docs and reference assets were intentionally left outside the code commits.
+
+Next Step
+- Start Phase 10B session-expiry recovery and staging smoke validation, then proceed to deployment wiring once the guarded purchase/unlock path is stable under expired-session conditions.
+
