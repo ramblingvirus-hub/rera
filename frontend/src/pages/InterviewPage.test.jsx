@@ -101,4 +101,31 @@ describe("InterviewPage preview submission", () => {
       expect(localStorage.getItem("rera_interview_id")).toBe("iv-1");
     });
   });
+
+  it("does not auto-load a stale interview ID when opening a new evaluation", async () => {
+    localStorage.setItem("rera_interview_id", "old-draft-id");
+    startInterview.mockResolvedValue({ id: "iv-fresh" });
+    getInterview.mockResolvedValue({
+      id: "iv-fresh",
+      responses: {},
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/new"]}>
+        <Routes>
+          <Route path="/new" element={<InterviewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(getInterview).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /start evaluation/i }));
+
+    await waitFor(() => {
+      expect(startInterview).toHaveBeenCalled();
+      expect(getInterview).toHaveBeenCalledWith("iv-fresh");
+      expect(localStorage.getItem("rera_interview_id")).toBe("iv-fresh");
+    });
+  });
 })

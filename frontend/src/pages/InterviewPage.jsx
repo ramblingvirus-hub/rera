@@ -57,13 +57,6 @@ export default function InterviewPage() {
     };
   }, []);
 
-  useEffect(() => {
-    const savedId = localStorage.getItem("rera_interview_id");
-    if (savedId) {
-      loadInterview(savedId);
-    }
-  }, []);
-
   async function handleStartNew() {
     // Clear any saved interview and start fresh
     localStorage.removeItem("rera_interview_id");

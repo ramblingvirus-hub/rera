@@ -245,8 +245,8 @@ export default function ReportView() {
       ? access.locked_sections
       : ["category_breakdown", "signals", "information_gaps", "suggestions"];
 
-  const loadReport = useCallback(async () => {
-    if (anonymousPreview) {
+  const loadReport = useCallback(async (force = false) => {
+    if (anonymousPreview && !isLoggedIn && !force) {
       return;
     }
 
@@ -296,7 +296,7 @@ export default function ReportView() {
     } finally {
       setLoading(false);
     }
-  }, [anonymousPreview, request_id, submittedReport]);
+  }, [anonymousPreview, isLoggedIn, request_id, submittedReport]);
 
   const refreshBalance = useCallback(async () => {
     try {
@@ -319,7 +319,7 @@ export default function ReportView() {
       setIsLoggedIn(true);
       setUsername("");
       setPassword("");
-      await loadReport();
+      await loadReport(true);
     } catch (error) {
       setAuthError(error.message || "Login failed");
     }

@@ -239,13 +239,13 @@ export async function refreshSession() {
 export async function startInterview() {
   return apiRequest("/interview/start/", {
     method: "POST",
-    auth: false,
+    auth: true,
   });
 }
 
 export async function getInterview(interviewId) {
   return apiRequest(`/interview/${interviewId}/`, {
-    auth: false,
+    auth: true,
   });
 }
 
@@ -253,14 +253,14 @@ export async function saveInterview(interviewId, responses) {
   return apiRequest(`/interview/${interviewId}/save/`, {
     method: "PATCH",
     body: { responses },
-    auth: false,
+    auth: true,
   });
 }
 
 export async function submitInterview(interviewId) {
   return apiRequest(`/interview/${interviewId}/submit/`, {
     method: "POST",
-    auth: false,
+    auth: true,
   });
 }
 

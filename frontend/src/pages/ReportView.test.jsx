@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -116,5 +116,49 @@ describe("ReportView teaser hardening", () => {
     expect(getCreditBalance).not.toHaveBeenCalled();
     expect(listReports).not.toHaveBeenCalled();
     expect(login).not.toHaveBeenCalled();
+  });
+
+  it("fetches the full report for an authenticated user on teaser route", async () => {
+    isAuthenticated.mockReturnValue(true);
+    getReport.mockResolvedValue({
+      report: {
+        ...teaserReport,
+        signals: ["Signal A"],
+        information_gaps: ["Gap A"],
+        suggestions: ["Suggestion A"],
+      },
+      access: {
+        can_view_full_report: true,
+        credit_balance: 0,
+        subscription_active: false,
+        subscription_days_remaining: 0,
+        locked_sections: [],
+      },
+      context: teaserContext,
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/report/req-123",
+            state: {
+              anonymousPreview: true,
+              submittedReport: teaserReport,
+              submittedContext: teaserContext,
+            },
+          },
+        ]}
+      >
+        <Routes>
+          <Route path="/report/:request_id" element={<ReportView />} />
+          <Route path="/login" element={<LoginProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(getReport).toHaveBeenCalledWith("req-123");
+    });
   });
 })
