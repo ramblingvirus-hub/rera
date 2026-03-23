@@ -299,6 +299,27 @@ export default function InterviewPage() {
     );
   }
 
+  // ── Next handler (shared by button + Enter key) ──
+  function handleNext() {
+    if (currentIndex === interviewQuestions.length - 1) {
+      setReviewMode(true);
+    } else {
+      setCurrentIndex(currentIndex + 1);
+    }
+  }
+
+  // ── Enter key advances to next question ──
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (e.key !== "Enter") return;
+      // Don't hijack Enter inside a <select> (opens/closes native dropdown)
+      if (document.activeElement?.tagName === "SELECT") return;
+      handleNext();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [currentIndex, interviewQuestions.length]);
+
   // ── Question mode ──
   return (
     <div style={{ maxWidth: "680px" }}>
@@ -404,13 +425,7 @@ export default function InterviewPage() {
 
         <button
           style={BTN_PRIMARY}
-          onClick={() => {
-            if (currentIndex === interviewQuestions.length - 1) {
-              setReviewMode(true);
-            } else {
-              setCurrentIndex(currentIndex + 1);
-            }
-          }}
+          onClick={handleNext}
         >
           {currentIndex === interviewQuestions.length - 1 ? "Review Answers →" : "Next →"}
         </button>
