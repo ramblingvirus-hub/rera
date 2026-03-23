@@ -1,0 +1,286 @@
+RERA � System Status Snapshot
+Last Updated: March 23, 2026 (Manila Time)
+System Classification:
+Integrity-Hardened, Versioned, Retry-Protected, PostgreSQL-Backed Evaluation Platform
+Staging-Ready, Deployment-Hardened
+
+Current System Capability
+RERA is a deterministic real-estate risk evaluation platform that processes structured buyer interview data and generates standardized risk reports while enforcing strict billing and audit integrity.
+The backend system is now capable of executing the full evaluation lifecycle from interview submission through report retrieval.
+
+Core Workflow (Operational)
+User Authentication
+      ?
+Interview Creation
+      ?
+Interview Save / Resume
+      ?
+Interview Submission
+      ?
+Evaluation Engine Execution
+      ?
+Credit Deduction (Atomic)
+      ?
+Audit Event Logging
+      ?
+Evaluation Report Generation
+      ?
+Report Retrieval
+      ?
+Evaluation History Access
+This workflow is now fully operational and verified.
+
+Backend Architecture (Operational)
+Evaluation System
+� Deterministic evaluation engine
+� Structured scoring model
+� Risk band classification
+� Category breakdown reporting
+Interview System
+� InterviewSession persistence
+� Progressive save capability
+� Interview submission workflow
+� Post-submission immutability enforcement
+Billing & Revenue Integrity
+� Immutable credit ledger
+� Atomic credit deduction
+� Idempotency-protected evaluation endpoint
+� Credit balance enforcement
+Security & Access Control
+� JWT authentication
+� Ownership enforcement for report retrieval
+� API throttling protection
+Audit & Monitoring
+� Immutable audit event logging
+� Request lifecycle correlation
+� Operational anomaly detection
+Infrastructure
+� PostgreSQL production database
+� Structured logging system
+� Disaster recovery snapshot capability
+
+API Surface (Operational)
+Authentication
+POST /api/token/
+POST /api/token/refresh/
+Interview Workflow
+POST   /api/v1/interview/start/
+PATCH  /api/v1/interview/<uuid>/save/
+GET    /api/v1/interview/<uuid>/
+POST   /api/v1/interview/<uuid>/submit/
+Evaluation Execution
+POST /api/v1/evaluate/
+Report Access
+GET /api/v1/reports/<request_id>/
+GET /api/v1/reports/
+
+Integrity Guarantees
+The system guarantees:
+� No duplicate evaluation execution under retry conditions
+� No duplicate billing under request replay
+� Immutable financial ledger entries
+� Immutable audit trail
+� Correlated request lifecycle tracking
+� Safe concurrent credit deduction using row-level locking
+
+Backend Development Status
+Completed phases:
+Phase 1  � Core Evaluation Engine
+Phase 2  � Billing & Ledger Integrity
+Phase 3  � Security, Idempotency & Infrastructure Hardening
+Phase 4A � Interview Scoring Engine
+Phase 4B � Interview Persistence Layer
+Phase 4C � Interview Workflow API
+Phase 4D � Interview ? Evaluation Integration
+Phase 4E � Interview Workflow Hardening
+Phase 4F � Report Retrieval & Evaluation History API
+Backend MVP architecture is complete.
+
+Remaining Work Before MVP Launch
+Only frontend completion remains:
+Frontend interview workflow UI
+Frontend report display
+Frontend evaluation history UI
+No additional backend functionality is required for launch.
+
+Deferred Features (Post-MVP Roadmap)
+The following improvements were intentionally excluded from MVP scope.
+Reporting Enhancements
+� Pagination for report history
+� Extended explanation signals in report retrieval
+� Exportable reports (PDF / download)
+User Dashboard
+� Aggregated evaluation statistics
+� Risk distribution analytics
+� Report filtering and search
+Analytical Features
+� Developer risk comparison
+� Evaluation trend tracking
+System Enhancements
+� Report caching layer
+� Asynchronous explanation generation
+� Advanced reporting endpoints
+These items will be evaluated after MVP launch and real user feedback.
+
+Current Project State
+The RERA backend is now a stable, integrity-hardened evaluation system ready to support the frontend user experience and MVP testing.
+No additional backend expansion is required prior to launch.
+
+Staging Deployment Infrastructure (Completed March 15-21, 2026)
+
+Deployment Model Finalized
+RERA now supports split-host deployment architecture:
+
+1. Frontend Service
+   - React/Vite static site
+   - Deployable to any static hosting or CDN
+   - Environment: VITE_BACKEND_ORIGIN points to backend API domain
+   - Build artifact: frontend/dist/
+
+2. Backend Service
+   - Django + Gunicorn WSGI application
+   - Deployable to Python-capable hosts (VPS, Render, Fly.io, Railway)
+   - Runtime: Linux systemd service
+   - Configuration: Environment variables with Railway DATABASE_URL support
+
+3. Database Service
+   - PostgreSQL hosted on Railway or managed provider
+   - Connection via DATABASE_URL or traditional DB_* variables
+   - Connection pooling and SSL support
+
+4. Reverse Proxy
+   - Nginx serves frontend and proxies backend
+   - Option: Single host (nginx + backend) or multi-host (frontend CDN + separate backend)
+
+Database Configuration Enhancement
+- Added direct DATABASE_URL parsing (railway://, postgresql:// schemes)
+- Maintained backward compatibility with DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
+- SSL mode: Configurable via DB_SSLMODE (preferred: "require" for Railway)
+
+Environment-Driven Settings
+- RERA_ENV controls which settings module loads (dev, staging, prod)
+- New staging module: config.settings.settings_stage
+- Security settings (SSL redirect, HSTS, cookie security) environment-controlled
+- CORS and CSRF origins specified via environment variables
+
+Deployment Assets
+✓ Gunicorn configuration (3 workers, 2 threads, 60s timeout)
+✓ Systemd service unit for staging backend
+✓ Nginx site configuration for reverse proxy
+✓ Automated release script (migrations, builds, collectstatic, checks)
+✓ Environment templates for backend and frontend
+✓ Comprehensive deployment guide (docs/STAGING_DEPLOYMENT.md)
+
+Staging Deployment Validation
+✓ Django system check: PASS
+✓ Backend pytest (14 tests): PASS
+✓ Frontend Vitest (8 tests): PASS
+✓ Frontend ESLint: PASS
+✓ Frontend production build: PASS
+
+Recommended Hosting Combination
+- Frontend: Netlify, Vercel, GitHub Pages, or shared hosting
+- Backend: Render, Fly.io, Railway, or Ubuntu VPS
+- Database: Railway PostgreSQL
+- Total deployment time: ~30 minutes post-environment-setup
+
+Frontend Development Status (Updated)
+Phase 7 � Report Display UI (Initial Integration)
+Status: In Progress
+Date: March 13, 2026
+Frontend report retrieval has been successfully connected to the backend report API.
+A React report viewer component (ReportView.jsx) has been implemented and verified to:
+� authenticate requests using JWT access token
+� retrieve evaluation report from /api/v1/reports/<request_id>/
+� parse backend response structure
+� display total_score and risk_band
+Backend response format verified:
+{
+  request_id,
+  timestamp_utc,
+  report: {
+    structure_version,
+    total_score,
+    risk_band,
+    category_breakdown,
+    license_to_sell_present,
+    signals,
+    information_gaps,
+    suggestions
+  }
+}
+Frontend now correctly extracts the report object using:
+setReport(data.report)
+This resolves the data binding mismatch between the API wrapper object and the actual report payload.
+Current Report UI Capabilities
+� manual report retrieval via test button
+� successful JWT-authenticated API request
+� rendering of total score and risk band
+Remaining Phase 7 tasks:
+� render category breakdown
+� render risk signals
+� render information gaps
+� render due diligence suggestions
+� implement automatic report loading via request_id route parameter
+� remove temporary test button
+File: RERA System Snapshot March 13, 2026
+Add this section near the end.
+Frontend Status (Updated)
+Phase 7 � Report Display UI and Routing
+Completed:
+* React report viewer implemented (ReportView.jsx)
+* JWT authenticated API request confirmed
+* Report retrieval endpoint integrated (/api/v1/reports/<request_id>/)
+* Dynamic routing implemented using React Router
+* URL-based report access enabled:
+/report/<request_id>
+Example:
+http://localhost:5173/report/<request_id>
+* Report now loads automatically using useParams() and useEffect
+* Development test buttons removed
+Current Report Rendering:
+Total Score
+Risk Band
+Category Breakdown
+Key Risk Signals
+Information Gaps
+Due Diligence Suggestions
+Planned access model:
+Free teaser
+    � Total Score
+    � Risk Band
+
+Paid report
+    � Category Breakdown
+    � Risk Signals
+    � Information Gaps
+    � Due Diligence Suggestions
+Payment integration will gate full report access.
+Frontend & Backend Split-Host Readiness (March 23, 2026)
+
+Frontend Deployment
+✓ Vite production build generates static site (frontend/dist/)
+✓ VITE_BACKEND_ORIGIN environment variable configures API host
+✓ No long-running server process required
+✓ Works with any static hosting (Netlify, Vercel, etc.)
+✓ Example: https://rera.example.com (frontend)
+
+Backend Deployment
+✓ Django app runnable with gunicorn
+✓ Systemd service unit provided for process management
+✓ Nginx reverse proxy configuration provided
+✓ DATABASE_URL support for Railway PostgreSQL
+✓ Example: https://api.rera.example.com (backend)
+
+Cross-Domain Configuration
+✓ CORS_ALLOWED_ORIGINS = frontend domain
+✓ CSRF_TRUSTED_ORIGINS = frontend domain
+✓ ALLOWED_HOSTS = backend domain
+✓ All settings environment-driven, no code changes for different hosts
+
+MVP Launch Readiness
+Backend: READY for staging/production
+Frontend: READY for staging/production
+Deployment: FULLY DOCUMENTED
+Database: READY with Railway integration
+

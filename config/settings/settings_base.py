@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import urlparse, unquote
 from dotenv import load_dotenv
 
 
@@ -19,6 +20,63 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 load_dotenv(BASE_DIR / ".env")
+
+
+def env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_list(name, default=None):
+    value = os.environ.get(name)
+    if value is None:
+        return list(default or [])
+
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def build_database_config():
+    database_url = os.environ.get("DATABASE_URL")
+
+    if database_url:
+        parsed = urlparse(database_url)
+        engine_map = {
+            "postgres": "django.db.backends.postgresql",
+            "postgresql": "django.db.backends.postgresql",
+        }
+
+        config = {
+            "ENGINE": engine_map.get(parsed.scheme, "django.db.backends.postgresql"),
+            "NAME": unquote(parsed.path.lstrip("/")),
+            "USER": unquote(parsed.username or ""),
+            "PASSWORD": unquote(parsed.password or ""),
+            "HOST": parsed.hostname or "",
+            "PORT": str(parsed.port or ""),
+        }
+
+        sslmode = os.environ.get("DB_SSLMODE")
+        if sslmode:
+            config["OPTIONS"] = {"sslmode": sslmode}
+
+        return config
+
+    config = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': os.environ.get('DB_PORT'),
+    }
+
+    sslmode = os.environ.get("DB_SSLMODE")
+    if sslmode:
+        config["OPTIONS"] = {"sslmode": sslmode}
+
+    return config
 
 
 
@@ -98,17 +156,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #    }
 #}
 
-import os
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
-    }
+    'default': build_database_config()
 }
 
 
@@ -147,6 +196,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 
@@ -251,7 +301,18 @@ LOGGING = {
     },
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", False)
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = env_bool("USE_X_FORWARDED_HOST", True)
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", False)
+SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", False)
+CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", False)
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
+SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", False)
 
 # ===== PayMongo Configuration =====
 

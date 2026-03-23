@@ -1,0 +1,160 @@
+RERA Production Freeze Checklist (Consolidated)
+Last Updated: 2026-03-05
+
+Core System Integrity
+? Immutable credit ledger implemented
+? Purchase transactions created via service layer only
+? Ledger rows append?only (no mutation or deletion)
+? Reference ID generated and inherited by usage rows
+? Audit trail implemented for all billing lifecycle events
+Authentication & Security
+? JWT authentication implemented
+? Access token expiry enforced (~15 minutes)
+? Refresh token flow operational
+? Authorization required for evaluation endpoint
+Billing & Revenue Controls
+? Credit purchase service operational
+? Credit deduction per evaluation enforced
+? Balance enforcement gate implemented
+? HTTP 402 returned when credits exhausted
+? No ledger mutation when billing fails
+Idempotency Protection
+? Idempotency-Key header supported
+? Replay with identical payload returns stored response
+? Replay with different payload returns HTTP 409
+? Idempotent responses prevent duplicate charges
+Audit Logging
+? EVALUATION_ATTEMPT logged
+? BILLING_CREDIT_DEDUCTED logged
+? EVALUATION_SUCCESS logged
+? BILLING_INSUFFICIENT_CREDIT logged
+Operational Visibility
+? Request IDs generated for each evaluation
+? Billing and evaluation events correlated by request_id
+? Structured audit events stored
+Revenue Flow Simulation (Phase 3G)
+? Credit purchase created (+5 credits)
+? Multiple evaluations consumed credits correctly
+? Idempotency replay tested (no duplicate billing)
+? Idempotency conflict tested (HTTP 409)
+? Credits drained to zero
+? Insufficient credit test produced HTTP 402
+? Audit events recorded for failed billing attempts
+System State at Completion
+Ledger verified append?only
+Billing integrity validated
+Audit traceability confirmed
+Revenue protection mechanisms operational
+? Credit deduction protected by row-level database locking
+? No negative balance possible under concurrent requests
+? Idempotency cleanup command available for operational maintenance
+
+Monitoring and Operational Readiness
+? Operational anomaly monitoring command implemented
+? Credit usage velocity monitoring active
+? Validation failure monitoring active
+? Evaluation request velocity monitoring active
+? Monitoring command logging integrated (Phase 3J)
+? Anomaly detection results persistently recorded in logs/errors.log
+? Monitoring system automation-ready for scheduled execution
+
+Phase 6 - Staging Deployment Infrastructure
+Status: COMPLETE
+Date: March 23, 2026
+
+Deployment Readiness
+? Django settings hardened for environment-driven configuration
+? DATABASE_URL support added for Railway PostgreSQL integration
+? Staging settings module created (config.settings.settings_stage)
+? Split hosting architecture supported (frontend + backend on separate hosts)
+? CORS and CSRF configuration environment-driven
+? SSL/TLS header handling for reverse proxies configured
+
+Deployment Assets Created
+? Gunicorn WSGI server configuration (deploy/staging/gunicorn.conf.py)
+? Systemd service unit (deploy/staging/rera-staging.service)
+? Nginx reverse proxy configuration (deploy/staging/nginx-rera-staging.conf)
+? Release automation script (deploy/staging/release.sh)
+? Environment templates (.env.staging.example, frontend/.env.staging.example)
+? Comprehensive staging deployment guide (docs/STAGING_DEPLOYMENT.md)
+
+Staging Deployment Model
+? Frontend: Static Vite build deployable to any static hosting
+? Backend: Django + Gunicorn runnable on VPS, Render, Fly.io, Railway
+? Database: PostgreSQL hosted on Railway with DATABASE_URL support
+? Reverse Proxy: Nginx serving frontend and proxying /api/ to backend
+
+Validation
+? Full QA battery passed post-staging changes
+? Django system check: PASS
+? Backend pytest: 14 tests PASS
+? Frontend Vitest: 8 tests PASS
+? Frontend ESLint: PASS
+? Frontend production build: PASS
+
+RERA_Production_Freeze_Checklist
+Environment Update
+Development environment standardized to:
+Python 3.11
+Django 5.2.x
+React + Vite frontend
+PostgreSQL database
+Reason:
+Python 3.14 introduced compatibility issues with Django ecosystem dependencies.
+Python 3.11 provides stable compatibility across Django, DRF, and supporting libraries.
+
+Thread Status
+Frontend environment initialized
+Backend restored
+Anonymous evaluation flow enabled
+
+Update � Production Freeze Checklist
+March 11, 2026
+Phase 5 Components (Not Yet Frozen)
+The following components were implemented but remain unfrozen pending UI completion:
+Frontend:
+frontend/src/App.jsx
+Backend:
+reports/views.py
+Endpoints used by React:
+POST  /api/v1/interview/start/
+GET   /api/v1/interview/<uuid>/
+PATCH /api/v1/interview/<uuid>/save/
+Current limitations:
+� Resume interview UI not yet implemented
+� Interview questions still hardcoded in React
+� Dynamic questionnaire rendering pending
+Phase 5 will be frozen after completion of the full React interview rendering engine.
+3?? Production Freeze Checklist Update
+Update the Phase 5 section inside:
+26-0311 F RERA_Production_Freeze_Checklist_Consolidated.docx
+Change:
+Phase 5 Components (Not Yet Frozen)
+to:
+Phase 5 Components (Frozen)
+Update notes:
+Frontend
+frontend/src/App.jsx
+frontend/src/interview/questions.js
+frontend/src/interview/QuestionRenderer.jsx
+Dynamic interview renderer implemented.
+Autosave integration verified.
+Session restore verified.
+Interview UI fully functional.
+3?? Production Freeze Checklist
+Update this file:
+26-0311 F RERA_Production_Freeze_Checklist_Consolidated.docx
+Under Phase 5, change status to:
+Phase 5 � React Interview Engine  ? FROZEN
+Notes:
+Dynamic question renderer implemented.
+Autosave with debounce implemented.
+Session restore verified.
+Response hydration verified.
+Frontend interview engine stable.
+Frontend Readiness
+
+? Guided interview navigation implemented
+? Interview progress indicator implemented
+? Review screen before evaluation submission implemented
+? Autosave confirmed functional during navigation

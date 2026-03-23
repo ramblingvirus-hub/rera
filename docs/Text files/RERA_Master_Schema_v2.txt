@@ -1,0 +1,76 @@
+RERA Master Schema v2
+Updated: 2026-03-05
+
+Core Tables
+CreditTransaction
+id (PK) � unique transaction identifier
+user_id � reference to user
+type � purchase or usage
+amount � positive for purchase, negative for usage
+reference_id � purchase UUID inherited by usage rows
+expiry_date � expiration timestamp for purchased credits
+created_at � ledger entry timestamp
+EvaluationRequest
+request_id (UUID PK) � unique evaluation request
+user_id � request owner
+payload_hash � hash of request body for idempotency checks
+billing_type � credit or subscription
+created_at � request timestamp
+EvaluationReport
+id � report identifier
+request_id � link to evaluation request
+structure_version � report schema version
+total_score � computed risk score
+risk_band � risk classification
+category_breakdown � JSON category scores
+AuditEvent
+id � audit event id
+request_id � linked request
+event_type � lifecycle event
+severity � INFO / WARNING / ERROR
+created_at � event timestamp
+IdempotencyKey
+key � idempotency key value
+payload_hash � hash of request body
+response_snapshot � stored response
+created_at � timestamp
+Schema Guarantees
+� Ledger append?only integrity
+� Request id correlation across tables
+� Idempotent request enforcement
+� Full audit traceability
+
+Additional Runtime Guarantees (Phase 3H)
+
+� Credit deduction protected via row-level locking
+using PostgreSQL SELECT FOR UPDATE
+
+� No negative balance possible even under
+concurrent evaluation requests
+
+� IdempotencyKey table subject to operational cleanup
+via management command to prevent long-term growth
+Database Configuration (Phase 6 - Staging Infrastructure)
+
+The application now supports both traditional DB_* environment variables and modern DATABASE_URL format:
+
+TRADITIONAL (separate variables):
+DB_NAME=rera_staging
+DB_USER=rera_staging
+DB_PASSWORD=<password>
+DB_HOST=localhost
+DB_PORT=5432
+DB_SSLMODE=require
+
+RAILWAY DATABASE_URL (preferred for hosted PostgreSQL):
+DATABASE_URL=postgresql://user:password@host:port/dbname
+DB_SSLMODE=require
+
+Parsing Logic:
+? If DATABASE_URL is set, it takes precedence
+? PostgreSQL connection strings automatically parsed
+? SSL mode configurable via DB_SSLMODE environment variable
+? Backward compatible with existing DB_* configuration
+
+This enables seamless integration with hosting services like Railway,
+Render, and other managed PostgreSQL providers that supply DATABASE_URL.

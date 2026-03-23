@@ -1,0 +1,16 @@
+[Unit]
+Description=RERA staging Django application
+After=network.target
+
+[Service]
+Type=simple
+User=rera
+Group=www-data
+WorkingDirectory=/srv/rera/current
+EnvironmentFile=/srv/rera/shared/.env
+ExecStart=/srv/rera/current/venv/bin/gunicorn -c /srv/rera/current/deploy/staging/gunicorn.conf.py config.wsgi:application
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
