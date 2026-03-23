@@ -6,6 +6,11 @@ from django.db import transaction
 from audit.constants import BILLING_CREDIT_DEDUCTED
 import uuid
 
+
+def user_has_admin_bypass(user):
+    """Superusers are exempt from report credit and subscription checks."""
+    return bool(user and getattr(user, "is_superuser", False))
+
 def calculate_user_balance(user):
     """
     Returns the current usable credit balance for a user.
@@ -24,7 +29,7 @@ def calculate_user_balance(user):
 
     return result['total'] or 0
 
-def deduct_credit(user):
+def deduct_credit(user, reference_id=None):
     """
     Deducts 1 credit from user if balance is sufficient.
     Returns True if deduction successful.
@@ -54,7 +59,7 @@ def deduct_credit(user):
         if not active_purchase:
             raise ValueError("No active credit purchase found.")
 
-        purchase_reference_id = active_purchase.reference_id
+        purchase_reference_id = reference_id or active_purchase.reference_id
 
         balance = calculate_user_balance(user)
 
@@ -86,6 +91,11 @@ def has_active_subscription(user):
     ).exists()
 
 
+def has_unlimited_report_access(user):
+    """Users with a valid subscription or superuser bypass can evaluate without credits."""
+    return user_has_admin_bypass(user) or has_active_subscription(user)
+
+
 def enforce_report_access(user, reference_id=None):
     """
     Enforces billing rules for report generation.
@@ -98,6 +108,9 @@ def enforce_report_access(user, reference_id=None):
         ValueError if insufficient credits
     """
 
+    if user_has_admin_bypass(user):
+        return "admin"
+
     if has_active_subscription(user):
         return "subscription"
 
@@ -108,7 +121,7 @@ def has_sufficient_credit(user):
     """
     Returns True if user has at least 1 usable credit.
     """
-    return calculate_user_balance(user) >= 1
+    return user_has_admin_bypass(user) or calculate_user_balance(user) >= 1
 
 def create_credit_purchase(user, credit_amount, expiry_date, reference_id=None, source="manual"):
     """

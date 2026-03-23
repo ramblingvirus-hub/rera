@@ -1,6 +1,5 @@
 import json
 import uuid
-from datetime import datetime
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -13,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from rera_core.engine_v1 import evaluate_project_v1
 from .models import Report
 from django.db import transaction
-from billing.services import has_active_subscription, has_sufficient_credit, deduct_credit
+from billing.services import has_active_subscription, has_sufficient_credit, deduct_credit, user_has_admin_bypass, has_unlimited_report_access
 from billing.services import calculate_user_balance
 from audit.services import log_audit_event
 from audit.constants import EVALUATION_ATTEMPT
@@ -28,6 +27,7 @@ from .explanation_engine import generate_explanations
 from .models import InterviewSession, InterviewStatus
 from .serializers import InterviewSessionSerializer
 from rest_framework.permissions import AllowAny
+from django.utils import timezone
 
 from billing.report_access import ReportAccessControl
 
@@ -79,9 +79,11 @@ class EvaluateProjectView(APIView):
         )
             # === SUBSCRIPTION CHECK ===
             subscription_active = has_active_subscription(request.user)
+            admin_bypass = user_has_admin_bypass(request.user)
+            unlimited_access = has_unlimited_report_access(request.user)
 
             # === CREDIT CHECK (NO DEDUCTION YET) ===
-            if not subscription_active:
+            if not unlimited_access:
                 if not has_sufficient_credit(request.user):
 
                     log_audit_event(
@@ -128,7 +130,7 @@ class EvaluateProjectView(APIView):
             # === SAVE + DEDUCT (ATOMIC) ===
             with transaction.atomic():
 
-                timestamp = datetime.utcnow()
+                timestamp = timezone.now()
 
                 Report.objects.create(
                     request_id=request_id,
@@ -149,7 +151,11 @@ class EvaluateProjectView(APIView):
 
                 billing_type = "subscription"
 
-                if subscription_active:
+                if admin_bypass:
+
+                    billing_type = "admin"
+
+                elif subscription_active:
 
                     log_audit_event(
                         user=request.user,

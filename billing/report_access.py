@@ -1,6 +1,7 @@
-from django.db.models import Sum
-from billing.models import CreditTransaction, Subscription
+from billing.models import Subscription
 from django.utils import timezone
+
+from billing.services import calculate_user_balance, user_has_admin_bypass
 
 
 class ReportAccessControl:
@@ -34,19 +35,21 @@ class ReportAccessControl:
     @staticmethod
     def user_has_sufficient_credits(user):
         """Check if user has at least 1 credit available"""
-        balance = CreditTransaction.objects.filter(user=user).aggregate(
-            total=Sum('amount')
-        )['total'] or 0
-        return balance >= ReportAccessControl.REPORT_CREDIT_COST
+        if user_has_admin_bypass(user):
+            return True
+
+        return calculate_user_balance(user) >= ReportAccessControl.REPORT_CREDIT_COST
     
     @staticmethod
     def can_access_full_report(user):
         """
         User can access full report if:
+        1. Is a superuser, OR
         1. Has active subscription, OR
         2. Has sufficient credits
         """
         return (
+            user_has_admin_bypass(user) or
             ReportAccessControl.user_has_active_subscription(user) or
             ReportAccessControl.user_has_sufficient_credits(user)
         )
@@ -54,11 +57,7 @@ class ReportAccessControl:
     @staticmethod
     def get_user_credit_balance(user):
         """Get current credit balance"""
-        balance = CreditTransaction.objects.filter(user=user).aggregate(
-            total=Sum('amount')
-        )['total'] or 0
-
-        return balance
+        return calculate_user_balance(user)
 
     @staticmethod
     def get_active_subscription(user):
