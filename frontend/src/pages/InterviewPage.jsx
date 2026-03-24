@@ -156,6 +156,32 @@ export default function InterviewPage() {
     ? ((currentIndex + 1) / interviewQuestions.length) * 100
     : 0;
 
+  // ── Next handler (shared by button + Enter key) ──
+  function handleNext() {
+    if (currentIndex === interviewQuestions.length - 1) {
+      setReviewMode(true);
+    } else {
+      setCurrentIndex(currentIndex + 1);
+    }
+  }
+
+  // Keep hook order stable across all render paths.
+  useEffect(() => {
+    if (!interview || reviewMode) {
+      return undefined;
+    }
+
+    function onKeyDown(e) {
+      if (e.key !== "Enter") return;
+      // Don't hijack Enter inside a <select> (opens/closes native dropdown)
+      if (document.activeElement?.tagName === "SELECT") return;
+      handleNext();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [interview, reviewMode, currentIndex, interviewQuestions.length]);
+
   // ── Not started ──
   if (!interview) {
     return (
@@ -298,27 +324,6 @@ export default function InterviewPage() {
       </div>
     );
   }
-
-  // ── Next handler (shared by button + Enter key) ──
-  function handleNext() {
-    if (currentIndex === interviewQuestions.length - 1) {
-      setReviewMode(true);
-    } else {
-      setCurrentIndex(currentIndex + 1);
-    }
-  }
-
-  // ── Enter key advances to next question ──
-  useEffect(() => {
-    function onKeyDown(e) {
-      if (e.key !== "Enter") return;
-      // Don't hijack Enter inside a <select> (opens/closes native dropdown)
-      if (document.activeElement?.tagName === "SELECT") return;
-      handleNext();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [currentIndex, interviewQuestions.length]);
 
   // ── Question mode ──
   return (
