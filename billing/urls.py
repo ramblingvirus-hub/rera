@@ -4,6 +4,7 @@ from billing.views import (
     ConfirmCreditPurchaseView,
     CreditBalanceView,
     ActivateSubscriptionView,
+    PayMongoWebhookView,
 )
 
 urlpatterns = [
@@ -11,4 +12,5 @@ urlpatterns = [
     path("credits/purchase/confirm/", ConfirmCreditPurchaseView.as_view(), name="credits_purchase_confirm"),
     path("credits/balance/", CreditBalanceView.as_view(), name="credits_balance"),
     path("subscription/activate/", ActivateSubscriptionView.as_view(), name="subscription_activate"),
+    path("webhooks/paymongo/", PayMongoWebhookView.as_view(), name="paymongo_webhook"),
 ]

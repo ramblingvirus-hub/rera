@@ -2,14 +2,23 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from billing.models import CreditTransaction, CreditPurchase
 from billing.paymongo_service import PayMongoService, PayMongoException
 from billing.services import calculate_user_balance
 from django.utils import timezone
 from django.db import transaction
+from django.conf import settings
 from datetime import timedelta
 import uuid
 from billing.models import CreditPurchase, CreditTransaction, Subscription
+import hashlib
+import hmac
+import json
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 # Credit bundle pricing in Philippine Pesos (centavos for PayMongo)
@@ -274,5 +283,150 @@ class ActivateSubscriptionView(APIView):
             },
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
+
+
+class PayMongoWebhookView(APIView):
+    """
+    Receives PayMongo webhook events and finalizes pending purchases.
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    SUCCESS_EVENT_TYPES = {"payment_intent.succeeded", "payment.paid"}
+    FAILED_EVENT_TYPES = {"payment_intent.payment_failed", "payment.failed"}
+
+    def post(self, request):
+        webhook_secret = getattr(settings, "PAYMONGO_WEBHOOK_SECRET", None)
+        if not webhook_secret:
+            return Response(
+                {"error": "Webhook secret is not configured."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        payload_bytes = request.body or b""
+        signature = request.headers.get("x-paymongo-signature")
+
+        if not self._is_valid_signature(payload_bytes, signature, webhook_secret):
+            return Response(
+                {"error": "Invalid webhook signature."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        try:
+            event = json.loads(payload_bytes.decode("utf-8"))
+        except Exception:
+            return Response(
+                {"error": "Invalid JSON payload."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        event_type = self._event_type(event)
+        payment_intent_id = self._payment_intent_id(event)
+
+        if not event_type or not payment_intent_id:
+            return Response({"status": "ignored"}, status=status.HTTP_200_OK)
+
+        if event_type in self.SUCCESS_EVENT_TYPES:
+            processed = self._process_success(payment_intent_id)
+            return Response(
+                {
+                    "status": "processed" if processed else "already_processed",
+                    "payment_intent_id": payment_intent_id,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        if event_type in self.FAILED_EVENT_TYPES:
+            self._process_failure(payment_intent_id)
+            return Response(
+                {"status": "failed_marked", "payment_intent_id": payment_intent_id},
+                status=status.HTTP_200_OK,
+            )
+
+        return Response({"status": "ignored"}, status=status.HTTP_200_OK)
+
+    def _is_valid_signature(self, payload_bytes, signature_header, webhook_secret):
+        if not signature_header:
+            return False
+
+        # Expected header shape: "t=<unix>,v1=<hex>"
+        parts = {}
+        for chunk in signature_header.split(","):
+            if "=" in chunk:
+                k, v = chunk.split("=", 1)
+                parts[k.strip()] = v.strip()
+
+        timestamp = parts.get("t")
+        provided_v1 = parts.get("v1")
+
+        if not timestamp or not provided_v1:
+            return False
+
+        signed_payload = f"{timestamp}.".encode("utf-8") + payload_bytes
+        expected_v1 = hmac.new(
+            webhook_secret.encode("utf-8"),
+            signed_payload,
+            hashlib.sha256,
+        ).hexdigest()
+
+        return hmac.compare_digest(expected_v1, provided_v1)
+
+    def _event_type(self, event):
+        return (
+            event.get("data", {})
+            .get("attributes", {})
+            .get("type")
+        )
+
+    def _payment_intent_id(self, event):
+        data = event.get("data", {}).get("attributes", {}).get("data", {})
+
+        # payment_intent.* events usually place intent id at data.id
+        if data.get("id", "").startswith("pi_"):
+            return data.get("id")
+
+        # payment.* events usually contain payment_intent_id in attributes
+        attrs = data.get("attributes", {})
+        if attrs.get("payment_intent_id"):
+            return attrs.get("payment_intent_id")
+
+        return None
+
+    def _process_success(self, payment_intent_id):
+        with transaction.atomic():
+            purchase = (
+                CreditPurchase.objects.select_for_update()
+                .select_related("user")
+                .filter(paymongo_payment_id=payment_intent_id)
+                .first()
+            )
+
+            if not purchase:
+                logger.warning(
+                    "PayMongo webhook success ignored: purchase not found for %s",
+                    payment_intent_id,
+                )
+                return False
+
+            if purchase.status == "completed":
+                return False
+
+            CreditTransaction.objects.create(
+                user=purchase.user,
+                amount=purchase.credits_purchased,
+                type="purchase",
+                expiry_date=timezone.now() + timedelta(days=365),
+                reference_id=f"paymongo-{payment_intent_id}",
+            )
+
+            purchase.status = "completed"
+            purchase.save(update_fields=["status", "updated_at"])
+            return True
+
+    def _process_failure(self, payment_intent_id):
+        CreditPurchase.objects.filter(
+            paymongo_payment_id=payment_intent_id,
+            status="pending",
+        ).update(status="failed")
 
 

@@ -322,3 +322,4 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 # ----- PayMongo Configuration -----
 PAYMONGO_PUBLIC_KEY = os.getenv("PAYMONGO_PUBLIC_KEY")
 PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY")
+PAYMONGO_WEBHOOK_SECRET = os.getenv("PAYMONGO_WEBHOOK_SECRET")
