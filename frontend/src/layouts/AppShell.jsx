@@ -348,26 +348,12 @@ export default function AppShell({ children, breadcrumb }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-          {!isDashboardPage && (
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              style={{
-                padding: "8px 10px",
-                borderRadius: "8px",
-                border: "1px solid #d1d5db",
-                backgroundColor: "#ffffff",
-                color: "#374151",
-                fontSize: "13px",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Menu
-            </button>
-          )}
-
-          <div>
+          <div
+            onClick={isCompactLayout ? toggleSidebar : undefined}
+            style={{
+              cursor: isCompactLayout ? "pointer" : "default",
+            }}
+          >
             <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>HeptaGeeks</div>
             <div style={{ fontSize: "11px", color: "#94a3b8" }}>Platform workspace</div>
           </div>
