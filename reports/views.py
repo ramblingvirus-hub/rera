@@ -22,7 +22,11 @@ from django.db import IntegrityError
 
 from .interview_scoring import calculate_category_scores, calculate_final_score
 from .risk_band import classify_risk_band
-from .explanation_engine import generate_explanations
+from .explanation_engine import (
+    generate_explanations,
+    generate_assessment_summary,
+    build_category_interpretations,
+)
 
 from .models import InterviewSession, InterviewStatus
 from .serializers import InterviewSessionSerializer
@@ -126,6 +130,13 @@ class EvaluateProjectView(APIView):
                 category_scores,
                 license_to_sell_present=license_to_sell_present
             )
+            category_interpretations = build_category_interpretations(result.get("category_breakdown", {}))
+            assessment_summary = generate_assessment_summary(
+                result.get("total_score"),
+                result.get("risk_band"),
+                explanations.get("strengths", []),
+                explanations.get("signals", []),
+            )
 
             # === SAVE + DEDUCT (ATOMIC) ===
             with transaction.atomic():
@@ -141,9 +152,11 @@ class EvaluateProjectView(APIView):
                     risk_band=result["risk_band"],
                     category_breakdown=result["category_breakdown"],
                     license_to_sell_present=result["license_to_sell_present"],
+                      strengths=explanations.get("strengths", []),
                     signals=explanations.get("signals", []),
                     information_gaps=explanations.get("information_gaps", []),
                     suggestions=explanations.get("suggestions", []),
+                      assessment_summary=assessment_summary,
                     project_name=answers.get("q1", ""),
                           city=answers.get("q3", ""),
                           location=answers.get("q4", ""),
@@ -226,6 +239,9 @@ class EvaluateProjectView(APIView):
             response_payload["report"]["signals"] = explanations["signals"]
             response_payload["report"]["information_gaps"] = explanations["information_gaps"]
             response_payload["report"]["suggestions"] = explanations["suggestions"]
+            response_payload["report"]["strengths"] = explanations.get("strengths", [])
+            response_payload["report"]["assessment_summary"] = assessment_summary
+            response_payload["report"]["category_interpretations"] = category_interpretations
 
             response_payload["context"] = {
                 "project_name": answers.get("q1", ""),
@@ -283,10 +299,13 @@ class GetReportView(APIView):
         if can_view_full:
             report_payload.update({
                 "category_breakdown": report.category_breakdown,
+                "category_interpretations": build_category_interpretations(report.category_breakdown),
                 "license_to_sell_present": report.license_to_sell_present,
+                "strengths": report.strengths,
                 "signals": report.signals,
                 "information_gaps": report.information_gaps,
                 "suggestions": report.suggestions,
+                "assessment_summary": report.assessment_summary,
             })
 
         response_payload = {

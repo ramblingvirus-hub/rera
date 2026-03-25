@@ -19,9 +19,12 @@ const CREDIT_PACKAGE_OPTIONS = [
 
 const LOCKED_SECTION_LABELS = {
   category_breakdown: "Category Breakdown",
+  category_interpretations: "Category Interpretation",
+  assessment_summary: "Assessment Summary",
+  strengths: "Strength Indicators",
   signals: "Key Risk Signals",
   information_gaps: "Information Gaps",
-  suggestions: "Due Diligence Suggestions",
+  suggestions: "Recommended Next Steps",
 };
 
 const LOCKED_SECTION_PREVIEW_LINES = {
@@ -109,6 +112,14 @@ function ScoreBar({ value }) {
       </span>
     </div>
   );
+}
+
+function categoryLabel(score) {
+  const value = Number(score ?? 0);
+  if (value >= 80) return "Strong";
+  if (value >= 60) return "Moderate";
+  if (value >= 40) return "Weak";
+  return "High Risk";
 }
 
 function LockedSectionPreview({ sectionKey }) {
@@ -897,6 +908,17 @@ export default function ReportView() {
                         }}
                       >
                         <span>{label}</span>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                            color: "#6b7280",
+                          }}
+                        >
+                          {report.category_interpretations?.[key]?.label || categoryLabel(report.category_breakdown?.[key])}
+                        </span>
                       </div>
                       <ScoreBar value={report.category_breakdown?.[key]} />
                     </div>
@@ -936,6 +958,52 @@ export default function ReportView() {
                 padding: "28px 32px",
               }}
             >
+              {/* Assessment Summary */}
+              <div style={{ marginBottom: "28px" }}>
+                <h2
+                  style={{
+                    fontSize: "15px",
+                    fontWeight: 700,
+                    color: "#1a2332",
+                    marginBottom: "12px",
+                    paddingBottom: "8px",
+                    borderBottom: "1px solid #f3f4f6",
+                  }}
+                >
+                  Assessment Summary
+                </h2>
+                <p style={{ fontSize: "14px", color: "#374151", lineHeight: "1.6", whiteSpace: "pre-line" }}>
+                  {report.assessment_summary || "Assessment summary is not available for this report yet."}
+                </p>
+              </div>
+
+              {/* Strength Indicators */}
+              <div style={{ marginBottom: "28px" }}>
+                <h2
+                  style={{
+                    fontSize: "15px",
+                    fontWeight: 700,
+                    color: "#1a2332",
+                    marginBottom: "12px",
+                    paddingBottom: "8px",
+                    borderBottom: "1px solid #f3f4f6",
+                  }}
+                >
+                  Strength Indicators
+                </h2>
+                {report.strengths && report.strengths.length > 0 ? (
+                  <ul style={{ paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {report.strengths.map((strength, index) => (
+                      <li key={index} style={{ fontSize: "14px", color: "#166534", lineHeight: "1.5" }}>
+                        {strength}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={{ fontSize: "13.5px", color: "#9ca3af" }}>No major risk indicators detected.</p>
+                )}
+              </div>
+
               {/* HIGH/SEVERE risk fallback */}
               {(["HIGH_RISK", "SEVERE_RISK"].includes(report.risk_band)) &&
                 (!report.signals || report.signals.length === 0) &&
@@ -1029,7 +1097,7 @@ export default function ReportView() {
                     borderBottom: "1px solid #f3f4f6",
                   }}
                 >
-                  Due Diligence Suggestions
+                  Recommended Next Steps
                 </h2>
                 {report.suggestions && report.suggestions.length > 0 ? (
                   <ul style={{ paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>

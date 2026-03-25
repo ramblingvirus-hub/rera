@@ -161,4 +161,110 @@ describe("ReportView teaser hardening", () => {
       expect(getReport).toHaveBeenCalledWith("req-123");
     });
   });
+
+  it("renders assessment summary and strengths when full report is unlocked", async () => {
+    isAuthenticated.mockReturnValue(true);
+    getReport.mockResolvedValue({
+      report: {
+        ...teaserReport,
+        assessment_summary:
+          "This project appears to present a MODERATE level of risk based on the information provided.",
+        strengths: [
+          "Developer has presented a valid License to Sell.",
+          "No environmental hazard concerns were indicated.",
+        ],
+        signals: ["Signal A"],
+        information_gaps: ["Gap A"],
+        suggestions: ["Suggestion A"],
+      },
+      access: {
+        can_view_full_report: true,
+        credit_balance: 0,
+        subscription_active: false,
+        subscription_days_remaining: 0,
+        locked_sections: [],
+      },
+      context: teaserContext,
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/report/req-123",
+            state: {
+              anonymousPreview: true,
+              submittedReport: teaserReport,
+              submittedContext: teaserContext,
+            },
+          },
+        ]}
+      >
+        <Routes>
+          <Route path="/report/:request_id" element={<ReportView />} />
+          <Route path="/login" element={<LoginProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/assessment summary/i)).toBeInTheDocument();
+    expect(screen.getByText(/strength indicators/i)).toBeInTheDocument();
+    expect(screen.getByText(/developer has presented a valid license to sell/i)).toBeInTheDocument();
+    expect(screen.getByText(/recommended next steps/i)).toBeInTheDocument();
+  });
+
+  it("renders category interpretation labels in category scores", async () => {
+    isAuthenticated.mockReturnValue(true);
+    getReport.mockResolvedValue({
+      report: {
+        ...teaserReport,
+        category_interpretations: {
+          developer_legitimacy: { label: "Strong" },
+          project_compliance: { label: "Moderate" },
+          title_land: { label: "Weak" },
+          financial_exposure: { label: "High Risk" },
+          lgu_environment: { label: "Moderate" },
+        },
+        assessment_summary: "Summary",
+        strengths: ["Strength A"],
+        signals: ["Signal A"],
+        information_gaps: ["Gap A"],
+        suggestions: ["Suggestion A"],
+      },
+      access: {
+        can_view_full_report: true,
+        credit_balance: 0,
+        subscription_active: false,
+        subscription_days_remaining: 0,
+        locked_sections: [],
+      },
+      context: teaserContext,
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/report/req-123",
+            state: {
+              anonymousPreview: true,
+              submittedReport: teaserReport,
+              submittedContext: teaserContext,
+            },
+          },
+        ]}
+      >
+        <Routes>
+          <Route path="/report/:request_id" element={<ReportView />} />
+          <Route path="/login" element={<LoginProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/category scores/i)).toBeInTheDocument();
+    expect(screen.getByText("Strong")).toBeInTheDocument();
+    expect(screen.getAllByText("Moderate").length).toBeGreaterThan(0);
+    expect(screen.getByText("Weak")).toBeInTheDocument();
+    expect(screen.getAllByText("High Risk").length).toBeGreaterThan(0);
+  });
 })

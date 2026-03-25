@@ -13,7 +13,10 @@ class ReportAccessControl:
     ]
     
     PAID_SECTIONS = [
+        'assessment_summary',
         'category_breakdown',
+        'category_interpretations',
+        'strengths',
         'signals',
         'information_gaps',
         'suggestions'

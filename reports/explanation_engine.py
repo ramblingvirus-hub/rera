@@ -15,6 +15,101 @@ def _append_unique(target, value):
         target.append(value)
 
 
+def _normalize(value):
+    return str(value or "").strip().lower()
+
+
+def category_strength_label(score):
+    if score >= 80:
+        return "Strong"
+    if score >= 60:
+        return "Moderate"
+    if score >= 40:
+        return "Weak"
+    return "High Risk"
+
+
+def build_category_interpretations(category_breakdown):
+    descriptions = {
+        "developer_legitimacy": "Reflects developer credibility and proof of legal authority to sell.",
+        "project_compliance": "Measures permit and regulatory compliance readiness of the project.",
+        "title_land": "Assesses title quality and land ownership clarity for safer transfer.",
+        "financial_exposure": "Represents buyer payment exposure based on payment structure and safeguards.",
+        "lgu_environment": "Indicates local government and environmental risk conditions affecting the property.",
+    }
+    interpretations = {}
+    for key, score in (category_breakdown or {}).items():
+        if score is None:
+            continue
+        interpretations[key] = {
+            "score": score,
+            "label": category_strength_label(score),
+            "explanation": descriptions.get(key, "Category assessment derived from the provided interview responses."),
+        }
+    return interpretations
+
+
+def generate_strengths(answers: dict, context_profile: str | None = None):
+    strengths = []
+    context = context_profile or get_context_profile(answers)
+
+    if context != "private_sale" and answers.get("q7") == "Yes":
+        _append_unique(strengths, "Developer has presented a valid License to Sell.")
+
+    if context != "private_sale" and answers.get("q9") == "Yes":
+        _append_unique(strengths, "Development permit evidence appears available.")
+
+    if answers.get("q11") in {"TCT", "CCT"}:
+        _append_unique(strengths, "Property title type appears to be strong and verifiable.")
+
+    if answers.get("q12") == "No known issues":
+        _append_unique(strengths, "No known title disputes or encumbrance issues were reported.")
+
+    if answers.get("q16") == "No":
+        _append_unique(strengths, "No environmental hazard concerns were indicated.")
+
+    if not strengths:
+        strengths.append("No major risk indicators detected.")
+
+    return strengths
+
+
+def generate_assessment_summary(total_score, risk_band, strengths, signals):
+    risk_map = {
+        "LOW_RISK": "LOW",
+        "MODERATE_RISK": "MODERATE",
+        "HIGH_RISK": "HIGH",
+        "SEVERE_RISK": "HIGH",
+    }
+    level = risk_map.get(risk_band, "MODERATE")
+
+    summary_lines = [
+        f"This project appears to present a {level} level of risk based on the information provided.",
+        "",
+        "Key strengths include:",
+    ]
+    for item in (strengths or [])[:4]:
+        summary_lines.append(f"- {item}")
+
+    if signals:
+        summary_lines.append("")
+        summary_lines.append("Potential concerns include:")
+        for item in signals[:3]:
+            summary_lines.append(f"- {item}")
+
+    summary_lines.append("")
+    if total_score is not None:
+        summary_lines.append(
+            f"Current weighted score: {float(total_score):.1f}/100. Buyers are still encouraged to verify all documents independently before proceeding."
+        )
+    else:
+        summary_lines.append(
+            "While no major red flags are identified, buyers are still encouraged to verify all documents independently before proceeding."
+        )
+
+    return "\n".join(summary_lines)
+
+
 def _is_development_oriented_property(answers):
     return answers.get("q5") in [
         "Subdivision",
@@ -84,6 +179,7 @@ def generate_explanations(answers: dict):
     gaps = []
     suggestions = []
     context_profile = get_context_profile(answers)
+    strengths = generate_strengths(answers, context_profile=context_profile)
 
     # -----------------------------
     # License to Sell
@@ -168,6 +264,7 @@ def generate_explanations(answers: dict):
         _apply_private_sale_logic(answers, signals, gaps, suggestions)
 
     return {
+        "strengths": strengths,
         "signals": signals,
         "information_gaps": gaps,
         "suggestions": suggestions,

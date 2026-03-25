@@ -20,9 +20,11 @@ class Report(models.Model):
     license_to_sell_present = models.BooleanField()
     
     # Explanation fields
+    strengths = models.JSONField(default=list)
     signals = models.JSONField(default=list)
     information_gaps = models.JSONField(default=list)
     suggestions = models.JSONField(default=list)
+    assessment_summary = models.TextField(blank=True, null=True)
     
     # Interview context
     project_name = models.CharField(max_length=255, blank=True, null=True)

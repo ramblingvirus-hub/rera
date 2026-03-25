@@ -1,58 +1,126 @@
 RERA Master Schema v2
-Updated: 2026-03-05
+Updated: 2026-03-26
+
+NOTE: This document reflects the live production schema as of March 26, 2026.
+The EvaluationRequest and EvaluationReport entries from the original March 5
+spec have been unified into a single Report model.
 
 Core Tables
-CreditTransaction
-id (PK) � unique transaction identifier
-user_id � reference to user
-type � purchase or usage
-amount � positive for purchase, negative for usage
-reference_id � purchase UUID inherited by usage rows
-expiry_date � expiration timestamp for purchased credits
-created_at � ledger entry timestamp
-EvaluationRequest
-request_id (UUID PK) � unique evaluation request
-user_id � request owner
-payload_hash � hash of request body for idempotency checks
-billing_type � credit or subscription
-created_at � request timestamp
-EvaluationReport
-id � report identifier
-request_id � link to evaluation request
-structure_version � report schema version
-total_score � computed risk score
-risk_band � risk classification
-category_breakdown � JSON category scores
-AuditEvent
-id � audit event id
-request_id � linked request
-event_type � lifecycle event
-severity � INFO / WARNING / ERROR
-created_at � event timestamp
-IdempotencyKey
-key � idempotency key value
-payload_hash � hash of request body
-response_snapshot � stored response
-created_at � timestamp
+
+Report (Django app: reports)
+request_id - UUID, unique - evaluation request identifier
+user_id - FK to auth_user - report owner
+timestamp_utc - DateTimeField - submission timestamp (UTC)
+structure_version - CharField(10) - report schema version
+total_score - FloatField - weighted composite risk score (0-100)
+risk_band - CharField(20) - LOW_RISK | MODERATE_RISK | HIGH_RISK | SEVERE_RISK
+category_breakdown - JSONField - five category scores
+license_to_sell_present - BooleanField - severe override input for engine
+signals - JSONField(list) - key risk signals derived from answers
+information_gaps - JSONField(list) - unresolved or unclear documentation points
+suggestions - JSONField(list) - recommended due diligence next steps
+strengths - JSONField(list) - positive indicators derived from answers
+assessment_summary - TextField - narrative summary used in full report
+project_name - CharField(255), nullable - context from interview
+city - CharField(100), nullable - context from interview
+location - CharField(100), nullable - context from interview
+created_at - DateTimeField - auto set on create
+
+Immutability:
+- Report records are write-once; update attempts raise ValidationError.
+
+InterviewSession (Django app: reports)
+id - UUID PK - interview session ID
+user_id - FK to auth_user, nullable - null for anonymous preview sessions
+interview_version - CharField(10)
+responses - JSONField(dict)
+status - CharField(20) - draft | ready | submitted
+created_at - DateTimeField
+updated_at - DateTimeField
+
+CreditTransaction (Django app: billing)
+id - PK - transaction identifier
+user_id - FK to auth_user
+amount - IntegerField - positive for purchase/refund, negative for usage
+type - CharField(30) - purchase | usage | refund | admin_adjustment
+reference_id - CharField(100), nullable - purchase UUID inherited by usage rows
+expiry_date - DateTimeField, nullable - required for purchase rows
+created_at - DateTimeField
+
+Constraints:
+- purchase_rule: purchase rows must have amount > 0 and non-null expiry_date
+- usage_rule: usage rows must have amount < 0 and null expiry_date
+- refund_rule: refund rows must have amount > 0 and null expiry_date
+- admin_adjustment_rule: admin_adjustment rows must have null expiry_date
+
+Immutability:
+- Credit ledger entries are append-only; update/delete are blocked.
+
+CreditPurchase (Django app: billing)
+id - PK
+user_id - FK to auth_user
+credits_purchased - IntegerField
+amount_php - DecimalField(10,2)
+payment_method - CharField(50)
+paymongo_payment_id - CharField(255), nullable
+status - CharField(20) - pending | completed | failed
+created_at - DateTimeField
+updated_at - DateTimeField
+
+Subscription (Django app: billing)
+id - PK
+user_id - OneToOne FK to auth_user
+paymongo_subscription_id - CharField(255), unique
+status - CharField(20) - active | cancelled | expired
+billing_date - DateField
+created_at - DateTimeField
+updated_at - DateTimeField
+
+AuditEvent (Django app: audit)
+id - UUID PK
+user_id - FK to auth_user, nullable
+event_type - CharField(50), indexed
+severity - CharField(10) - INFO | WARNING | CRITICAL
+request_id - UUID, nullable, indexed
+metadata - JSONField, nullable
+timestamp - DateTimeField
+
+Common event types:
+- EVALUATION_ATTEMPT
+- EVALUATION_SUCCESS
+- EVALUATION_VALIDATION_FAIL
+- BILLING_SUBSCRIPTION_APPLIED
+- BILLING_CREDIT_DEDUCTED
+- BILLING_INSUFFICIENT_CREDIT
+- BILLING_ADMIN_BYPASS_APPLIED
+- BILLING_QA_BYPASS_APPLIED
+- THROTTLE_TRIGGERED
+
+IdempotencyKey (Django app: idempotency)
+id - UUID PK
+user_id - FK to auth_user, indexed
+key - CharField(255), indexed
+request_hash - CharField(64)
+response_snapshot - JSONField
+created_at - DateTimeField, indexed
+
+Constraint:
+- unique_user_idempotency_key on (user_id, key)
+
 Schema Guarantees
-� Ledger append?only integrity
-� Request id correlation across tables
-� Idempotent request enforcement
-� Full audit traceability
+- Ledger append-only integrity
+- Request ID correlation across Report, AuditEvent, and idempotency snapshots
+- Idempotent request enforcement (payload mismatch returns HTTP 409)
+- Full audit traceability for billing and evaluation lifecycle
 
 Additional Runtime Guarantees (Phase 3H)
+- Credit deduction protected via row-level locking using PostgreSQL SELECT FOR UPDATE
+- No negative balance possible even under concurrent evaluation requests
+- IdempotencyKey table subject to periodic cleanup command to prevent long-term growth
 
-� Credit deduction protected via row-level locking
-using PostgreSQL SELECT FOR UPDATE
-
-� No negative balance possible even under
-concurrent evaluation requests
-
-� IdempotencyKey table subject to operational cleanup
-via management command to prevent long-term growth
 Database Configuration (Phase 6 - Staging Infrastructure)
 
-The application now supports both traditional DB_* environment variables and modern DATABASE_URL format:
+The application supports both DB_* variables and DATABASE_URL format.
 
 TRADITIONAL (separate variables):
 DB_NAME=rera_staging
@@ -66,11 +134,8 @@ RAILWAY DATABASE_URL (preferred for hosted PostgreSQL):
 DATABASE_URL=postgresql://user:password@host:port/dbname
 DB_SSLMODE=require
 
-Parsing Logic:
-? If DATABASE_URL is set, it takes precedence
-? PostgreSQL connection strings automatically parsed
-? SSL mode configurable via DB_SSLMODE environment variable
-? Backward compatible with existing DB_* configuration
-
-This enables seamless integration with hosting services like Railway,
-Render, and other managed PostgreSQL providers that supply DATABASE_URL.
+Parsing logic:
+- If DATABASE_URL is set, it takes precedence
+- PostgreSQL connection strings are automatically parsed
+- SSL mode is configurable via DB_SSLMODE
+- Backward compatible with existing DB_* configuration

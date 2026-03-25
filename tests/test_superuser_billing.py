@@ -62,7 +62,11 @@ class SuperuserBillingBypassTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["billing_type"], "admin")
+        payload = response.json()
+        self.assertEqual(payload["billing_type"], "admin")
+        self.assertIn("strengths", payload["report"])
+        self.assertIn("assessment_summary", payload["report"])
+        self.assertIn("category_interpretations", payload["report"])
         self.assertFalse(CreditTransaction.objects.filter(user=self.superuser).exists())
         self.assertEqual(Report.objects.filter(user=self.superuser).count(), 1)
 
@@ -97,6 +101,9 @@ class SuperuserBillingBypassTests(TestCase):
         self.assertTrue(payload["access"]["can_view_full_report"])
         self.assertEqual(payload["access"]["credit_balance"], 0)
         self.assertEqual(payload["access"]["locked_sections"], [])
+        self.assertIn("assessment_summary", payload["report"])
+        self.assertIn("strengths", payload["report"])
+        self.assertIn("category_interpretations", payload["report"])
         self.assertIn("signals", payload["report"])
 
 
@@ -136,7 +143,11 @@ class QaBypassUnlockTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["billing_type"], "qa_bypass")
+        payload = response.json()
+        self.assertEqual(payload["billing_type"], "qa_bypass")
+        self.assertIn("strengths", payload["report"])
+        self.assertIn("assessment_summary", payload["report"])
+        self.assertIn("category_interpretations", payload["report"])
         self.assertFalse(CreditTransaction.objects.filter(user=self.user).exists())
 
     def test_user_can_view_full_report_without_credits_when_qa_bypass_enabled(self):
@@ -169,4 +180,7 @@ class QaBypassUnlockTests(TestCase):
         payload = response.json()
         self.assertTrue(payload["access"]["can_view_full_report"])
         self.assertEqual(payload["access"]["locked_sections"], [])
+        self.assertIn("assessment_summary", payload["report"])
+        self.assertIn("strengths", payload["report"])
+        self.assertIn("category_interpretations", payload["report"])
         self.assertIn("signals", payload["report"])

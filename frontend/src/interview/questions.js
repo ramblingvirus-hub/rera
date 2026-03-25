@@ -176,14 +176,54 @@ export const QUESTIONS = [
 export const PRIVATE_SALE_SUPPLEMENTAL_QUESTION_IDS = ["ps1", "ps2", "ps3", "ps4", "ps5"];
 
 const DEFAULT_HELPERS = {
-  q6: "This answer activates context-aware interpretation for succeeding questions.",
-  q7: "A License to Sell is issued by DHSUD and allows a developer to legally sell units.",
-  q8: "Developer track record helps assess execution and legitimacy risk.",
-  q9: "Development permit evidence supports local regulatory compliance.",
-  q10: "Environmental approvals are relevant for development impact and legal compliance.",
-  q11: "Title type is a key ownership legitimacy signal.",
-  q12: "Title verification and encumbrances materially affect transaction risk.",
-  q14: "Early payment requests before documentary proof can increase buyer exposure risk.",
+  q6: {
+    what: "This sets the transaction context used to interpret succeeding regulatory answers.",
+    why: "Private sale, developer project, and broker listing flows carry different legal checkpoints.",
+    impact: "Context shifts how risk signals and information gaps are interpreted.",
+    tip: "If unsure, select Not Sure so the report flags this context as an information gap.",
+  },
+  q7: {
+    what: "A License to Sell is issued by DHSUD and allows a developer to legally market and sell units.",
+    why: "Selling without LTS can indicate unauthorized or premature selling.",
+    impact: "YES strengthens legitimacy; NO is a high-risk trigger; Not Sure creates a verification gap.",
+    tip: "If unsure, select Not Sure so this appears in Information Gaps for follow-up.",
+  },
+  q9: {
+    what: "Development permit is local government approval to begin development.",
+    why: "Without permit support, construction may be non-compliant or halted.",
+    impact: "YES improves compliance confidence; NO raises regulatory risk; Not Sure weakens certainty.",
+    tip: "If unsure, select Not Sure so permit status is highlighted for due diligence.",
+  },
+  q10: {
+    what: "ECC or equivalent environmental approval confirms environmental compliance requirements.",
+    why: "Missing environmental clearance can trigger stoppage, penalties, or legal exposure.",
+    impact: "YES is positive; NO raises environmental/legal risk; 'not required' is treated as unverified claim.",
+    tip: "If unsure, select Not Sure so the report marks environmental clearance as unresolved.",
+  },
+  q11: {
+    what: "Title type describes the legal ownership document attached to the property.",
+    why: "Some title types are stronger and easier to verify than others.",
+    impact: "TCT/CCT signals stronger ownership; weaker title forms lower confidence and score.",
+    tip: "If title documents are unclear, use Not Sure so title validation is surfaced in the report.",
+  },
+  q12: {
+    what: "This checks for disputes, encumbrances, or unresolved claims on title.",
+    why: "Title issues can block transfer and materially increase legal risk for buyers.",
+    impact: "Clean status is positive; disclosed issues or unsupported clean-title claims are risk signals.",
+    tip: "If unsure, select Not Sure to ensure title status appears in Information Gaps.",
+  },
+  q14: {
+    what: "This asks whether buyers are asked to pay before key permits or ownership proof are validated.",
+    why: "Early payment can increase financial exposure if documentation is incomplete.",
+    impact: "YES creates a financial risk signal; NO supports safer transaction structure.",
+    tip: "If payment terms are unclear, select Not Sure so payment conditions are flagged for review.",
+  },
+  q16: {
+    what: "This checks whether the property is exposed to flood, landslide, protected-zone, or similar environmental risks.",
+    why: "Environmental exposure can affect safety, insurability, and long-term property value.",
+    impact: "YES raises risk; NO is a positive signal; Not Sure becomes an information gap.",
+    tip: "If unsure, select Not Sure to prioritize environmental verification in the report.",
+  },
 };
 
 const DEFAULT_SIGNALS = {
