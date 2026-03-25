@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   getReport,
   listReports,
@@ -322,6 +322,10 @@ export default function ReportView() {
     loadReport();
   }, [loadReport]);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [request_id]);
+
   async function handleLogin(event) {
     event.preventDefault();
     setAuthError("");
@@ -366,7 +370,7 @@ export default function ReportView() {
 
   async function handleInitiatePurchase() {
     if (!isLoggedIn) {
-      setBillingMessage("Please sign in to continue purchase.");
+      setBillingMessage("Please sign in or register to continue purchase.");
       navigate("/login", { state: { from: returnPath, pendingPackage: selectedPackage } });
       return;
     }
@@ -396,7 +400,7 @@ export default function ReportView() {
 
   async function handleConfirmPurchase() {
     if (!isLoggedIn) {
-      setBillingMessage("Please sign in to continue purchase.");
+      setBillingMessage("Please sign in or register to continue purchase.");
       navigate("/login", { state: { from: returnPath } });
       return;
     }
@@ -422,7 +426,7 @@ export default function ReportView() {
 
   async function handleActivateSubscription() {
     if (!isLoggedIn) {
-      setBillingMessage("Please sign in to continue subscription activation.");
+      setBillingMessage("Please sign in or register to continue subscription activation.");
       navigate("/login", { state: { from: returnPath } });
       return;
     }
@@ -492,7 +496,7 @@ export default function ReportView() {
           }}
         >
           <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#1a2332", marginBottom: "8px" }}>
-            Sign in to view this report
+            Sign In / Register to view this report
           </h2>
           <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "20px" }}>
             {errorMessage || "Authentication is required to access this report."}
@@ -560,6 +564,12 @@ export default function ReportView() {
             >
               Sign In
             </button>
+            <p style={{ marginTop: "12px", fontSize: "12px", color: "#6b7280", textAlign: "center" }}>
+              New here?{" "}
+              <Link to="/login" state={{ from: returnPath }} style={{ color: "#0f766e", fontWeight: 600 }}>
+                Register on the Sign In / Register page
+              </Link>
+            </p>
           </form>
         </div>
       </div>
@@ -688,7 +698,7 @@ export default function ReportView() {
                 cursor: "pointer",
               }}
             >
-              Sign In to Unlock
+              Sign In / Register to Unlock
             </button>
           )}
           <button

@@ -6,6 +6,8 @@ import LoginPage from "./LoginPage";
 
 vi.mock("../api/apiClient", () => ({
   login: vi.fn(),
+  register: vi.fn(),
+  initiateCreditPurchase: vi.fn(),
 }));
 
 import { login } from "../api/apiClient";
@@ -27,16 +29,16 @@ describe("LoginPage", () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: "linus" },
+    fireEvent.change(screen.getByLabelText(/email address/i), {
+      target: { value: "linus@example.com" },
     });
     fireEvent.change(screen.getByLabelText(/password/i), {
       target: { value: "secret" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.click(screen.getByText("Sign In", { selector: "button[type='submit']" }));
 
     await waitFor(() => {
-      expect(login).toHaveBeenCalledWith("linus", "secret");
+      expect(login).toHaveBeenCalledWith("linus@example.com", "secret");
       expect(screen.getByText("Billing page")).toBeInTheDocument();
     });
   });

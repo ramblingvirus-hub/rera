@@ -364,7 +364,7 @@ export default function AppShell({ children, breadcrumb }) {
           </button>
 
           <div>
-            <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>HeptaGeek</div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>HeptaGeeks</div>
             <div style={{ fontSize: "11px", color: "#94a3b8" }}>Platform workspace</div>
           </div>
         </div>
