@@ -167,6 +167,18 @@ class EvaluateProjectView(APIView):
 
                     billing_type = "subscription"
 
+                elif unlimited_access:
+
+                    log_audit_event(
+                        user=request.user,
+                        event_type="BILLING_QA_BYPASS_APPLIED",
+                        severity="INFO",
+                        request_id=request_id,
+                        metadata={"qa_bypass_unlock": True}
+                    )
+
+                    billing_type = "qa_bypass"
+
                 else:
 
                     deduct_credit(request.user)

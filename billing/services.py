@@ -1,5 +1,6 @@
 from django.utils import timezone
 from django.db.models import Sum, Q
+from django.conf import settings
 from audit.services import log_audit_event
 from .models import CreditTransaction, Subscription
 from django.db import transaction
@@ -10,6 +11,11 @@ import uuid
 def user_has_admin_bypass(user):
     """Superusers are exempt from report credit and subscription checks."""
     return bool(user and getattr(user, "is_superuser", False))
+
+
+def qa_bypass_unlock_enabled():
+    """Temporary QA bypass switch for report paywall testing."""
+    return bool(getattr(settings, "QA_BYPASS_UNLOCK", False))
 
 def calculate_user_balance(user):
     """
@@ -93,7 +99,7 @@ def has_active_subscription(user):
 
 def has_unlimited_report_access(user):
     """Users with a valid subscription or superuser bypass can evaluate without credits."""
-    return user_has_admin_bypass(user) or has_active_subscription(user)
+    return user_has_admin_bypass(user) or has_active_subscription(user) or qa_bypass_unlock_enabled()
 
 
 def enforce_report_access(user, reference_id=None):
@@ -121,7 +127,7 @@ def has_sufficient_credit(user):
     """
     Returns True if user has at least 1 usable credit.
     """
-    return user_has_admin_bypass(user) or calculate_user_balance(user) >= 1
+    return user_has_admin_bypass(user) or qa_bypass_unlock_enabled() or calculate_user_balance(user) >= 1
 
 def create_credit_purchase(user, credit_amount, expiry_date, reference_id=None, source="manual"):
     """

@@ -8,7 +8,7 @@ django.setup()
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -96,5 +96,77 @@ class SuperuserBillingBypassTests(TestCase):
         payload = response.json()
         self.assertTrue(payload["access"]["can_view_full_report"])
         self.assertEqual(payload["access"]["credit_balance"], 0)
+        self.assertEqual(payload["access"]["locked_sections"], [])
+        self.assertIn("signals", payload["report"])
+
+
+@override_settings(QA_BYPASS_UNLOCK=True)
+class QaBypassUnlockTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        unique_suffix = uuid.uuid4().hex
+        self.user = User.objects.create_user(
+            username=f"qa-user-{unique_suffix}",
+            email=f"qa-{unique_suffix}@example.com",
+            password="StrongPass123!",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_user_can_evaluate_without_credits_when_qa_bypass_enabled(self):
+        response = self.client.post(
+            "/api/v1/evaluate/",
+            {
+                "answers": {
+                    "q1": "QA Bypass Project",
+                    "q3": "Makati",
+                    "q4": "Legazpi Village",
+                    "q7": "Yes",
+                    "q8": "Yes",
+                    "q9": "Yes",
+                    "q10": "Yes",
+                    "q11": "TCT",
+                    "q12": "No known issues",
+                    "q13": "No",
+                    "q14": "No",
+                    "q15": "No",
+                    "q16": "No",
+                }
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["billing_type"], "qa_bypass")
+        self.assertFalse(CreditTransaction.objects.filter(user=self.user).exists())
+
+    def test_user_can_view_full_report_without_credits_when_qa_bypass_enabled(self):
+        report = Report.objects.create(
+            request_id=uuid.uuid4(),
+            timestamp_utc=timezone.now(),
+            user=self.user,
+            structure_version="1.0",
+            total_score=82.5,
+            risk_band="LOW_RISK",
+            category_breakdown={
+                "developer_legitimacy": 100,
+                "project_compliance": 100,
+                "title_land": 100,
+                "financial_exposure": 60,
+                "lgu_environment": 60,
+            },
+            license_to_sell_present=True,
+            signals=["Sample signal"],
+            information_gaps=["Sample gap"],
+            suggestions=["Sample suggestion"],
+            project_name="QA Bypass View Project",
+            city="Taguig",
+            location="BGC",
+        )
+
+        response = self.client.get(f"/api/v1/reports/{report.request_id}/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["access"]["can_view_full_report"])
         self.assertEqual(payload["access"]["locked_sections"], [])
         self.assertIn("signals", payload["report"])
