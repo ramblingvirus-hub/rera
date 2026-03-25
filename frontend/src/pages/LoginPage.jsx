@@ -8,6 +8,7 @@ export default function LoginPage() {
   const location = useLocation();
   const [mode, setMode] = useState("signin");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -39,7 +40,7 @@ export default function LoginPage() {
           return;
         }
 
-        await register(username, password, confirmPassword);
+        await register(username, email, password, confirmPassword);
       }
 
       await login(username, password);
@@ -105,7 +106,7 @@ export default function LoginPage() {
           <img
             src="/rera-logo.png"
             alt="RERA"
-            style={{ height: "40px", width: "auto", display: "block" }}
+            style={{ height: "52px", width: "auto", display: "block" }}
           />
         </div>
 
@@ -128,6 +129,21 @@ export default function LoginPage() {
         >
           Sign in if you already have an account, or register if you are new.
         </p>
+
+        <div
+          style={{
+            marginBottom: "18px",
+            padding: "10px 12px",
+            borderRadius: "8px",
+            border: "1px solid #fed7aa",
+            backgroundColor: "#fff7ed",
+            color: "#9a3412",
+            fontSize: "12px",
+            fontWeight: 600,
+          }}
+        >
+          Disclaimer: RERA provides structured risk indicators and not legal or financial advice.
+        </div>
 
         <div
           style={{
@@ -189,16 +205,16 @@ export default function LoginPage() {
                 marginBottom: "6px",
               }}
             >
-              Email address
+              Login name
             </label>
             <input
               id="login_username"
-              type="email"
+              type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              autoComplete="email"
-              placeholder="you@example.com"
+              autoComplete="username"
+              placeholder="your username"
               style={{
                 width: "100%",
                 padding: "10px 13px",
@@ -211,6 +227,42 @@ export default function LoginPage() {
               }}
             />
           </div>
+
+          {mode === "register" && (
+            <div style={{ marginBottom: "16px" }}>
+              <label
+                htmlFor="login_email"
+                style={{
+                  display: "block",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  color: "#374151",
+                  marginBottom: "6px",
+                }}
+              >
+                Email address
+              </label>
+              <input
+                id="login_email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                style={{
+                  width: "100%",
+                  padding: "10px 13px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  color: "#1a2332",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+          )}
 
           <div style={{ marginBottom: "22px" }}>
             <label

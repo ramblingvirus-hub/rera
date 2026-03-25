@@ -125,10 +125,18 @@ export default function InterviewPage() {
   async function handleSubmit() {
     if (!interview?.id) return;
     setIsSubmitting(true);
-    setFlowMessage("");
+    setFlowMessage("Submitting evaluation. Please wait...");
 
     try {
-      const result = await submitInterview(interview.id);
+      const result = await Promise.race([
+        submitInterview(interview.id),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Evaluation is taking too long. Please try again in a moment.")),
+            20000
+          )
+        ),
+      ]);
       const requestId = result?.request_id;
       if (!requestId) throw new Error("Submission succeeded but no request_id was returned.");
 

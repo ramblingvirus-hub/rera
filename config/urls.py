@@ -20,13 +20,26 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        username = (request.data.get("username") or "").strip()
         email = (request.data.get("email") or "").strip().lower()
         password = (request.data.get("password") or "").strip()
         confirm = (request.data.get("confirm_password") or "").strip()
 
-        if not email or not password or not confirm:
+        if not username or not email or not password or not confirm:
             return Response(
-                {"error": "Email, password, and confirm_password are required."},
+                {"error": "Username, email, password, and confirm_password are required."},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(username) < 3:
+            return Response(
+                {"error": "Username must be at least 3 characters."},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not re.match(r"^[A-Za-z0-9_.-]+$", username):
+            return Response(
+                {"error": "Username may only contain letters, numbers, underscore, dot, or hyphen."},
                 status=drf_status.HTTP_400_BAD_REQUEST,
             )
 
@@ -42,7 +55,13 @@ class RegisterView(APIView):
                 status=drf_status.HTTP_400_BAD_REQUEST,
             )
 
-        if User.objects.filter(username=email).exists():
+        if User.objects.filter(username__iexact=username).exists():
+            return Response(
+                {"error": "This username is already taken."},
+                status=drf_status.HTTP_409_CONFLICT,
+            )
+
+        if User.objects.filter(email__iexact=email).exists():
             return Response(
                 {"error": "An account with this email already exists."},
                 status=drf_status.HTTP_409_CONFLICT,
@@ -80,7 +99,7 @@ class RegisterView(APIView):
             )
 
         user = User.objects.create_user(
-            username=email,
+            username=username,
             email=email,
             password=password,
         )

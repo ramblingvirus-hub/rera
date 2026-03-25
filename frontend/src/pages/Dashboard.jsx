@@ -28,7 +28,7 @@ export default function Dashboard() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           gap: "16px",
           marginBottom: "28px",
         }}
@@ -121,21 +121,54 @@ export default function Dashboard() {
             View Reports
           </button>
         </div>
-      </div>
 
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          borderRadius: "12px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-          padding: "20px 24px",
-          fontSize: "13px",
-          color: "#9ca3af",
-          lineHeight: "1.6",
-        }}
-      >
-        RERA provides structured risk indicators based on disclosed project information.
-        Results do not constitute legal or financial advice.
+        {/* Billing card */}
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "12px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+            padding: "24px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "13px",
+              fontWeight: 600,
+              color: "#9ca3af",
+              marginBottom: "8px",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+            }}
+          >
+            Billing
+          </div>
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#6b7280",
+              marginBottom: "18px",
+              lineHeight: "1.5",
+            }}
+          >
+            Buy credits and manage your subscription in one place.
+          </p>
+          <button
+            onClick={() => navigate("/billing")}
+            style={{
+              padding: "9px 18px",
+              backgroundColor: "transparent",
+              color: "#2b9f94",
+              border: "1px solid #2b9f94",
+              borderRadius: "8px",
+              fontSize: "13.5px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Buy Credits
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-gradient-to-br from-teal-500 to-green-600 text-white">
       <div className="max-w-6xl mx-auto flex flex-col gap-4 px-6 lg:px-8 py-6 sm:flex-row sm:justify-between sm:items-center">
         <div className="flex items-center gap-3">
-          <img src="/rera-logo.png" alt="RERA" className="h-9 w-auto" />
+          <img src="/rera-logo.png" alt="RERA" className="h-12 w-auto" />
           <div className="font-bold text-xl">RERA</div>
         </div>
         <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-4">

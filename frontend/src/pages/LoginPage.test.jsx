@@ -29,8 +29,8 @@ describe("LoginPage", () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/email address/i), {
-      target: { value: "linus@example.com" },
+    fireEvent.change(screen.getByLabelText(/login name/i), {
+      target: { value: "linus" },
     });
     fireEvent.change(screen.getByLabelText(/password/i), {
       target: { value: "secret" },
@@ -38,7 +38,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByText("Sign In", { selector: "button[type='submit']" }));
 
     await waitFor(() => {
-      expect(login).toHaveBeenCalledWith("linus@example.com", "secret");
+      expect(login).toHaveBeenCalledWith("linus", "secret");
       expect(screen.getByText("Billing page")).toBeInTheDocument();
     });
   });

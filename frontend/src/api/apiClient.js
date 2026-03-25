@@ -212,10 +212,10 @@ export function isAuthenticated() {
   return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
 }
 
-export async function register(email, password, confirmPassword) {
+export async function register(username, email, password, confirmPassword) {
   return apiRequest("/auth/register/", {
     method: "POST",
-    body: { email, password, confirm_password: confirmPassword },
+    body: { username, email, password, confirm_password: confirmPassword },
   });
 }
 

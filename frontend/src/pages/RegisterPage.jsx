@@ -7,6 +7,7 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -38,8 +39,8 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await register(email, password, confirmPassword);
-      await login(email, password);
+      await register(username, email, password, confirmPassword);
+      await login(username, password);
 
       const pendingPackage = location.state?.pendingPackage;
       const from = location.state?.from || "/dashboard";
@@ -94,7 +95,7 @@ export default function RegisterPage() {
           <img
             src="/rera-logo.png"
             alt="RERA"
-            style={{ height: "40px", width: "auto", display: "block" }}
+            style={{ height: "52px", width: "auto", display: "block" }}
           />
         </div>
 
@@ -118,7 +119,56 @@ export default function RegisterPage() {
           Enter your email address and choose a password.
         </p>
 
+        <div
+          style={{
+            marginBottom: "18px",
+            padding: "10px 12px",
+            borderRadius: "8px",
+            border: "1px solid #fed7aa",
+            backgroundColor: "#fff7ed",
+            color: "#9a3412",
+            fontSize: "12px",
+            fontWeight: 600,
+          }}
+        >
+          Disclaimer: RERA provides structured risk indicators and not legal or financial advice.
+        </div>
+
         <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: "16px" }}>
+            <label
+              htmlFor="reg_username"
+              style={{
+                display: "block",
+                fontSize: "13px",
+                fontWeight: 500,
+                color: "#374151",
+                marginBottom: "6px",
+              }}
+            >
+              Login name
+            </label>
+            <input
+              id="reg_username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              autoComplete="username"
+              placeholder="choose a username"
+              style={{
+                width: "100%",
+                padding: "10px 13px",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                fontSize: "14px",
+                color: "#1a2332",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
           <div style={{ marginBottom: "16px" }}>
             <label
               htmlFor="reg_email"

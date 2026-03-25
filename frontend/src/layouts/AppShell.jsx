@@ -144,6 +144,7 @@ export default function AppShell({ children, breadcrumb }) {
 
   const userMenuRef = useRef(null);
   const currentPageLabel = breadcrumb?.current || "Workspace";
+  const isDashboardPage = location.pathname === "/dashboard";
 
   function handleLogout() {
     clearAuthTokens();
@@ -278,7 +279,7 @@ export default function AppShell({ children, breadcrumb }) {
           <img
             src="/rera-logo.png"
             alt="RERA"
-            style={{ height: "32px", width: "auto", display: "block" }}
+            style={{ height: "44px", width: "auto", display: "block" }}
           />
           <div>
             <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>RERA</div>
@@ -346,22 +347,24 @@ export default function AppShell({ children, breadcrumb }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            style={{
-              padding: "8px 10px",
-              borderRadius: "8px",
-              border: "1px solid #d1d5db",
-              backgroundColor: "#ffffff",
-              color: "#374151",
-              fontSize: "13px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Menu
-          </button>
+          {!isDashboardPage && (
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              style={{
+                padding: "8px 10px",
+                borderRadius: "8px",
+                border: "1px solid #d1d5db",
+                backgroundColor: "#ffffff",
+                color: "#374151",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Menu
+            </button>
+          )}
 
           <div>
             <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>HeptaGeeks</div>
@@ -391,37 +394,50 @@ export default function AppShell({ children, breadcrumb }) {
           style={{ display: "flex", alignItems: "center", gap: "10px", position: "relative" }}
         >
           {loggedIn && (
-            <div
-              style={{
-                padding: "8px 12px",
-                borderRadius: "999px",
-                border: "1px solid #d1fae5",
-                backgroundColor: "#ecfdf5",
-                color: "#047857",
-                fontSize: "12px",
-                fontWeight: 700,
-                letterSpacing: "0.03em",
-              }}
-            >
-              Credits {creditBalance ?? "--"}
-            </div>
+            <>
+              <div
+                style={{
+                  fontSize: "13px",
+                  color: "#0f172a",
+                  fontWeight: 600,
+                }}
+              >
+                Welcome back {username || "User"}
+              </div>
+              <div
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "999px",
+                  border: "1px solid #d1fae5",
+                  backgroundColor: "#ecfdf5",
+                  color: "#047857",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  letterSpacing: "0.03em",
+                }}
+              >
+                Credits {creditBalance ?? "--"}
+              </div>
+            </>
           )}
 
-          <button
-            type="button"
-            style={{
-              padding: "8px 12px",
-              borderRadius: "10px",
-              border: "1px solid #e5e7eb",
-              backgroundColor: "#ffffff",
-              color: "#475569",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Alerts
-          </button>
+          {!isDashboardPage && (
+            <button
+              type="button"
+              style={{
+                padding: "8px 12px",
+                borderRadius: "10px",
+                border: "1px solid #e5e7eb",
+                backgroundColor: "#ffffff",
+                color: "#475569",
+                fontSize: "12px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Alerts
+            </button>
+          )}
 
           {loggedIn ? (
             <button
@@ -585,6 +601,21 @@ export default function AppShell({ children, breadcrumb }) {
               <div style={{ marginTop: "4px" }}>
                 <div style={{ fontSize: "24px", fontWeight: 800, color: "#0f172a" }}>RERA</div>
                 <div style={{ fontSize: "13px", color: "#64748b" }}>{currentPageLabel}</div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: "12px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  border: "1px solid #fed7aa",
+                  backgroundColor: "#fff7ed",
+                  color: "#9a3412",
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                }}
+              >
+                Disclaimer: RERA provides structured risk indicators based on disclosed project information. Results do not constitute legal or financial advice.
               </div>
             </div>
 
