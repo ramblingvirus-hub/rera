@@ -1,0 +1,324 @@
+RERA REPORT ENHANCEMENT – LOCKED IMPLEMENTATION (PRE-LAUNCH SAFE)
+
+---
+
+## SECTION 1 — OBJECTIVE
+
+Enhance report usefulness and perceived value without modifying:
+
+* Scoring logic
+* Backend architecture
+* Database schema
+
+Focus only on:
+
+* Explanation layer
+* Output structure
+* Helper content
+
+---
+
+## SECTION 2 — REQUIRED REPORT STRUCTURE
+
+All reports MUST include the following sections:
+
+1. Assessment Summary (ALWAYS PRESENT)
+2. Category Breakdown with Interpretation
+3. Strength Indicators (NEW)
+4. Key Risk Signals (if any)
+5. Information Gaps & Unverified Claims
+6. Recommended Next Steps (ALWAYS PRESENT)
+
+---
+
+## SECTION 3 — ASSESSMENT SUMMARY
+
+Template:
+
+"This project appears to present a [LOW / MODERATE / HIGH] level of risk based on the information provided.
+
+Key strengths include:
+• {auto-generated strengths}
+
+Potential concerns include:
+• {only if exists}
+
+While no major red flags are identified, buyers are still encouraged to verify all documents independently before proceeding."
+
+Rules:
+
+* Always generated
+* Must include at least 1 strength
+* Concerns section optional if none
+
+---
+
+## SECTION 4 — STRENGTH INDICATORS (NEW)
+
+Purpose:
+Highlight positive signals from user responses
+
+Examples:
+
+* Developer has presented a valid License to Sell
+* Development permit appears secured
+* No known title disputes reported
+* No environmental risks indicated
+
+Rules:
+
+* Derived from positive answers (YES / CLEAN)
+* Minimum 2 items
+* If none: "No major risk indicators detected"
+
+---
+
+## SECTION 5 — CATEGORY INTERPRETATION
+
+Each category must include:
+
+* Score
+* Label
+* 1-sentence explanation
+
+Labels:
+80–100 → Strong
+60–79 → Moderate
+40–59 → Weak
+0–39 → High Risk
+
+Example:
+
+"Developer Legitimacy — Strong (85/100)
+The developer appears established and has provided key regulatory documentation."
+
+---
+
+## SECTION 6 — INFORMATION GAPS & UNVERIFIED CLAIMS
+
+Two types:
+
+A. Information Gaps
+Triggered by "Not Sure"
+
+Examples:
+
+* Environmental risks are unclear
+* Title condition not confirmed
+
+B. Unverified Claims
+Triggered by responses like:
+
+* "No documents shown"
+* "Seller claims but no proof"
+* "Developer says not required"
+
+Examples:
+
+* Seller claims title is clean but no documents were shown
+* Developer indicates ECC is not required without verification
+
+Rules:
+
+* At least 1 item must be present
+* If none: "No major information gaps identified"
+
+---
+
+## SECTION 7 — RECOMMENDED NEXT STEPS
+
+Purpose:
+Make report actionable regardless of risk level
+
+Examples:
+
+* Verify License to Sell with DHSUD
+* Request certified true copy of the title
+* Confirm permits with local government
+* Conduct a physical site visit
+
+Rules:
+
+* ALWAYS present
+* Minimum 3 items
+* Must include at least 1 regulatory check
+
+---
+
+## SECTION 8 — EXPLANATION ENGINE LOGIC (SIMPLIFIED)
+
+Strengths:
+IF Q7 == YES → add LTS strength
+IF Q9 == YES → add permit strength
+IF Q11 == CLEAN → add title strength
+IF Q16 == NO → add environmental safety
+
+Risk Signals:
+Existing logic (no change)
+
+Information Gaps:
+IF answer == NOT SURE → add gap
+
+Unverified Claims:
+IF answer contains:
+
+* "no documents shown"
+* "seller claims"
+* "not required"
+  → add unverified claim
+
+Suggestions:
+Always append baseline due diligence list
+
+---
+
+## SECTION 9 — HELPER SYSTEM DESIGN
+
+Each helper must include:
+
+1. What it is
+2. Why it matters
+3. Impact on assessment
+
+All helpers must be accessible via (?) icon on each question.
+
+---
+
+## SECTION 10 — HELPER CONTENT
+
+Q7 — License to Sell
+
+What it is:
+Issued by DHSUD, this allows a developer to legally sell units.
+
+Why it matters:
+Selling without this may indicate unauthorized or premature selling.
+
+Impact on assessment:
+YES → Strong positive signal
+NO → High-risk trigger
+Not Sure → Information gap
+
+Tip: If unsure, select “Not Sure” — this will highlight areas you may need to verify.
+
+---
+
+Q9 — Development Permit
+
+What it is:
+Approval from the local government to begin development.
+
+Why it matters:
+Without this, construction may be illegal or halted.
+
+Impact on assessment:
+YES → Improves compliance score
+NO → Major regulatory risk
+Not Sure → Weakens confidence
+
+Tip: If unsure, select “Not Sure” — this will highlight areas you may need to verify.
+
+---
+
+Q10 — Environmental Compliance Certificate (ECC)
+
+What it is:
+Environmental clearance required for certain developments.
+
+Why it matters:
+Projects without proper clearance may face stoppage or penalties.
+
+Impact on assessment:
+YES → Positive signal
+NO → Environmental/legal risk
+"Not required" → Unverified claim
+
+Tip: If unsure, select “Not Sure” — this will highlight areas you may need to verify.
+
+---
+
+Q11 — Title Type
+
+What it is:
+Indicates the form of land ownership.
+
+Why it matters:
+Some title types carry higher legal risk.
+
+Impact on assessment:
+TCT/CCT → Strong
+Mother Title → Moderate caution
+Rights Only / No title → High risk
+
+Tip: If unsure, select “Not Sure” — this will highlight areas you may need to verify.
+
+---
+
+Q12 — Title Issues
+
+What it is:
+Indicates if there are disputes or claims on the property.
+
+Why it matters:
+Disputes can delay or prevent ownership transfer.
+
+Impact on assessment:
+Clean → Positive
+Issues → High risk
+"Seller claims clean" → Unverified claim
+
+Tip: If unsure, select “Not Sure” — this will highlight areas you may need to verify.
+
+---
+
+Q14 — Early Payments
+
+What it is:
+Requests for deposits before permits are secured.
+
+Why it matters:
+May indicate premature selling or funding risk.
+
+Impact on assessment:
+YES → Financial risk
+NO → Safer structure
+Not Sure → Information gap
+
+Tip: If unsure, select “Not Sure” — this will highlight areas you may need to verify.
+
+---
+
+Q16 — Environmental Risk
+
+What it is:
+Exposure to flooding, landslides, or protected zones.
+
+Why it matters:
+Affects safety and long-term value.
+
+Impact on assessment:
+YES → Risk signal
+NO → Positive
+Not Sure → Information gap
+
+Tip: If unsure, select “Not Sure” — this will highlight areas you may need to verify.
+
+---
+
+## SECTION 11 — FINAL RULES
+
+DO NOT:
+
+* Modify scoring logic
+* Add new questions
+* Change database schema
+
+ONLY:
+
+* Enhance explanation output
+* Improve helper clarity
+* Enforce minimum content rules
+
+---
+
+## END OF FILE
