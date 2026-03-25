@@ -1,23 +1,45 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { login, initiateCreditPurchase } from "../api/apiClient";
+import { register, login, initiateCreditPurchase } from "../api/apiClient";
 import { resolveRedirectTarget } from "../utils/navigation";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [username, setUsername] = useState("");
+
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function validatePassword(pw) {
+    if (pw.length < 8) return "Password must be at least 8 characters.";
+    if (!/[A-Z]/.test(pw)) return "Password must contain at least one capital letter.";
+    if (!/[0-9]/.test(pw)) return "Password must contain at least one number.";
+    if (!/[^A-Za-z0-9]/.test(pw)) return "Password must contain at least one symbol (e.g. @, #, !, $).";
+    return null;
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
-    setLoading(true);
 
+    const pwError = validatePassword(password);
+    if (pwError) {
+      setError(pwError);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
     try {
-      await login(username, password);
+      await register(email, password, confirmPassword);
+      await login(email, password);
 
       const pendingPackage = location.state?.pendingPackage;
       const from = location.state?.from || "/dashboard";
@@ -41,7 +63,7 @@ export default function LoginPage() {
         replace: true,
       });
     } catch (err) {
-      setError(err.message || "Login failed. Check your credentials.");
+      setError(err.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -68,7 +90,6 @@ export default function LoginPage() {
           maxWidth: "400px",
         }}
       >
-        {/* Logo */}
         <div style={{ marginBottom: "30px" }}>
           <img
             src="/rera-logo.png"
@@ -85,7 +106,7 @@ export default function LoginPage() {
             marginBottom: "6px",
           }}
         >
-          Sign in
+          Create an account
         </h1>
         <p
           style={{
@@ -94,13 +115,13 @@ export default function LoginPage() {
             marginBottom: "26px",
           }}
         >
-          Enter your credentials to access your account.
+          Enter your email address and choose a password.
         </p>
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: "16px" }}>
             <label
-              htmlFor="login_username"
+              htmlFor="reg_email"
               style={{
                 display: "block",
                 fontSize: "13px",
@@ -109,15 +130,52 @@ export default function LoginPage() {
                 marginBottom: "6px",
               }}
             >
-              Username
+              Email address
             </label>
             <input
-              id="login_username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="reg_email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
-              autoComplete="username"
+              autoComplete="email"
+              placeholder="you@example.com"
+              style={{
+                width: "100%",
+                padding: "10px 13px",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                fontSize: "14px",
+                color: "#1a2332",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: "16px" }}>
+            <label
+              htmlFor="reg_password"
+              style={{
+                display: "block",
+                fontSize: "13px",
+                fontWeight: 500,
+                color: "#374151",
+                marginBottom: "6px",
+              }}
+            >
+              Password
+            </label>
+            <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "6px", lineHeight: 1.5 }}>
+              Min. 8 characters · 1 capital letter · 1 number · 1 symbol
+            </p>
+            <input
+              id="reg_password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="new-password"
               style={{
                 width: "100%",
                 padding: "10px 13px",
@@ -133,7 +191,7 @@ export default function LoginPage() {
 
           <div style={{ marginBottom: "22px" }}>
             <label
-              htmlFor="login_password"
+              htmlFor="reg_confirm"
               style={{
                 display: "block",
                 fontSize: "13px",
@@ -142,15 +200,15 @@ export default function LoginPage() {
                 marginBottom: "6px",
               }}
             >
-              Password
+              Confirm password
             </label>
             <input
-              id="login_password"
+              id="reg_confirm"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              autoComplete="current-password"
+              autoComplete="new-password"
               style={{
                 width: "100%",
                 padding: "10px 13px",
@@ -193,7 +251,7 @@ export default function LoginPage() {
               transition: "background-color 0.15s",
             }}
           >
-            {loading ? "Signing in…" : "Sign In"}
+            {loading ? "Creating account…" : "Create Account"}
           </button>
 
           <p
@@ -204,13 +262,13 @@ export default function LoginPage() {
               color: "#6b7280",
             }}
           >
-            Don&apos;t have an account?{" "}
+            Already have an account?{" "}
             <Link
-              to="/register"
+              to="/login"
               state={location.state}
               style={{ color: "#0f766e", fontWeight: 600 }}
             >
-              Create one
+              Sign in
             </Link>
           </p>
 

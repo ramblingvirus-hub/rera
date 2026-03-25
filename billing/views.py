@@ -86,7 +86,12 @@ class InitiateCreditPurchaseView(APIView):
 
         try:
             paymongo = PayMongoService()
-            success_url, cancel_url = self._resolve_redirect_urls(request)
+            body_success = request.data.get("success_url") or None
+            body_cancel = request.data.get("cancel_url") or None
+            if body_success and body_cancel:
+                success_url, cancel_url = body_success, body_cancel
+            else:
+                success_url, cancel_url = self._resolve_redirect_urls(request)
 
             checkout_session = paymongo.create_checkout_session(
                 amount_cents=package["amount_centavos"],

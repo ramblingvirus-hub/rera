@@ -212,6 +212,13 @@ export function isAuthenticated() {
   return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
 }
 
+export async function register(email, password, confirmPassword) {
+  return apiRequest("/auth/register/", {
+    method: "POST",
+    body: { email, password, confirm_password: confirmPassword },
+  });
+}
+
 export async function login(username, password) {
   const response = await fetchWithNetworkHandling(TOKEN_OBTAIN_URL, {
     method: "POST",
@@ -276,10 +283,13 @@ export async function listReports() {
   });
 }
 
-export async function initiateCreditPurchase(packageKey) {
+export async function initiateCreditPurchase(packageKey, { successUrl, cancelUrl } = {}) {
   return apiRequest("/billing/credits/purchase/initiate/", {
     method: "POST",
-    body: { package: packageKey },
+    body: {
+      package: packageKey,
+      ...(successUrl ? { success_url: successUrl, cancel_url: cancelUrl } : {}),
+    },
     auth: true,
   });
 }

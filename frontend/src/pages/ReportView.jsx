@@ -237,6 +237,17 @@ export default function ReportView() {
   const [subscriptionId, setSubscriptionId] = useState("");
   const [subscriptionPeriodDays, setSubscriptionPeriodDays] = useState(30);
 
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  // Detect ?payment=success after returning from PayMongo checkout
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("payment") === "success") {
+      setPaymentSuccess(true);
+      navigate(location.pathname, { replace: true });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const canViewFullReport = Boolean(access?.can_view_full_report);
   const subscriptionActive = Boolean(access?.subscription_active);
   const subscriptionDaysRemaining = Number(access?.subscription_days_remaining ?? 0);
@@ -356,7 +367,7 @@ export default function ReportView() {
   async function handleInitiatePurchase() {
     if (!isLoggedIn) {
       setBillingMessage("Please sign in to continue purchase.");
-      navigate("/login", { state: { from: returnPath } });
+      navigate("/login", { state: { from: returnPath, pendingPackage: selectedPackage } });
       return;
     }
 
@@ -612,6 +623,22 @@ export default function ReportView() {
 
   return (
     <div style={{ maxWidth: "900px" }}>
+      {paymentSuccess && (
+        <div
+          style={{
+            backgroundColor: "#dcfce7",
+            border: "1px solid #86efac",
+            borderRadius: "10px",
+            padding: "14px 18px",
+            marginBottom: "20px",
+            fontSize: "14px",
+            color: "#166534",
+            fontWeight: 500,
+          }}
+        >
+          Payment received! Your full report is being loaded below.
+        </div>
+      )}
       {/* ── Page header ── */}
       <div
         style={{

@@ -12,6 +12,7 @@ import AccountPage from "./pages/AccountPage";
 import BillingPage from "./pages/BillingPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
+import RegisterPage from "./pages/RegisterPage";
 
 function App() {
   return (
@@ -25,6 +26,14 @@ function App() {
           element={
             <GuestRoute>
               <LoginPage />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <RegisterPage />
             </GuestRoute>
           }
         />
