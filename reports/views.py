@@ -290,6 +290,20 @@ class GetReportView(APIView):
         active_subscription = ReportAccessControl.get_active_subscription(request.user)
         subscription_days_remaining = ReportAccessControl.get_subscription_days_remaining(request.user)
 
+        signals = report.signals or []
+        information_gaps = report.information_gaps or []
+        suggestions = report.suggestions or []
+
+        if not information_gaps:
+            information_gaps = ["No major information gaps identified."]
+
+        if not suggestions:
+            suggestions = [
+                "Verify the License to Sell with DHSUD or the relevant regulator before making payments.",
+                "Request and review certified true copies of title and ownership records.",
+                "Confirm permit and zoning status directly with the local government unit.",
+            ]
+
         report_payload = {
             "structure_version": report.structure_version,
             "total_score": report.total_score,
@@ -302,9 +316,9 @@ class GetReportView(APIView):
                 "category_interpretations": build_category_interpretations(report.category_breakdown),
                 "license_to_sell_present": report.license_to_sell_present,
                 "strengths": report.strengths,
-                "signals": report.signals,
-                "information_gaps": report.information_gaps,
-                "suggestions": report.suggestions,
+                "signals": signals,
+                "information_gaps": information_gaps,
+                "suggestions": suggestions,
                 "assessment_summary": report.assessment_summary,
             })
 

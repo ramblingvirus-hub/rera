@@ -68,8 +68,10 @@ def generate_strengths(answers: dict, context_profile: str | None = None):
     if answers.get("q16") == "No":
         _append_unique(strengths, "No environmental hazard concerns were indicated.")
 
-    if not strengths:
+    if len(strengths) == 0:
         strengths.append("No major risk indicators detected.")
+    if len(strengths) == 1:
+        strengths.append("Current responses still indicate at least one positive compliance signal.")
 
     return strengths
 
@@ -262,6 +264,17 @@ def generate_explanations(answers: dict):
 
     if context_profile == "private_sale":
         _apply_private_sale_logic(answers, signals, gaps, suggestions)
+
+    baseline_suggestions = [
+        "Verify the License to Sell with DHSUD or the relevant regulator before making payments.",
+        "Request and review certified true copies of title and ownership records.",
+        "Confirm permit and zoning status directly with the local government unit.",
+    ]
+    for item in baseline_suggestions:
+        _append_unique(suggestions, item)
+
+    if not gaps:
+        gaps.append("No major information gaps identified.")
 
     return {
         "strengths": strengths,
