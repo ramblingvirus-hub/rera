@@ -144,7 +144,8 @@ export default function AppShell({ children, breadcrumb }) {
 
   const userMenuRef = useRef(null);
   const currentPageLabel = breadcrumb?.current || "Workspace";
-  const isDashboardPage = location.pathname === "/dashboard";
+  const isDashboardPage =
+    location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard/");
 
   function handleLogout() {
     clearAuthTokens();
@@ -340,7 +341,7 @@ export default function AppShell({ children, breadcrumb }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 18px 0 16px",
+          padding: "0 14px 0 12px",
           position: "sticky",
           top: 0,
           zIndex: 120,
@@ -372,7 +373,7 @@ export default function AppShell({ children, breadcrumb }) {
           </div>
         </div>
 
-        <div style={{ flex: "0 1 360px", padding: "0 18px", minWidth: 0 }}>
+        <div style={{ flex: "0 1 320px", padding: "0 12px", minWidth: 0 }}>
           <div
             style={{
               width: "100%",
@@ -391,7 +392,7 @@ export default function AppShell({ children, breadcrumb }) {
 
         <div
           ref={userMenuRef}
-          style={{ display: "flex", alignItems: "center", gap: "10px", position: "relative" }}
+          style={{ display: "flex", alignItems: "center", gap: "8px", position: "relative", minWidth: 0 }}
         >
           {loggedIn && (
             <>
@@ -400,6 +401,10 @@ export default function AppShell({ children, breadcrumb }) {
                   fontSize: "13px",
                   color: "#0f172a",
                   fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: isCompactLayout ? "110px" : "220px",
                 }}
               >
                 Welcome back {username || "User"}
