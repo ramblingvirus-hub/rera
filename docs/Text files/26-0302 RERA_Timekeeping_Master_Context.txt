@@ -1,0 +1,180 @@
+RERA � Timekeeping Master Context
+Purpose:
+This document tracks weekly time spent on RERA development work. Week runs Sunday ? Saturday (Manila Time, UTC+8).
+
+System Classification Reference:
+Integrity-Hardened, Versioned, Retry-Protected, PostgreSQL-Backed, Environment-Disciplined Core
+Weekly Time Summary
+Week 1: Feb 9 � Feb 15, 2026
+Estimated: 5�6 hours
+Notes: Transition & Design Freeze Period
+Week 2: Feb 16 � Feb 22, 2026
+Total: 22.8 hours
+Key Milestones:
+- Phase 2D Integrity Layer Completion
+- Lifecycle Validation
+- Audit & Ledger Hardening
+Week 3: Feb 23 � Feb 29, 2026
+Total: 26.5 hours
+Key Milestones:
+- Phase 3A API Versioning
+- Phase 3B Idempotency Layer
+- Phase 3C PostgreSQL Migration Execution
+- Phase 3D Environment Configuration Hardening
+Week 4: Mar 1 – Mar 7, 2026
+Sunday (Mar 2): 4.5 hours
+Additional sessions (Mar 3–7): ~8.0 hours estimated
+  Phases completed this week:
+  – Phase 3E/3F/3G Monitoring + Revenue Flow Simulation
+  – Phase 3H Operational Safety Guardrails
+  – Phase 3I/3J Monitoring Automation
+  – Phase 4A Interview Scoring Engine design + implementation
+  – Phase 4B Interview Save & Resume Architecture
+Week Total: ~12.5 hours (estimated)
+
+Week 5: Mar 8 – Mar 14, 2026
+Estimated total: ~20 hours
+
+Sessions this week covered:
+  Mar 9–10: ~8 hours
+    – Phase 4C Interview Workflow API
+      * POST /api/v1/interview/start/
+      * PATCH /api/v1/interview/<id>/save/
+      * GET /api/v1/interview/<id>/
+      * POST /api/v1/interview/<id>/submit/
+    – Phase 4D Interview → Evaluation Engine Integration
+      * InterviewSession responses passed to evaluation pipeline
+      * Full workflow: interview → billing → report generation
+    – Phase 4E Interview Workflow Hardening
+      * Empty interview guard
+      * Required question validation (Q7–Q16)
+      * Credit availability enforcement
+      * Post-submission interview immutability
+
+  Mar 11–12: ~8 hours
+    – Phase 4F Report Retrieval & Evaluation History API
+      * Report retrieval endpoint
+      * User evaluation history endpoint
+      * Ownership enforcement for reports
+    – Phase 5 Frontend Interview Engine
+      * React + Vite frontend environment initialized
+      * Dashboard interface
+      * Interview question rendering
+      * API submission to backend connected
+    – Phase 6 Interview Navigation & UX
+      * Single-question navigation interface
+      * Next / Back controls
+      * Section-based grouping
+      * Progress indicator and visual progress bar
+      * Review screen prior to submission
+
+  Mar 13–14: ~4 hours
+    – Phase 7 Report Display UI (initiated)
+      * ReportView.jsx component created
+      * JWT authenticated API request
+      * Dynamic route /report/:request_id implemented
+      * Category breakdown, risk signals, gaps, suggestions rendered
+
+Week Total: ~20 hours (estimated)
+
+Week 6: Mar 15 – Mar 21, 2026
+Estimated total: ~24 hours
+
+Sessions this week covered:
+  Mar 15–17: ~4 hours
+    – Phase 7 Report Display UI finalized and frozen
+    – Phase 8 backend preparation and API stabilization
+
+  Mar 18: ~8 hours
+    – Phase 8 Report Paywall & Monetization (backend)
+      * billing/report_access.py access control helper
+      * billing/paymongo_service.py PayMongo scaffold
+      * CreditPurchase + Subscription models + migrations
+      * Credit purchase initiate/confirm endpoints
+      * Subscription activation endpoint
+      * Report unlock gating wired to GetReportView
+    – Runtime stability restored after rollback (subscription model fix)
+    – End-to-end Postman verification of all billing endpoints
+
+  Mar 19: ~8 hours
+    – Phase 8 frontend bridge
+      * Auth token management + refresh flow (apiClient.js)
+      * Login/logout UI in interview and report views
+      * Report paywall with blurred locked sections + LOCKED badges
+      * Billing controls (Buy Credits, Subscribe) in report page
+      * Access metadata surfaced in API response
+    – Phase 9 Website Design Port
+      * Dashboard and report surfaces ported to finalized design system
+      * Interview flow surfaced as structured itemized experience
+    – Phase 9A Context-Aware Interview Refinement
+      * Private-sale supplemental questions integrated
+      * Context-aware rendering and interpretation
+      * Global footer branding "Powered by HeptaGeeks"
+
+  Mar 20: ~4 hours
+    – Phase 10A Frontend Hardening, QA Baseline & Teaser-First Funnel
+      * Tailwind landing and UX guide revisions
+      * Anonymous teaser report delivery before authentication
+      * Auth moved to buy/unlock actions
+      * Vitest + React Testing Library introduced
+      * qa.ps1 one-command QA runner and VS Code QA tasks
+      * Redirect preservation through login/unlock flows
+      * Frontend network error normalization
+      * Regression test coverage for auth guards, teaser gating,
+        interview preview submission
+    – Backend pytest pinned in requirements.txt
+    – 17 backend tests passing, 10 frontend tests passing
+
+Week 7: Mar 22 – Mar 28, 2026 (Current)
+  Mar 23: ~5 hours
+    – Phase 10B Superadmin Billing Bypass & Frontend Auth Hardening
+      * Root cause investigation: interview API calls sending auth: false
+        (no JWT token attached — backend treated all users as anonymous)
+      * billing/services.py: user_has_admin_bypass() added
+      * billing/report_access.py: superuser short-circuit
+      * reports/views.py: billing_type = "admin" for superusers
+      * apiClient.js: auth: false → auth: true on all interview endpoints
+      * InterviewPage.jsx: stale draft auto-load removed
+      * ReportView.jsx: force-refetch after inline login
+      * tests/test_superuser_billing.py: 3 regression tests added
+      * Full report confirmed rendering in incognito (live production)
+    – Phase 10C Vercel SPA Routing Fix
+      * Created frontend/vercel.json with SPA rewrite rule
+      * Resolves 404: NOT_FOUND on direct route access
+    – Phase 10D Interview Enter Key Navigation
+      * Enter key now advances to next question in interview
+      * SELECT guard prevents hijacking native dropdown behavior
+    – Documentation update: 26-0323 engineering log, phase map, context
+
+Week Total So Far: ~5 hours
+
+Cumulative Hours (Confirmed + Estimated)
+Week 1: ~5.5 hours
+Week 2: 22.8 hours
+Week 3: 26.5 hours
+Week 4: ~12.5 hours
+Week 5: ~20.0 hours
+Week 6: ~24.0 hours
+Week 7 (in progress): ~5.0 hours
+--------------------------------------------------
+Total Hours to Date: ~116.3 hours (approx.)
+Productivity Per Phase Breakdown
+Phase 2D � Integrity Layer: ~15�18 hours
+Phase 3A � API Versioning: ~4�5 hours
+Phase 3B � Idempotency: ~6�8 hours
+Phase 3C � PostgreSQL Migration: ~8�10 hours
+Phase 3D � Environment Hardening: ~4�6 hours
+Time reflects logged development blocks and milestone sessions.
+Projected MVP Timeline Tracker
+Target Operating Cadence: 22 hours/week
+If maintained consistently:
+- Remaining hardening + freeze checklist items can be closed within 1�2 focused weeks.
+- Revenue Activation readiness likely achievable well before March 31 target.
+Note: Timeline depends on no new scope expansion and controlled execution discipline.
+Operating Discipline Rules
+- 22 hours is a ceiling, not a challenge.
+- Log hours immediately after completion.
+- Use Manila Time (UTC+8).
+- Weekly close every Saturday.
+- No retroactive inflation of hours.
+- Commit major milestones to git after completion.

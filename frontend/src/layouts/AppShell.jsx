@@ -597,13 +597,29 @@ export default function AppShell({ children, breadcrumb }) {
               borderTop: "1px solid #e2e8f0",
               color: "#64748b",
               fontSize: "12px",
-              fontWeight: 700,
               textAlign: "center",
-              letterSpacing: "0.04em",
               backgroundColor: "#f8fafc",
             }}
           >
-            Powered by HeptaGeeks
+            <div style={{ fontWeight: 700, letterSpacing: "0.04em" }}>Powered by HeptaGeeks</div>
+            <div
+              style={{
+                marginTop: "6px",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "10px",
+                flexWrap: "wrap",
+              }}
+            >
+              <Link to="/privacy-policy" style={{ color: "#0f766e", fontWeight: 600 }}>
+                Privacy Policy
+              </Link>
+              <span aria-hidden="true">•</span>
+              <Link to="/terms-of-service" style={{ color: "#0f766e", fontWeight: 600 }}>
+                Terms of Service
+              </Link>
+            </div>
           </div>
         </main>
       </div>

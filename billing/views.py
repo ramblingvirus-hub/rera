@@ -47,10 +47,25 @@ CREDIT_PACKAGES = {
 class InitiateCreditPurchaseView(APIView):
     """
     Step 1 of credit purchase flow.
-    Creates a PayMongo payment intent and returns the client key
-    so the frontend can complete the payment.
+    Creates a hosted PayMongo checkout session and returns checkout URL.
     """
     permission_classes = [IsAuthenticated]
+
+    def _resolve_redirect_urls(self, request):
+        app_origin = (
+            request.headers.get("Origin")
+            or getattr(settings, "PAYMONGO_CHECKOUT_FRONTEND_ORIGIN", "")
+            or (settings.CORS_ALLOWED_ORIGINS[0] if getattr(settings, "CORS_ALLOWED_ORIGINS", None) else "")
+        )
+
+        if app_origin:
+            app_origin = app_origin.rstrip("/")
+            return (
+                f"{app_origin}/report",
+                f"{app_origin}/report",
+            )
+
+        return (None, None)
 
     def post(self, request):
         package_key = request.data.get("package")
@@ -71,15 +86,29 @@ class InitiateCreditPurchaseView(APIView):
 
         try:
             paymongo = PayMongoService()
-            payment_intent = paymongo.create_payment_intent(
+            success_url, cancel_url = self._resolve_redirect_urls(request)
+
+            checkout_session = paymongo.create_checkout_session(
                 amount_cents=package["amount_centavos"],
                 description=package["description"],
                 metadata={
                     "user_id": str(request.user.id),
                     "package": package_key,
-                    "credits": package["credits"]
-                }
+                    "credits": package["credits"],
+                },
+                success_url=success_url,
+                cancel_url=cancel_url,
+                reference_number=f"rera-{uuid.uuid4().hex[:12]}",
             )
+
+            checkout_session_id = checkout_session.get("id")
+            checkout_url = checkout_session.get("attributes", {}).get("checkout_url")
+
+            if not checkout_session_id or not checkout_url:
+                return Response(
+                    {"error": "Payment initiation failed: checkout URL not returned."},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
 
             # Record pending purchase
             purchase = CreditPurchase.objects.create(
@@ -87,15 +116,15 @@ class InitiateCreditPurchaseView(APIView):
                 credits_purchased=package["credits"],
                 amount_php=package["amount_php"],
                 payment_method="paymongo",
-                paymongo_payment_id=payment_intent["id"],
+                paymongo_payment_id=checkout_session_id,
                 status="pending"
             )
 
             return Response(
                 {
                     "purchase_id": str(purchase.id),
-                    "payment_intent_id": payment_intent["id"],
-                    "client_key": payment_intent["attributes"]["client_key"],
+                    "checkout_session_id": checkout_session_id,
+                    "checkout_url": checkout_url,
                     "amount_php": package["amount_php"],
                     "credits": package["credits"],
                     "description": package["description"],
@@ -118,12 +147,12 @@ class InitiateCreditPurchaseView(APIView):
 class ConfirmCreditPurchaseView(APIView):
     """
     Step 2 of credit purchase flow.
-    Checks PayMongo payment intent status and credits user when succeeded.
+    Checks PayMongo payment status and credits user when succeeded.
     """
     permission_classes = [IsAuthenticated]
 
-    SUCCESS_STATUSES = {"succeeded"}
-    FAILED_STATUSES = {"cancelled"}
+    SUCCESS_STATUSES = {"succeeded", "paid"}
+    FAILED_STATUSES = {"cancelled", "failed", "expired"}
 
     def post(self, request):
         purchase_id = request.data.get("purchase_id")
@@ -157,8 +186,21 @@ class ConfirmCreditPurchaseView(APIView):
 
         try:
             paymongo = PayMongoService()
-            payment_intent = paymongo.retrieve_payment_intent(purchase.paymongo_payment_id)
-            payment_status = payment_intent.get("attributes", {}).get("status", "unknown")
+            paymongo_ref = (purchase.paymongo_payment_id or "").strip()
+
+            if paymongo_ref.startswith("cs_"):
+                session = paymongo.retrieve_checkout_session(paymongo_ref)
+                session_attrs = session.get("attributes", {})
+                session_status = session_attrs.get("status", "unknown")
+
+                payments = session_attrs.get("payments") or []
+                latest_payment = payments[-1] if payments else {}
+                latest_status = latest_payment.get("attributes", {}).get("status", "unknown")
+
+                payment_status = latest_status if latest_status != "unknown" else session_status
+            else:
+                payment_intent = paymongo.retrieve_payment_intent(paymongo_ref)
+                payment_status = payment_intent.get("attributes", {}).get("status", "unknown")
 
             if payment_status in self.SUCCESS_STATUSES:
                 with transaction.atomic():

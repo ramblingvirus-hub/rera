@@ -5,18 +5,18 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-500 to-green-600 text-white">
-      <div className="max-w-6xl mx-auto flex justify-between items-center px-6 lg:px-8 py-6">
+      <div className="max-w-6xl mx-auto flex flex-col gap-4 px-6 lg:px-8 py-6 sm:flex-row sm:justify-between sm:items-center">
         <div className="flex items-center gap-3">
           <img src="/rera-logo.png" alt="RERA" className="h-9 w-auto" />
           <div className="font-bold text-xl">RERA</div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-4">
           <Link to="/login" className="text-white/80 hover:text-white transition-colors">
             Sign In
           </Link>
           <button
             onClick={() => navigate("/new")}
-            className="bg-white text-teal-700 px-5 py-2.5 rounded-lg font-semibold shadow-md hover:bg-gray-100 hover:scale-105 transition-all"
+            className="bg-white text-teal-700 px-4 py-2.5 rounded-lg text-sm sm:text-base sm:px-5 font-semibold shadow-md hover:bg-gray-100 hover:scale-105 transition-all"
           >
             Start Free Risk Check →
           </button>
@@ -125,8 +125,17 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <div className="text-center text-white/70 py-6 text-sm">
-        Powered by HeptaGeeks
+      <div className="text-center text-white/80 py-6 text-sm">
+        <p>Powered by HeptaGeeks</p>
+        <div className="mt-2 flex items-center justify-center gap-4">
+          <Link to="/privacy-policy" className="underline hover:text-white">
+            Privacy Policy
+          </Link>
+          <span>•</span>
+          <Link to="/terms-of-service" className="underline hover:text-white">
+            Terms of Service
+          </Link>
+        </div>
       </div>
     </div>
   );

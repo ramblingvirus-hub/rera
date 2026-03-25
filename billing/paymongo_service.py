@@ -16,6 +16,10 @@ class PayMongoService:
         self.secret_key = settings.PAYMONGO_SECRET_KEY
         self.public_key = settings.PAYMONGO_PUBLIC_KEY
         self.headers = self._get_headers()
+
+        # Optional redirect URLs for hosted checkout.
+        self.checkout_success_url = getattr(settings, "PAYMONGO_CHECKOUT_SUCCESS_URL", "")
+        self.checkout_cancel_url = getattr(settings, "PAYMONGO_CHECKOUT_CANCEL_URL", "")
     
     def _get_headers(self):
         """Create authorization headers for PayMongo API"""
@@ -45,10 +49,12 @@ class PayMongoService:
                         }
                     },
                     "description": description,
-                    
                 }
             }
         }
+
+        if metadata:
+            payload["data"]["attributes"]["metadata"] = metadata
 
         try:
             response = requests.post(
@@ -65,6 +71,61 @@ class PayMongoService:
             return response.json()["data"]
         except requests.exceptions.RequestException as e:
             raise PayMongoException(f"Failed to create payment intent: {str(e)}")
+
+    def create_checkout_session(
+        self,
+        amount_cents,
+        description,
+        metadata=None,
+        success_url=None,
+        cancel_url=None,
+        reference_number=None,
+    ):
+        """
+        Create a hosted PayMongo Checkout Session and return session data.
+        """
+        payload = {
+            "data": {
+                "attributes": {
+                    "line_items": [
+                        {
+                            "currency": "PHP",
+                            "amount": int(amount_cents),
+                            "name": description,
+                            "quantity": 1,
+                        }
+                    ],
+                    "payment_method_types": ["card"],
+                }
+            }
+        }
+
+        resolved_success_url = success_url or self.checkout_success_url
+        resolved_cancel_url = cancel_url or self.checkout_cancel_url
+        if resolved_success_url:
+            payload["data"]["attributes"]["success_url"] = resolved_success_url
+        if resolved_cancel_url:
+            payload["data"]["attributes"]["cancel_url"] = resolved_cancel_url
+        if metadata:
+            payload["data"]["attributes"]["metadata"] = metadata
+        if reference_number:
+            payload["data"]["attributes"]["reference_number"] = str(reference_number)
+
+        try:
+            response = requests.post(
+                f"{self.BASE_URL}/checkout_sessions",
+                json=payload,
+                headers=self.headers,
+                timeout=15,
+            )
+            if response.status_code >= 400:
+                raise PayMongoException(
+                    f"PayMongo create_checkout_session failed "
+                    f"({response.status_code}): {response.text}"
+                )
+            return response.json()["data"]
+        except requests.exceptions.RequestException as e:
+            raise PayMongoException(f"Failed to create checkout session: {str(e)}")
 
     
     def create_payment_method(self, token):
@@ -151,6 +212,25 @@ class PayMongoService:
             return response.json()["data"]
         except requests.exceptions.RequestException as e:
             raise PayMongoException(f"Failed to retrieve payment intent: {str(e)}")
+
+    def retrieve_checkout_session(self, checkout_session_id):
+        """
+        Retrieve the status of a checkout session.
+        """
+        try:
+            response = requests.get(
+                f"{self.BASE_URL}/checkout_sessions/{checkout_session_id}",
+                headers=self.headers,
+                timeout=10,
+            )
+            if response.status_code >= 400:
+                raise PayMongoException(
+                    f"PayMongo retrieve_checkout_session failed "
+                    f"({response.status_code}): {response.text}"
+                )
+            return response.json()["data"]
+        except requests.exceptions.RequestException as e:
+            raise PayMongoException(f"Failed to retrieve checkout session: {str(e)}")
 
 
 class PayMongoException(Exception):

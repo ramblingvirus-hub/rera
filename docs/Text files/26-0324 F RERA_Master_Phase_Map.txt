@@ -1,0 +1,309 @@
+RERA Master Phase Map
+Last Updated: 2026-03-23
+
+Phase 1 – Core Evaluation Engine
+Development of the real-estate risk scoring model
+Category scoring structure implemented
+Evaluation report generation
+Baseline API endpoint for evaluation
+
+Phase 2 – Ledger & Billing Foundations
+Immutable credit ledger design
+CreditTransaction model implemented
+AuditEvent system introduced
+Service-layer billing abstraction created
+
+Phase 3 – Revenue Activation
+JWT authentication layer
+Evaluation endpoint protected
+Billing deduction tied to evaluation lifecycle
+Idempotency protection added
+
+Phase 3G – Revenue Flow Simulation & Freeze Validation
+Credit purchase simulation
+Multiple credit deductions tested
+Idempotency replay protection validated
+Idempotency conflict protection validated (HTTP 409)
+Credits drained to zero
+Insufficient credit enforcement validated (HTTP 402)
+Audit logging verified
+
+Phase 3H – Operational Safety & Abuse Guardrails
+Status: Completed
+
+Implemented:
+– Explicit HTTP method restriction for evaluation endpoint
+– Idempotency key cleanup command
+– Row-level locking for credit deduction
+
+Purpose:
+– Protect evaluation endpoint from accidental exposure
+– Prevent long-term idempotency table growth
+– Eliminate concurrency race conditions in credit ledger
+
+Result:
+System billing layer now guarantees transaction-safe credit deduction
+under parallel requests.
+
+Phase 3I – Operational Monitoring & Anomaly Detection
+Status: Completed
+
+Implemented:
+– Operational monitoring command
+– Billing velocity detection
+– Validation failure detection
+– Evaluation request velocity detection
+– Per-user credit activity inspection
+– System health aggregation
+
+Purpose:
+Provide founder-level operational visibility before revenue activation.
+
+Phase 3J – Monitoring Automation
+Status: Completed
+
+Implemented:
+– Monitoring command logging integration
+– Healthy system monitoring logs (INFO level)
+– Anomaly detection logs (ERROR level)
+– Persistent anomaly evidence written to logs/errors.log
+– Monitoring command prepared for scheduler-based automation
+
+Purpose:
+Ensure operational anomaly detection results are persistently recorded
+when monitoring runs automatically without an interactive console.
+
+Phase 4A – Interview Scoring & Risk Interpretation Layer
+Status: Completed
+Date: March 9, 2026
+
+Implemented:
+– Interview scoring matrix (Q7–Q16 mapped to five risk categories)
+– Category score calculation with defined weights
+– Final score computation
+– Risk band classification (Lower / Moderate / Elevated / High)
+– Explanation engine (signals, information gaps, suggestions)
+– Integration with EvaluateProjectView
+
+Phase 4B – Interview Save & Resume Architecture
+Status: Completed
+Date: March 9, 2026
+
+Implemented:
+– InterviewSession persistence model
+– Django admin inspection support
+– Question registry architecture
+– Registry-driven scoring compatibility
+– Standardized question identifiers
+
+Phase 4C – Interview Workflow API
+Status: Completed
+Date: March 10, 2026
+
+Delivered endpoints:
+POST   /api/v1/interview/start/
+PATCH  /api/v1/interview/<id>/save/
+GET    /api/v1/interview/<id>/
+POST   /api/v1/interview/<id>/submit/
+
+Phase 4D – Interview → Evaluation Engine Integration
+Status: Completed
+Date: March 10, 2026
+
+InterviewSession responses passed to evaluation pipeline via internal
+DRF request. Full workflow: interview → submit → evaluation → billing
+→ report generation.
+
+Phase 4E – Interview Workflow Hardening
+Status: Completed
+Date: March 10, 2026
+
+Delivered protections:
+– Empty interview guard
+– Required question validation (Q7–Q16)
+– Credit availability enforcement
+– Post-submission interview immutability
+
+Phase 4F – Report Retrieval & Evaluation History API
+Status: Completed
+Date: March 11, 2026
+
+Implemented:
+– Report retrieval endpoint
+– User evaluation history endpoint
+– Ownership enforcement for reports
+– Query optimization for history listing
+
+Phase 5 – Frontend Interview Engine
+Status: Completed
+Date: March 11–12, 2026
+
+Delivered:
+– React + Vite frontend environment
+– Dashboard interface
+– Interview question rendering
+– Response capture
+– API submission to backend
+– Interview session lifecycle management
+
+Phase 6 – Interview Navigation & UX
+Status: Completed
+Date: March 12, 2026
+
+Implemented:
+– Single-question navigation interface
+– Next / Back interview navigation controls
+– Section-based interview grouping
+– Progress indicator (Question X of N)
+– Visual progress bar
+– Dynamic section titles
+– Review screen prior to evaluation submission
+
+Phase 7 – Report Display UI
+Status: Completed
+Date: March 13, 2026
+
+Delivered:
+– React report viewer component (ReportView.jsx)
+– JWT authenticated API request
+– Dynamic route: /report/:request_id
+– Category breakdown display
+– Risk signals and information gaps display
+– Due diligence suggestions display
+
+Phase 8 – Report Paywall & Monetization
+Status: Completed
+Date: March 18–19, 2026
+
+Backend delivered:
+– Report access control helper (billing/report_access.py)
+– PayMongo integration scaffold (billing/paymongo_service.py)
+
+---
+Summary for March 24, 2026:
+
+- Production domain, DNS, and SSL setup completed for both frontend (Vercel) and backend (Railway).
+- CORS, CSRF, and allowed hosts environment variables hardened for production.
+- Beta user creation pipeline prepared for production DB.
+- PayMongo keys flagged for switch to live credentials.
+- Frontend and backend now fully communicate via custom domains with CORS and credential support.
+- To-do list and beta user credential files created in docs/Text files.
+- Next priorities: responsive design, PayMongo live keys, insert beta users, and full smoke test.
+– CreditPurchase and Subscription models + migrations
+– Credit purchase initiate/confirm endpoints
+– Subscription activation endpoint
+– Report unlock gating in GetReportView
+
+Frontend delivered:
+– Auth token management and refresh flow
+– Login/logout UI integrated in interview and report views
+– Report paywall with blurred locked sections and LOCKED badges
+– Billing controls in report page (Buy Credits, Subscribe)
+– Access metadata surfaced in API response
+– Teaser report context (project name, city, region)
+
+Phase 9 – Website Design Port
+Status: Completed
+Date: March 19, 2026
+
+Delivered:
+– Frontend dashboard and report surfaces ported to finalized design
+– Interview flow surfaced as structured itemized experience
+– Context-aware interview rendering
+– Private-sale interpretation refinements
+– Global footer branding "Powered by HeptaGeeks"
+
+Phase 10A – Frontend Hardening, QA Baseline & Teaser-First Conversion Flow
+Status: Completed
+Date: March 20, 2026
+
+Implemented:
+– Tailwind-based landing and interview UX guide port
+– Anonymous teaser report delivery before authentication
+– Authentication moved to buy/unlock actions
+– Backend pytest dependency pinned
+– Frontend Vitest + React Testing Library introduced
+– One-command qa.ps1 runner and VS Code QA tasks
+– Consistent frontend route protection
+– Redirect preservation through login and unlock actions
+– Frontend network error normalization
+– Regression tests for auth guards, teaser gating, interview preview
+
+Phase 10B – Superadmin Billing Bypass & Frontend Authentication Hardening
+Status: Completed
+Date: March 23, 2026
+
+Problem
+Superadmin user receiving teaser/locked report on live production site
+despite backend bypass logic having been committed. Root cause: interview
+API calls in apiClient.js were sending auth: false, meaning no JWT token
+was attached. Backend treated all interview requests as anonymous and
+returned preview: true unconditionally.
+
+Backend changes:
+– user_has_admin_bypass(user) added to billing/services.py
+– has_unlimited_report_access() routes through bypass check
+– billing/report_access.py short-circuits for superusers
+– reports/views.py: admin bypass before subscription/credit checks
+– billing_type = "admin" set when superuser bypass applies
+– timezone.now() replaces datetime.utcnow()
+
+Frontend changes:
+– apiClient.js: auth: true on all interview endpoints
+  (startInterview, getInterview, saveInterview, submitInterview)
+– InterviewPage.jsx: stale rera_interview_id auto-load removed
+– ReportView.jsx: loadReport(force) guard updated; force-refetch
+  after inline login
+
+Tests added:
+– tests/test_superuser_billing.py (3 regression tests, all passing)
+– Backend: 17 passed | Frontend: 10 passed
+
+Commits:
+– 9eb2a97  Backend billing bypass + regression tests
+– 66ae23d  Frontend auth fix + stale draft removal + ReportView guard
+
+Result:
+Full report confirmed rendering in incognito browser as superadmin.
+
+Phase 10C – Vercel SPA Routing Fix
+Status: Completed
+Date: March 23, 2026
+
+Problem
+Direct navigation to any React Router route (e.g. /login, /new, /report/:id)
+returned 404: NOT_FOUND from Vercel CDN. No SPA fallback rewrite existed.
+
+Fix:
+– Created frontend/vercel.json with SPA rewrite:
+    { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
+– All direct URL access and page refreshes now correctly serve
+  index.html and allow React Router to handle routing client-side.
+
+Commit:
+– 8f90af4  add vercel rewrite for spa routes
+
+Phase 10D – Interview Enter Key Navigation
+Status: Completed
+Date: March 23, 2026
+
+Feature:
+Allow Enter key to advance interview to next question, in addition to
+the Next → button.
+
+Implementation:
+– handleNext() extracted and shared by button and keydown listener
+– useEffect registers window keydown listener for Enter key
+– Guard: does not fire when focused element is <select>
+– Listener cleaned up and re-registered on currentIndex change
+– On final question: Enter opens Review screen
+
+Commit:
+– 45da682  feat: Enter key advances to next question in interview
+
+Phase 11 – Next
+Objective:
+– Session recovery across token expiry during billing/unlock actions
+– Staging smoke pass: teaser → login → purchase → unlock full report
+– Operational monitoring alert routing
+– Production domain, DNS, SSL, and secret hardening

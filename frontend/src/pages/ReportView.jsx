@@ -365,10 +365,16 @@ export default function ReportView() {
     try {
       const data = await initiateCreditPurchase(selectedPackage);
       const nextPurchaseId = data?.purchase_id || "";
+      const checkoutUrl = data?.checkout_url || "";
       setPurchaseId(nextPurchaseId);
-      setBillingMessage(
-        `Purchase initialized. purchase_id=${nextPurchaseId}. Complete payment in PayMongo, then click Confirm Purchase.`
-      );
+
+      if (checkoutUrl) {
+        setBillingMessage("Redirecting to PayMongo checkout...");
+        window.location.assign(checkoutUrl);
+        return;
+      }
+
+      setBillingMessage("Purchase initialized but checkout URL is missing.");
       await refreshBalance();
     } catch (error) {
       setBillingMessage(error.message || "Failed to initiate purchase");
@@ -1103,7 +1109,7 @@ export default function ReportView() {
                 {/* Confirm Purchase */}
                 <div style={{ marginBottom: "22px" }}>
                   <h3 style={{ fontSize: "14px", fontWeight: 600, color: "#1a2332", marginBottom: "10px" }}>
-                    Confirm Purchase
+                    Refresh Purchase Status
                   </h3>
                   <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                     <input

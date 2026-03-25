@@ -10,12 +10,16 @@ import ReportsListPage from "./pages/ReportsListPage";
 import ReportView from "./pages/ReportView";
 import AccountPage from "./pages/AccountPage";
 import BillingPage from "./pages/BillingPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         <Route
           path="/login"
           element={

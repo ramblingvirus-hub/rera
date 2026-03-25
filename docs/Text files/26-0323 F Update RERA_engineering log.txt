@@ -1,0 +1,195 @@
+RERA – Engineering Log
+Date: March 23, 2026 (Manila Time)
+Session Type: Live Debugging + Feature Delivery
+
+---------------------------------------------------
+OVERVIEW
+---------------------------------------------------
+
+Three problems resolved and one quality-of-life feature delivered in a
+single session. Work was driven by a live failure report on the deployed
+production site at rera-five.vercel.app.
+
+At session start: superadmin user was receiving a locked/teaser report
+despite existing backend bypass logic committed in a prior session.
+
+At session end: full report confirmed rendering in incognito browser.
+All four changes validated on live production environment.
+
+---------------------------------------------------
+PHASE 10B – Superadmin Billing Bypass & Frontend Auth Hardening
+Date: March 23, 2026
+Status: COMPLETE
+---------------------------------------------------
+
+Root Cause Investigation
+
+After backend billing bypass was committed (billing/services.py,
+billing/report_access.py, reports/views.py – commit 9eb2a97),
+the superadmin was still receiving a teaser/preview report on the live site.
+
+Root cause traced to frontend: all interview API calls in apiClient.js
+were sending `auth: false`. This meant no JWT token was attached to
+requests. On the backend, request.user.is_authenticated evaluated to False,
+causing the SubmitInterviewView to return preview: true for every evaluation
+regardless of user identity.
+
+Backend billing bypass was correct. Frontend was bypassing it entirely by
+presenting as anonymous.
+
+Changes Delivered
+
+1. billing/services.py
+   – Added user_has_admin_bypass(user): returns True for is_superuser
+   – Added has_unlimited_report_access(user): routes through bypass check
+   – Updated has_sufficient_credit() to short-circuit for superusers
+   – Updated enforce_report_access() to return "admin" for superusers
+
+2. billing/report_access.py
+   – Imported user_has_admin_bypass from services
+   – can_access_full_report() and user_has_sufficient_credits() now
+     return early for superusers
+
+3. reports/views.py
+   – EvaluateProjectView checks user_has_admin_bypass() before
+     subscription or credit enforcement
+   – Sets billing_type = "admin" when bypassed
+   – Replaced datetime.utcnow() with timezone.now() (naive datetime fix)
+
+4. frontend/src/api/apiClient.js
+   – startInterview, getInterview, saveInterview, submitInterview:
+     auth: false → auth: true
+   – JWT token now included in all interview API calls
+
+5. frontend/src/pages/InterviewPage.jsx
+   – Removed useEffect that auto-loaded stale rera_interview_id from
+     localStorage on page mount
+   – New evaluations now always begin blank
+
+6. frontend/src/pages/ReportView.jsx
+   – loadReport now accepts force parameter (default: false)
+   – Guard updated: skip re-fetch only when anonymousPreview AND
+     not logged in AND not force
+   – After inline login (handleLogin), calls loadReport(true) to
+     force-fetch full report
+   – Dependency array updated to include isLoggedIn
+
+7. tests/test_superuser_billing.py (new file)
+   – Three regression tests for superadmin billing bypass
+   – uuid.uuid4().hex suffix on usernames avoids fixture collision
+   – settings.ALLOWED_HOSTS patched to include testserver
+   – timezone.now() used for report timestamp
+   – All 3 tests passing
+
+Test Results
+– Backend pytest: 17 passed
+– Frontend Vitest: 10 passed
+
+Git Commits
+– 9eb2a97  Backend billing bypass + regression tests
+– 66ae23d  Frontend auth fix, stale draft removal, ReportView teaser guard
+
+
+---------------------------------------------------
+PHASE 10C – Vercel SPA Routing Fix
+Date: March 23, 2026
+Status: COMPLETE
+---------------------------------------------------
+
+Problem
+
+During browser cache-bust testing, navigating directly to
+rera-five.vercel.app/login returned:
+    404: NOT_FOUND
+
+Vercel CDN was not configured to fall back to index.html for client-side
+React Router routes. Any direct URL access or page refresh on a non-root
+route produced a hard 404.
+
+Fix
+
+Created frontend/vercel.json with SPA rewrite rule:
+
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+
+This instructs Vercel to serve index.html for all routes, allowing React
+Router to handle the path client-side. Standard requirement for any Vite/
+React Router SPA deployment on Vercel.
+
+Git Commit
+– 8f90af4  add vercel rewrite for spa routes
+
+
+---------------------------------------------------
+PHASE 10D – Interview Enter Key Navigation
+Date: March 23, 2026
+Status: COMPLETE
+---------------------------------------------------
+
+Feature Request
+
+Allow the Enter key to advance to the next question during the interview
+flow, in addition to the existing Next → button.
+
+Implementation
+
+frontend/src/pages/InterviewPage.jsx
+
+– Extracted inline onClick logic into handleNext() function (shared by
+  button and keyboard listener)
+– Added useEffect with window keydown listener:
+    if (e.key !== "Enter") return
+    if (document.activeElement?.tagName === "SELECT") return
+    handleNext()
+– <select> guard prevents Enter from hijacking native dropdown behavior
+– Listener is cleaned up and re-registered on currentIndex change
+
+Behavioral Coverage
+– Text input questions (type: "text"): Enter advances
+– Radio card questions: Enter advances after selection
+– Dropdown questions (type: "select"): Enter opens/closes native dropdown
+  without advancing (guarded by SELECT tag check)
+– Last question reached: Enter opens Review screen instead of advancing
+
+Git Commit
+– 45da682  feat: Enter key advances to next question in interview
+
+
+---------------------------------------------------
+SESSION RESULT
+---------------------------------------------------
+
+Live site confirmed: full evaluation report rendering in incognito browser
+as superadmin. All four deliverables pushed to main and deployed.
+
+Commits this session:
+– 9eb2a97  Backend billing bypass
+– 66ae23d  Frontend auth fix
+– 8f90af4  Vercel SPA rewrite
+– 45da682  Enter key interview navigation
+
+System state at end of session:
+– Superadmin bypasses all billing and credit enforcement
+– Interview API calls authenticated (JWT carried on all endpoints)
+
+---
+Summary for March 24, 2026:
+
+- Production domain, DNS, and SSL setup completed for both frontend (Vercel) and backend (Railway).
+- CORS, CSRF, and allowed hosts environment variables hardened for production.
+- Beta user creation pipeline prepared for production DB.
+- PayMongo keys flagged for switch to live credentials.
+- Frontend and backend now fully communicate via custom domains with CORS and credential support.
+- To-do list and beta user credential files created in docs/Text files.
+- Next priorities: responsive design, PayMongo live keys, insert beta users, and full smoke test.
+– Stale draft auto-load removed from interview page mount
+– ReportView force-refetches full report after inline login
+– Vercel SPA routing correctly handles all direct URL access
+– Enter key supported in interview navigation flow

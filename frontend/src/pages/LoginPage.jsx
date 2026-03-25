@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { login } from "../api/apiClient";
 import { resolveRedirectTarget } from "../utils/navigation";
 
@@ -176,6 +176,24 @@ export default function LoginPage() {
           >
             {loading ? "Signing in…" : "Sign In"}
           </button>
+
+          <div
+            style={{
+              marginTop: "14px",
+              textAlign: "center",
+              fontSize: "12px",
+              color: "#6b7280",
+              lineHeight: 1.6,
+            }}
+          >
+            <Link to="/privacy-policy" style={{ color: "#0f766e" }}>
+              Privacy Policy
+            </Link>
+            <span style={{ margin: "0 8px" }}>•</span>
+            <Link to="/terms-of-service" style={{ color: "#0f766e" }}>
+              Terms of Service
+            </Link>
+          </div>
         </form>
       </div>
     </div>

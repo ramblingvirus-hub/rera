@@ -1,28 +1,1 @@
-26-0319 Frontend Testing
-
-Observations: 
-
-We need a landing page.  
-
-
-Context Layer Implementation
-CLI works
-CLI does not show when sale is offered by Developer
-
-
-Helper Implementation
-I only saw the helper once. 
-Is there a way to show these through a question mark symbol that if hovered through, will show content  of help?  
-
-
-UI Revisions: 
-Logout or Signout button should be beside user info
-
-Additional Functionalities: 
-Print report button after payment
-email report button after payment
-
-
-Others:
-I noticed that LGU/Environmental was at 0 for the Evaluation ID: 2a924d24-643d-426e-b52d-b9bceee57775
-Shouldn't this have a weight attached to it? 
+26-0319 Frontend TestingObservations:We need a landing page.Context Layer ImplementationCLI worksCLI does not show when sale is offered by DeveloperHelper ImplementationI only saw the helper once.Is there a way to show these through a question mark symbol that if hovered through, will show content  of help?UI Revisions:Logout or Signout button should be beside user infoAdditional Functionalities:Print report button after paymentemail report button after paymentOthers:I noticed that LGU/Environmental was at 0 for the Evaluation ID: 2a924d24-643d-426e-b52d-b9bceee57775Shouldn't this have a weight attached to it?26-0320 Testing FrontendHelper Implementation? button needs to be more prominentInstead of being clicked, make this a hover button wherein once the pointer is hovered over it, it pops up like a bubbleMarch 23, 2026 TestingEvaluation Form:Previous Answers are left in the blank spaces for new evaluations

@@ -1,0 +1,169 @@
+RERA PRE-LAUNCH MASTER TODO LIST
+Date: March 25, 2026
+Status: FINAL PRE-LAUNCH EXECUTION
+
+---
+
+## PHASE 1 — CRITICAL BLOCKERS (MUST COMPLETE BEFORE ANY USER ACCESS)
+
+[LEGAL & COMPLIANCE]
+
+* Create Terms of Service page
+* Create Privacy Policy page
+* Add Disclaimer text inside report UI
+* Verify non-accusation language
+* Verify limitation of liability
+
+[PAYMENT SYSTEM]
+
+* Switch PayMongo to LIVE (production) keys
+* Verify payment webhook handling
+* Ensure failed payments DO NOT create credits
+* Ensure successful payments create correct ledger entries
+* Verify reference_id traceability (payment → ledger → audit)
+
+[PRODUCTION CONFIGURATION]
+
+* Confirm DEBUG = False
+* Confirm ALLOWED_HOSTS configured correctly
+* Ensure no dev/test endpoints exposed
+* Confirm JWT authentication only (no session auth)
+* Verify API throttling (429)
+
+---
+
+## PHASE 2 — CORE USER EXPERIENCE (PRODUCT READINESS)
+
+[LANDING PAGE]
+
+* Create landing page
+* Add clear product description (what RERA does)
+* Add target user explanation (buyers, investors)
+* Add CTA: "Start Evaluation"
+* Add trust framing (neutral, non-legal positioning)
+
+[REPORT UI — CRITICAL]
+
+* Display category breakdown
+* Display risk signals
+* Display information gaps
+* Display due diligence suggestions
+* Remove reliance on score-only display
+
+[TEASER → PAID FLOW]
+
+* Verify teaser report shows:
+
+  * total score
+  * risk band
+  * basic context (project info)
+* Ensure smooth transition:
+  teaser → login → purchase → unlock full report
+* Confirm report unlock logic works after payment
+
+---
+
+## PHASE 3 — INTERVIEW UX IMPROVEMENTS
+
+* Add consistent (?) hover tooltips for helper explanations
+* Ensure helper content appears reliably for all relevant questions
+* Fix conditional logic visibility (context-driven questions must always trigger)
+* Improve clarity of question wording if needed
+* Ensure all required categories (5) are always captured (no validation failures)
+
+---
+
+## PHASE 4 — POST-PAYMENT EXPERIENCE
+
+* Add "Print Report" functionality (window.print or equivalent)
+* Add "Download Report" option (optional but preferred)
+* (Optional) Add "Email Report" functionality
+
+---
+
+## PHASE 5 — FRONTEND & UI POLISH
+
+* Make web app fully responsive (mobile layout fixes)
+* Ensure logout/signout button placement is intuitive (beside user info)
+* Remove any leftover test buttons or debug UI elements
+* Ensure consistent styling across pages
+
+---
+
+## PHASE 6 — FULL SYSTEM DRY RUN (MANDATORY)
+
+Simulate full user journey:
+
+1. Anonymous user starts interview
+2. Complete interview
+3. Submit interview
+4. View teaser report
+5. Login
+6. Purchase credits
+7. Unlock full report
+8. View full report
+9. Consume credits to zero
+10. Attempt evaluation again → expect HTTP 402
+
+Validate:
+
+* Billing accuracy
+* Credit deduction
+* Report access control
+* UX flow consistency
+
+---
+
+## PHASE 7 — BETA LAUNCH PREPARATION
+
+* Insert beta users into production database
+* Prepare beta user credentials
+* Limit initial users (3–5 only)
+* Observe behavior and gather feedback
+
+---
+
+## PHASE 8 — MONITORING & OPERATIONS
+
+* Run anomaly detection command regularly:
+  python manage.py check_operational_anomalies
+* Monitor:
+
+  * credit usage spikes
+  * validation failures
+  * evaluation request spikes
+* Review logs for errors or abnormal patterns
+
+---
+
+## PHASE 9 — OPTIONAL (DO ONLY IF TIME PERMITS)
+
+* Email report delivery
+* Improved mobile UX refinements
+* Minor UI polish enhancements
+
+---
+
+## EXPLICITLY DEFERRED (DO NOT TOUCH BEFORE LAUNCH)
+
+* Async audit logging (Celery / queues)
+* Audit table partitioning
+* Founder admin dashboard
+* Advanced analytics features
+* AI/document verification features
+
+---
+
+## FINAL LAUNCH CRITERIA
+
+Launch ONLY if:
+
+* All Phase 1 items complete
+* Payment flow fully verified
+* End-to-end dry run successful
+* Report UI fully displays value (not just score)
+* No critical UX blockers observed
+
+---
+
+## END OF FILE

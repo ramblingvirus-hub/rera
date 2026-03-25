@@ -1,0 +1,167 @@
+RERA Master Context v2
+Updated: 2026-03-23
+
+System Purpose
+RERA is a structured real-estate risk evaluation engine designed to assess
+development projects based on regulatory, legal, and environmental indicators.
+The system produces standardized risk reports while enforcing strict billing
+integrity and audit traceability.
+
+Core Architecture
+– Django backend with PostgreSQL data layer (Railway)
+– React + Vite frontend (Vercel / rera-five.vercel.app)
+– Immutable credit ledger for billing
+– JWT authentication with short-lived access tokens
+– Idempotent evaluation endpoint
+– Structured audit logging system
+– Request correlation via request_id
+– Superadmin bypass layer for internal access without billing
+
+Billing Model
+The system operates on a credit-based billing model. Purchases create positive
+ledger entries. Each evaluation deducts one credit through a usage entry.
+Ledger records are append-only and cannot be modified or deleted in production.
+
+Superadmin Bypass
+Users with is_superuser = True bypass all billing and credit enforcement.
+– user_has_admin_bypass(user) in billing/services.py
+– has_unlimited_report_access() routes through bypass
+– billing/report_access.py short-circuits for superusers
+– EvaluateProjectView sets billing_type = "admin" for superusers
+– Full report access granted regardless of credit balance or subscription
+
+Financial Integrity Guarantees
+– No duplicate charges under request retries
+– Idempotency-Key required for evaluation requests
+– Replay requests return stored responses
+– Payload conflicts produce HTTP 409
+– Zero balance produces HTTP 402 Payment Required
+– Row-level locking prevents concurrent double-deduction
+
+Monetization Surface (Phase 8)
+Freemium access model:
+
+Free (teaser):
+– Total score
+– Risk band
+– Project name, city, region
+
+Paid (full report):
+– Category breakdown
+– Risk signals
+– Information gaps
+– Due diligence suggestions
+
+Access determined by:
+– Active subscription
+– Sufficient credit balance
+– Superadmin bypass (no restriction)
+
+Interview & Evaluation Pipeline
+Interview Answers
+→ Interview Scoring Engine (reports/interview_scoring.py)
+→ Category Scores (5 categories)
+→ Evaluation Engine (rera_core/engine_v1.py)
+→ Risk Band Classification (reports/risk_band.py)
+→ Explanation Engine (reports/explanation_engine.py)
+→ Billing Deduction (billing/services.py)
+→ Structured API Report
+
+Interview API (all endpoints require JWT authentication)
+POST   /api/v1/interview/start/
+PATCH  /api/v1/interview/<id>/save/
+GET    /api/v1/interview/<id>/
+POST   /api/v1/interview/<id>/submit/
+
+Report API
+GET    /api/v1/reports/
+GET    /api/v1/reports/<request_id>/
+
+Billing API
+GET    /api/v1/billing/credits/balance/
+POST   /api/v1/billing/credits/purchase/initiate/
+POST   /api/v1/billing/credits/purchase/confirm/
+POST   /api/v1/billing/subscription/activate/
+
+Risk Score Model
+Category Weights:
+– Developer Legitimacy  25%
+– Project Compliance    30%
+– Title & Land          25%
+– Financial Exposure    10%
+– LGU & Environmental   10%
+
+Risk Bands:
+80–100  Lower Risk
+60–79   Moderate Risk
+40–59   Elevated Risk
+0–39    High Risk
+
+Frontend Architecture
+– React 19, Vite 7.3.1, React Router 7, Tailwind CSS
+– Vitest + React Testing Library for frontend regression coverage
+– One-command QA runner: powershell -File qa.ps1
+– All interview API calls send JWT token (auth: true)
+– Teaser report delivered before authentication
+– Authentication and billing triggered at unlock/buy actions
+– SPA routing handled by Vercel rewrite rule (frontend/vercel.json)
+
+Key Frontend Files
+– frontend/src/api/apiClient.js     — All API calls, auth token management
+– frontend/src/pages/InterviewPage.jsx  — Interview flow, question navigation
+– frontend/src/pages/ReportView.jsx     — Report display, paywall, unlock
+– frontend/vercel.json              — Vercel SPA rewrite config
+
+Deployment
+– Backend: Railway (auto-deploys from GitHub main)
+– Frontend: Vercel (rera-five.vercel.app, auto-deploys from GitHub main)
+– Git remote: https://github.com/ramblingvirus-hub/rera.git
+– Branch: main
+
+Current Phase: 10 (Deployment Hardening)
+
+Completed Phases (Summary)
+Phase 1   Core Evaluation Engine
+Phase 2   Ledger & Billing Foundations
+Phase 3   Revenue Activation + Guardrails + Monitoring
+Phase 4   Interview Architecture (Scoring, Persistence, API, Hardening)
+Phase 5   Frontend Interview Engine
+Phase 6   Interview Navigation & UX
+Phase 7   Report Display UI
+Phase 8   Report Paywall & Monetization (backend + frontend)
+Phase 9   Website Design Port
+Phase 10A Frontend Hardening, QA Baseline, Teaser-First Funnel
+Phase 10B Superadmin Billing Bypass & Frontend Auth Hardening
+Phase 10C Vercel SPA Routing Fix
+Phase 10D Interview Enter Key Navigation
+
+System Classification (Current)
+Integrity-Hardened
+Versioned
+Retry-Protected
+PostgreSQL-Backed
+Environment-Disciplined
+Operationally Observable
+Concurrency-Safe
+Monitoring-Aware
+Superadmin-Bypassed
+SPA-Deployed
+QA-Baseline-Covered
+Interview-Keyboard-Navigable Core
+
+---
+Summary for March 24, 2026:
+
+- Production domain, DNS, and SSL setup completed for both frontend (Vercel) and backend (Railway).
+- CORS, CSRF, and allowed hosts environment variables hardened for production.
+- Beta user creation pipeline prepared for production DB.
+- PayMongo keys flagged for switch to live credentials.
+- Frontend and backend now fully communicate via custom domains with CORS and credential support.
+- To-do list and beta user credential files created in docs/Text files.
+- Next priorities: responsive design, PayMongo live keys, insert beta users, and full smoke test.
+
+Next Priorities (Phase 11)
+– Session recovery across JWT expiry during billing/unlock actions
+– Full staging smoke pass: teaser → login → purchase → unlock
+– Production domain, DNS, SSL, and environment secret hardening
+– Operational monitoring alert routing and incident runbook completion

@@ -1,0 +1,17 @@
+# Beta User Credentials for Production (2026-03-24)
+
+beta_user_01 / ReraBeta!65366e
+beta_user_02 / ReraBeta!5a6a1e
+beta_user_03 / ReraBeta!bd0d9a
+beta_user_04 / ReraBeta!2aab8f
+beta_user_05 / ReraBeta!b9f216
+beta_user_06 / ReraBeta!777607
+beta_user_07 / ReraBeta!e86e88
+beta_user_08 / ReraBeta!df0b02
+beta_user_09 / ReraBeta!3a3044
+beta_user_10 / ReraBeta!df8cdc
+
+Instructions:
+- Use these credentials to create regular users in the production database.
+- Do not assign staff or superuser privileges.
+- See management command or SQL script for insertion.
