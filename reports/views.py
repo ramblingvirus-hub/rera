@@ -26,6 +26,7 @@ from .explanation_engine import (
     generate_explanations,
     generate_assessment_summary,
     build_category_interpretations,
+    optimize_suggestions_for_report,
 )
 
 from .models import InterviewSession, InterviewStatus
@@ -322,6 +323,12 @@ class GetReportView(APIView):
         signals = report.signals or []
         information_gaps = report.information_gaps or []
         suggestions = report.suggestions or []
+        is_non_developer = self._infer_non_developer_context(report)
+
+        suggestions = optimize_suggestions_for_report(
+            suggestions,
+            is_non_developer=is_non_developer,
+        )
 
         if not information_gaps:
             information_gaps = ["No major information gaps identified."]
@@ -340,7 +347,6 @@ class GetReportView(APIView):
         }
 
         if can_view_full:
-            is_non_developer = self._infer_non_developer_context(report)
             report_payload.update({
                 "category_breakdown": report.category_breakdown,
                 "category_interpretations": build_category_interpretations(

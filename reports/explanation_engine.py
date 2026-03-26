@@ -53,8 +53,17 @@ def _suggestion_category(text):
 
 
 def _optimize_suggestions(suggestions, answers):
-    sale_mode = _normalize_sale_mode(answers.get("q6"))
     developer_project = _is_developer_project(answers)
+
+    canonical_by_category = {
+        "title_verification": "Verify property ownership by requesting a certified true copy of the title from the Registry of Deeds.",
+        "regulatory_check": "Confirm permit and zoning status with the local government unit.",
+        "transaction_safety": "Ensure a notarized Deed of Sale is prepared.",
+        "professional_support": "Engage a licensed real estate broker or legal professional.",
+        "site_validation": "Check hazard maps and local government environmental assessments.",
+    }
+    if developer_project:
+        canonical_by_category["regulatory_check"] = "Verify the License to Sell with DHSUD before making payments."
 
     filtered = []
     for item in suggestions:
@@ -83,38 +92,29 @@ def _optimize_suggestions(suggestions, answers):
     ]
 
     first_per_category = {}
-    extras = []
     for item in deduped:
         category = _suggestion_category(item)
         if category not in first_per_category:
-            first_per_category[category] = item
-        else:
-            extras.append(item)
+            first_per_category[category] = canonical_by_category.get(category, item)
 
-    ordered = [first_per_category[c] for c in priority_order if c in first_per_category]
+    ordered = []
+    for category in priority_order:
+        if category in first_per_category and len(ordered) < 5:
+            ordered.append(first_per_category[category])
 
-    for item in extras:
+    for category in priority_order:
         if len(ordered) >= 5:
             break
-        ordered.append(item)
-
-    baseline = [
-        "Verify property ownership by requesting a certified true copy of the title from the Registry of Deeds.",
-        "Confirm permit and zoning status with the local government unit.",
-        "Ensure a notarized Deed of Sale is prepared.",
-        "Engage a licensed real estate broker or legal professional.",
-    ]
-    if developer_project:
-        baseline.insert(1, "Verify the License to Sell with DHSUD before making payments.")
-
-    for item in baseline:
-        if len(ordered) >= 5:
-            break
-        key = _normalize_suggestion_text(item)
-        if key and key not in {_normalize_suggestion_text(existing) for existing in ordered}:
-            ordered.append(item)
+        if category in first_per_category:
+            continue
+        ordered.append(canonical_by_category[category])
 
     return ordered[:5]
+
+
+def optimize_suggestions_for_report(suggestions, is_non_developer=False):
+    sale_type = "Private Sale" if is_non_developer else "Developer Project"
+    return _optimize_suggestions(suggestions or [], {"q6": sale_type})
 
 
 def category_strength_label(score):

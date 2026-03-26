@@ -138,3 +138,21 @@ class SuggestionOptimizationTests(TestCase):
 
 		self.assertLessEqual(len(suggestions), 5)
 		self.assertTrue(any("license to sell" in s.lower() or "dhsud" in s.lower() for s in suggestions))
+
+	def test_semantic_title_repetitions_collapse_to_single_action(self):
+		answers = {
+			"q6": "Private Sale",
+			"q12": "Seller claims title is clean but no proof shown",
+			"ps2": "No",
+		}
+
+		result = generate_explanations(answers)
+		suggestions = result["suggestions"]
+
+		title_like_count = sum(
+			1 for s in suggestions
+			if any(token in s.lower() for token in ["title", "registry of deeds", "ownership"])
+		)
+
+		self.assertLessEqual(len(suggestions), 5)
+		self.assertEqual(title_like_count, 1)
