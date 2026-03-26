@@ -38,6 +38,20 @@ class ExplanationEngineEnhancementTests(TestCase):
 		self.assertEqual(interpretations["title_land"]["label"], "Weak")
 		self.assertEqual(interpretations["financial_exposure"]["label"], "High Risk")
 
+	def test_category_interpretations_marks_non_developer_categories_not_applicable(self):
+		interpretations = build_category_interpretations(
+			{
+				"developer_legitimacy": 100,
+				"project_compliance": 100,
+				"title_land": 70,
+			},
+			is_non_developer=True,
+		)
+
+		self.assertEqual(interpretations["developer_legitimacy"]["label"], "Not Applicable")
+		self.assertEqual(interpretations["project_compliance"]["label"], "Not Applicable")
+		self.assertEqual(interpretations["title_land"]["label"], "Moderate")
+
 	def test_assessment_summary_renders_strengths_and_concerns(self):
 		summary = generate_assessment_summary(
 			72.5,

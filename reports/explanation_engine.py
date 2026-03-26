@@ -127,7 +127,7 @@ def category_strength_label(score):
     return "High Risk"
 
 
-def build_category_interpretations(category_breakdown):
+def build_category_interpretations(category_breakdown, is_non_developer=False):
     descriptions = {
         "developer_legitimacy": "Reflects developer credibility and proof of legal authority to sell.",
         "project_compliance": "Measures permit and regulatory compliance readiness of the project.",
@@ -139,6 +139,20 @@ def build_category_interpretations(category_breakdown):
     for key, score in (category_breakdown or {}).items():
         if score is None:
             continue
+
+        if is_non_developer and key in {"developer_legitimacy", "project_compliance"}:
+            explanation = (
+                "This assessment is not required for private resale or non-developer transactions."
+                if key == "developer_legitimacy"
+                else "Regulatory permits in this section apply to developer-led projects and may not be required in this sale context."
+            )
+            interpretations[key] = {
+                "score": score,
+                "label": "Not Applicable",
+                "explanation": explanation,
+            }
+            continue
+
         interpretations[key] = {
             "score": score,
             "label": category_strength_label(score),

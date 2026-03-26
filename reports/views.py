@@ -41,6 +41,10 @@ class EvaluateProjectView(APIView):
 
     http_method_names = ['post']
 
+    @staticmethod
+    def _normalize_sale_mode(value):
+        return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
     def post(self, request):
             
         try:
@@ -130,7 +134,12 @@ class EvaluateProjectView(APIView):
                 category_scores,
                 license_to_sell_present=license_to_sell_present
             )
-            category_interpretations = build_category_interpretations(result.get("category_breakdown", {}))
+            sale_mode = self._normalize_sale_mode(answers.get("q6"))
+            is_non_developer = sale_mode not in {"", "developer_project"}
+            category_interpretations = build_category_interpretations(
+                result.get("category_breakdown", {}),
+                is_non_developer=is_non_developer,
+            )
             assessment_summary = generate_assessment_summary(
                 result.get("total_score"),
                 result.get("risk_band"),
@@ -279,6 +288,26 @@ class EvaluateProjectView(APIView):
 class GetReportView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @staticmethod
+    def _infer_non_developer_context(report):
+        signals = report.signals or []
+        suggestions = report.suggestions or []
+        category_breakdown = report.category_breakdown or {}
+
+        if any("private sale" in str(item).lower() for item in signals):
+            return True
+
+        has_lts_hint = any(
+            ("license to sell" in str(item).lower()) or ("dhsud" in str(item).lower())
+            for item in suggestions
+        )
+        if has_lts_hint:
+            return False
+
+        developer_legitimacy = category_breakdown.get("developer_legitimacy")
+        project_compliance = category_breakdown.get("project_compliance")
+        return developer_legitimacy == 100 and project_compliance == 100
+
     def get(self, request, request_id):
         report = get_object_or_404(
             Report,
@@ -311,9 +340,13 @@ class GetReportView(APIView):
         }
 
         if can_view_full:
+            is_non_developer = self._infer_non_developer_context(report)
             report_payload.update({
                 "category_breakdown": report.category_breakdown,
-                "category_interpretations": build_category_interpretations(report.category_breakdown),
+                "category_interpretations": build_category_interpretations(
+                    report.category_breakdown,
+                    is_non_developer=is_non_developer,
+                ),
                 "license_to_sell_present": report.license_to_sell_present,
                 "strengths": report.strengths,
                 "signals": signals,
