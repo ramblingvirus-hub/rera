@@ -84,7 +84,35 @@ function RiskBadge({ band }) {
   );
 }
 
-function ScoreBar({ value }) {
+function ScoreBar({ value, applicable = true }) {
+  if (!applicable) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div
+          style={{
+            flex: 1,
+            height: "6px",
+            backgroundColor: "#d1d5db",
+            borderRadius: "3px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              backgroundColor: "#9ca3af",
+              borderRadius: "3px",
+            }}
+          />
+        </div>
+        <span style={{ fontSize: "13px", fontWeight: 600, color: "#9ca3af", minWidth: "32px", textAlign: "right" }}>
+          —
+        </span>
+      </div>
+    );
+  }
+
   const pct = Math.min(Math.max((value ?? 0), 0), 100);
   const color = pct >= 80 ? "#16a34a" : pct >= 60 ? "#d97706" : "#dc2626";
   return (
@@ -914,13 +942,23 @@ export default function ReportView() {
                             fontWeight: 700,
                             letterSpacing: "0.04em",
                             textTransform: "uppercase",
-                            color: "#6b7280",
+                            color:
+                              (report.category_applicability?.[key] ??
+                                report.category_interpretations?.[key]?.label !== "Not Applicable")
+                                ? "#6b7280"
+                                : "#9ca3af",
                           }}
                         >
                           {report.category_interpretations?.[key]?.label || categoryLabel(report.category_breakdown?.[key])}
                         </span>
                       </div>
-                      <ScoreBar value={report.category_breakdown?.[key]} />
+                      <ScoreBar
+                        value={report.category_breakdown?.[key]}
+                        applicable={
+                          report.category_applicability?.[key] ??
+                          report.category_interpretations?.[key]?.label !== "Not Applicable"
+                        }
+                      />
                     </div>
                   ))}
                 </div>

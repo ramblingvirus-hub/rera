@@ -49,7 +49,7 @@ def determine_risk_band(score, severe_override=False):
 # CORE EVALUATION ENGINE
 # =====================
 
-def evaluate_project_v1(category_scores, license_to_sell_present=True):
+def evaluate_project_v1(category_scores, license_to_sell_present=True, category_applicability=None):
         # =====================
     # INPUT VALIDATION
     # =====================
@@ -83,9 +83,14 @@ def evaluate_project_v1(category_scores, license_to_sell_present=True):
     # Severe structural override
     severe_override = not license_to_sell_present
 
-    total_score = 0
+    total_score = 0.0
+    active_weight_total = 0.0
 
     for category, weight in CATEGORY_WEIGHTS.items():
+        applicable = True if category_applicability is None else category_applicability.get(category, True)
+        if not applicable:
+            continue
+
         score = category_scores.get(category, 0)
 
         # Safety clamp
@@ -97,6 +102,13 @@ def evaluate_project_v1(category_scores, license_to_sell_present=True):
         weighted_score = score * weight
         total_score += weighted_score
 
+        active_weight_total += weight
+
+    if active_weight_total == 0:
+        total_score = 0.0
+    else:
+        total_score = total_score / active_weight_total
+
     final_band = determine_risk_band(total_score, severe_override)
 
     return {
@@ -104,5 +116,6 @@ def evaluate_project_v1(category_scores, license_to_sell_present=True):
         "total_score": round(total_score, 2),
         "risk_band": final_band,
         "category_breakdown": category_scores,
+        "category_applicability": category_applicability or {k: True for k in CATEGORY_WEIGHTS.keys()},
         "license_to_sell_present": license_to_sell_present
     }

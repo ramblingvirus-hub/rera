@@ -9,7 +9,7 @@ from rest_framework.test import APIRequestFactory
 
 from django.shortcuts import get_object_or_404
 
-from rera_core.engine_v1 import evaluate_project_v1
+from rera_core.engine_v1 import evaluate_project_v1, determine_risk_band
 from .models import Report
 from django.db import transaction
 from billing.services import has_active_subscription, has_sufficient_credit, deduct_credit, user_has_admin_bypass, has_unlimited_report_access
@@ -20,7 +20,7 @@ from idempotency.models import IdempotencyKey
 from idempotency.utils import generate_request_hash
 from django.db import IntegrityError
 
-from .interview_scoring import calculate_category_scores, calculate_final_score
+from .interview_scoring import calculate_category_scores, calculate_final_score, get_category_applicability
 from .risk_band import classify_risk_band
 from .explanation_engine import (
     generate_explanations,
@@ -120,8 +120,9 @@ class EvaluateProjectView(APIView):
                 )
             
             category_scores = calculate_category_scores(answers)
+            category_applicability = get_category_applicability(answers)
 
-            final_score = calculate_final_score(category_scores)
+            final_score = calculate_final_score(category_scores, category_applicability)
 
             risk_band = classify_risk_band(final_score)
 
@@ -133,7 +134,8 @@ class EvaluateProjectView(APIView):
             # === ENGINE EVALUATION ===
             result = evaluate_project_v1(
                 category_scores,
-                license_to_sell_present=license_to_sell_present
+                license_to_sell_present=license_to_sell_present,
+                category_applicability=category_applicability,
             )
             sale_mode = self._normalize_sale_mode(answers.get("q6"))
             is_non_developer = sale_mode not in {"", "developer_project"}
@@ -347,8 +349,23 @@ class GetReportView(APIView):
         }
 
         if can_view_full:
+            category_applicability = {
+                "developer_legitimacy": not is_non_developer,
+                "project_compliance": not is_non_developer,
+                "title_land": True,
+                "financial_exposure": True,
+                "lgu_environment": True,
+            }
+
+            adjusted_total_score = calculate_final_score(
+                report.category_breakdown or {},
+                category_applicability,
+            )
+            adjusted_risk_band = determine_risk_band(adjusted_total_score, severe_override=False)
+
             report_payload.update({
                 "category_breakdown": report.category_breakdown,
+                "category_applicability": category_applicability,
                 "category_interpretations": build_category_interpretations(
                     report.category_breakdown,
                     is_non_developer=is_non_developer,
@@ -359,6 +376,8 @@ class GetReportView(APIView):
                 "information_gaps": information_gaps,
                 "suggestions": suggestions,
                 "assessment_summary": report.assessment_summary,
+                "total_score": adjusted_total_score,
+                "risk_band": adjusted_risk_band,
             })
 
         response_payload = {
@@ -526,7 +545,8 @@ class SubmitInterviewView(APIView):
 
         if not request.user.is_authenticated:
             category_scores = calculate_category_scores(answers)
-            final_score = calculate_final_score(category_scores)
+            category_applicability = get_category_applicability(answers)
+            final_score = calculate_final_score(category_scores, category_applicability)
             risk_band = classify_risk_band(final_score)
 
             teaser_request_id = str(uuid.uuid4())

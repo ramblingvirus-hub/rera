@@ -21,6 +21,17 @@ def _normalize_sale_mode(value: str | None) -> str:
 def _is_developer_project(answers: Dict[str, str]) -> bool:
     return _normalize_sale_mode(answers.get("q6")) == "developer_project"
 
+
+def get_category_applicability(answers: Dict[str, str]) -> Dict[str, bool]:
+    is_developer_project = _is_developer_project(answers)
+    return {
+        "developer_legitimacy": is_developer_project,
+        "project_compliance": is_developer_project,
+        "title_land": True,
+        "financial_exposure": True,
+        "lgu_environment": True,
+    }
+
 def initialize_category_scores():
     return {
         "developer_legitimacy": 0,
@@ -207,12 +218,34 @@ def compute_category_scores(responses: Dict[str, str], interview_version: str) -
 # Final Score Calculation
 # -----------------------------
 
-def calculate_final_score(category_scores: Dict[str, float]) -> float:
+def calculate_final_score(
+    category_scores: Dict[str, float],
+    category_applicability: Dict[str, bool] | None = None,
+) -> float:
 
-    return (
-        category_scores["developer_legitimacy"] * 0.25
-        + category_scores["project_compliance"] * 0.30
-        + category_scores["title_land"] * 0.25
-        + category_scores["financial_exposure"] * 0.10
-        + category_scores["lgu_environment"] * 0.10
-    )
+    weights = {
+        "developer_legitimacy": 0.25,
+        "project_compliance": 0.30,
+        "title_land": 0.25,
+        "financial_exposure": 0.10,
+        "lgu_environment": 0.10,
+    }
+
+    weighted_sum = 0.0
+    active_weight_total = 0.0
+
+    for category, weight in weights.items():
+        applicable = True if category_applicability is None else category_applicability.get(category, True)
+        if not applicable:
+            continue
+
+        score = float(category_scores.get(category, 0))
+        score = max(0.0, min(100.0, score))
+
+        weighted_sum += score * weight
+        active_weight_total += weight
+
+    if active_weight_total == 0:
+        return 0.0
+
+    return round(weighted_sum / active_weight_total, 2)

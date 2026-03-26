@@ -6,6 +6,7 @@ from reports.explanation_engine import (
 	generate_explanations,
 )
 from reports.interview_scoring import calculate_category_scores
+from reports.interview_scoring import calculate_final_score, get_category_applicability
 
 
 class ExplanationEngineEnhancementTests(TestCase):
@@ -156,3 +157,45 @@ class SuggestionOptimizationTests(TestCase):
 
 		self.assertLessEqual(len(suggestions), 5)
 		self.assertEqual(title_like_count, 1)
+
+
+class DynamicReweightingTests(TestCase):
+	def test_private_sale_reweights_excluding_non_applicable_categories(self):
+		category_scores = {
+			"developer_legitimacy": 100,
+			"project_compliance": 100,
+			"title_land": 76,
+			"financial_exposure": 100,
+			"lgu_environment": 50,
+		}
+		applicability = {
+			"developer_legitimacy": False,
+			"project_compliance": False,
+			"title_land": True,
+			"financial_exposure": True,
+			"lgu_environment": True,
+		}
+
+		final_score = calculate_final_score(category_scores, applicability)
+
+		self.assertGreaterEqual(final_score, 75)
+		self.assertLessEqual(final_score, 76)
+
+	def test_developer_project_keeps_standard_weighting(self):
+		category_scores = {
+			"developer_legitimacy": 80,
+			"project_compliance": 70,
+			"title_land": 60,
+			"financial_exposure": 50,
+			"lgu_environment": 40,
+		}
+		final_score = calculate_final_score(category_scores)
+
+		self.assertEqual(final_score, 67.0)
+
+	def test_applicability_map_marks_non_developer_categories(self):
+		applicability = get_category_applicability({"q6": "Private Sale"})
+
+		self.assertFalse(applicability["developer_legitimacy"])
+		self.assertFalse(applicability["project_compliance"])
+		self.assertTrue(applicability["title_land"])
