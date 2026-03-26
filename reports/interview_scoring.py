@@ -13,6 +13,14 @@ from .interview_registry import (
     ANSWER_SCORE_MAP
 )
 
+
+def _normalize_sale_mode(value: str | None) -> str:
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _is_developer_project(answers: Dict[str, str]) -> bool:
+    return _normalize_sale_mode(answers.get("q6")) == "developer_project"
+
 def initialize_category_scores():
     return {
         "developer_legitimacy": 0,
@@ -125,11 +133,14 @@ def score_title_issue(answer: str) -> int:
 
 def calculate_category_scores(answers: Dict[str, str]) -> Dict[str, float]:
 
-    q7 = score_positive(answers.get("q7"))
-    q8 = score_positive(answers.get("q8"))
+    is_developer_project = _is_developer_project(answers)
 
-    q9 = score_positive(answers.get("q9"))
-    q10 = score_positive(answers.get("q10"))
+    # For non-developer flows, developer-only categories are treated as neutral-positive.
+    q7 = score_positive(answers.get("q7")) if is_developer_project else 100
+    q8 = score_positive(answers.get("q8")) if is_developer_project else 100
+
+    q9 = score_positive(answers.get("q9")) if is_developer_project else 100
+    q10 = score_positive(answers.get("q10")) if is_developer_project else 100
 
     q11 = score_title(answers.get("q11"))
     q12 = score_title_issue(answers.get("q12"))

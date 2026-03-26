@@ -439,6 +439,10 @@ class SubmitInterviewView(APIView):
 
     from .views import EvaluateProjectView
 
+    @staticmethod
+    def _normalize_sale_mode(value):
+        return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
     def post(self, request, interview_id):
 
         interview = get_object_or_404(
@@ -455,13 +459,6 @@ class SubmitInterviewView(APIView):
 
         answers = interview.responses
 
-        required_questions = [
-            "q7","q8","q9","q10","q11",
-            "q12","q13","q14","q15","q16"
-        ]
-
-        missing = [q for q in required_questions if q not in answers]
-
         answers = interview.responses
 
         if not answers:
@@ -470,10 +467,12 @@ class SubmitInterviewView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        required_questions = [
-            "q7","q8","q9","q10","q11",
-            "q12","q13","q14","q15","q16"
-        ]
+        sale_mode = self._normalize_sale_mode(answers.get("q6"))
+        is_developer_project = sale_mode == "developer_project"
+
+        required_questions = ["q11", "q12", "q13", "q14", "q15", "q16"]
+        if is_developer_project:
+            required_questions = ["q7", "q8", "q9", "q10", *required_questions]
 
         missing = [q for q in required_questions if q not in answers]
 

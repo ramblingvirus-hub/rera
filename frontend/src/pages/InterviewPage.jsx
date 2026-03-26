@@ -48,6 +48,7 @@ export default function InterviewPage() {
   const interviewQuestions = getQuestionsForContext(responses);
   const currentQuestion = interviewQuestions[currentIndex];
   const contextProfile = getContextProfile(responses);
+  const isDeveloperProject = String(responses.q6 || "").trim() === "Developer Project";
   const hasSaleModeAnswer = Boolean(responses.q6);
   const saveTimer = useRef(null);
 
@@ -103,6 +104,16 @@ export default function InterviewPage() {
     ) {
       // Keep response payload consistent with visible questions.
       PRIVATE_SALE_SUPPLEMENTAL_QUESTION_IDS.forEach((id) => {
+        delete updated[id];
+      });
+    }
+
+    if (
+      questionId === "q6" &&
+      String(value || "").trim() !== "Developer Project"
+    ) {
+      // Remove developer-only answers once the flow is not developer-led.
+      ["q7", "q8", "q9", "q10"].forEach((id) => {
         delete updated[id];
       });
     }
@@ -379,8 +390,10 @@ export default function InterviewPage() {
           }}
         >
           {contextProfile === "private_sale"
-            ? "Private Sale context active: additional ownership and transfer verification questions are enabled."
-            : "Developer/Broker context active: standard regulatory and compliance interpretation is applied."}
+            ? "Private/Broker context active: developer-specific checks have been removed as not applicable."
+            : isDeveloperProject
+              ? "Developer Project context active: standard regulatory and compliance checks are applied."
+              : "Non-developer context active: developer-specific checks have been removed as not applicable."}
         </div>
       )}
 

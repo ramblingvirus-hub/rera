@@ -317,6 +317,10 @@ export function getContextProfile(responses = {}) {
   return "default";
 }
 
+function isDeveloperProject(responses = {}) {
+  return normalizeSaleMode(responses.q6) === "developer_project";
+}
+
 function withContextOverrides(question, contextProfile) {
   const baseQuestion = {
     ...question,
@@ -342,22 +346,16 @@ function withContextOverrides(question, contextProfile) {
 
 export function getQuestionsForContext(responses = {}) {
   const contextProfile = getContextProfile(responses);
-  const baseQuestions = QUESTIONS.map((question) =>
+  let baseQuestions = QUESTIONS.map((question) =>
     withContextOverrides(question, contextProfile)
   );
 
-  if (contextProfile !== "private_sale") {
-    return baseQuestions;
+  // Hide developer-only questions unless the user selected Developer Project.
+  if (!isDeveloperProject(responses)) {
+    baseQuestions = baseQuestions.filter(
+      (q) => !["q7", "q8", "q9", "q10"].includes(q.id)
+    );
   }
 
-  const insertBeforeIndex = baseQuestions.findIndex((q) => q.id === "q13");
-  if (insertBeforeIndex === -1) {
-    return [...baseQuestions, ...PRIVATE_SALE_SUPPLEMENTAL_QUESTIONS];
-  }
-
-  return [
-    ...baseQuestions.slice(0, insertBeforeIndex),
-    ...PRIVATE_SALE_SUPPLEMENTAL_QUESTIONS,
-    ...baseQuestions.slice(insertBeforeIndex),
-  ];
+  return baseQuestions;
 }

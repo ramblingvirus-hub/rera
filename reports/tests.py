@@ -5,6 +5,7 @@ from reports.explanation_engine import (
 	generate_assessment_summary,
 	generate_explanations,
 )
+from reports.interview_scoring import calculate_category_scores
 
 
 class ExplanationEngineEnhancementTests(TestCase):
@@ -48,3 +49,45 @@ class ExplanationEngineEnhancementTests(TestCase):
 		self.assertIn("MODERATE level of risk", summary)
 		self.assertIn("Key strengths include", summary)
 		self.assertIn("Potential concerns include", summary)
+
+
+class ConditionalScoringTests(TestCase):
+	def test_non_developer_sale_neutralizes_q7_to_q10(self):
+		answers = {
+			"q6": "Private Sale",
+			"q7": "No",
+			"q8": "No",
+			"q9": "No",
+			"q10": "No",
+			"q11": "TCT",
+			"q12": "No known issues",
+			"q13": "No",
+			"q14": "No",
+			"q15": "No",
+			"q16": "No",
+		}
+
+		scores = calculate_category_scores(answers)
+
+		self.assertEqual(scores["developer_legitimacy"], 100)
+		self.assertEqual(scores["project_compliance"], 100)
+
+	def test_developer_sale_uses_q7_to_q10_answers(self):
+		answers = {
+			"q6": "Developer Project",
+			"q7": "No",
+			"q8": "No",
+			"q9": "No",
+			"q10": "No",
+			"q11": "TCT",
+			"q12": "No known issues",
+			"q13": "No",
+			"q14": "No",
+			"q15": "No",
+			"q16": "No",
+		}
+
+		scores = calculate_category_scores(answers)
+
+		self.assertEqual(scores["developer_legitimacy"], 0)
+		self.assertEqual(scores["project_compliance"], 0)
