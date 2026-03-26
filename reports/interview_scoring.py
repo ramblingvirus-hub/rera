@@ -46,12 +46,25 @@ def compute_category_scores(responses, interview_version):
 
 
 # -----------------------------
-# Basic Yes / No / Not Sure scoring
+# Positive Question Scoring (Good if YES)
+# Q7, Q8, Q9, Q10
 # -----------------------------
 
-BASIC_SCORE_MAP = {
+POSITIVE_QUESTION_MAP = {
     "Yes": 100,
     "No": 0,
+    "Not Sure": 50,
+}
+
+
+# -----------------------------
+# Risk Question Scoring (Bad if YES)
+# Q13, Q14, Q15, Q16
+# -----------------------------
+
+RISK_QUESTION_MAP = {
+    "Yes": 0,
+    "No": 100,
     "Not Sure": 50,
 }
 
@@ -85,11 +98,17 @@ TITLE_ISSUE_MAP = {
 
 
 # -----------------------------
-# Generic Scoring Function
+# Generic Scoring Functions
 # -----------------------------
 
-def score_basic(answer: str) -> int:
-    return BASIC_SCORE_MAP.get(answer, 50)
+def score_positive(answer: str) -> int:
+    """Score for positive questions (Yes = good)"""
+    return POSITIVE_QUESTION_MAP.get(answer, 50)
+
+
+def score_risk(answer: str) -> int:
+    """Score for risk questions (No = good, Yes = bad)"""
+    return RISK_QUESTION_MAP.get(answer, 50)
 
 
 def score_title(answer: str) -> int:
@@ -106,20 +125,20 @@ def score_title_issue(answer: str) -> int:
 
 def calculate_category_scores(answers: Dict[str, str]) -> Dict[str, float]:
 
-    q7 = score_basic(answers.get("q7"))
-    q8 = score_basic(answers.get("q8"))
+    q7 = score_positive(answers.get("q7"))
+    q8 = score_positive(answers.get("q8"))
 
-    q9 = score_basic(answers.get("q9"))
-    q10 = score_basic(answers.get("q10"))
+    q9 = score_positive(answers.get("q9"))
+    q10 = score_positive(answers.get("q10"))
 
     q11 = score_title(answers.get("q11"))
     q12 = score_title_issue(answers.get("q12"))
 
-    q13 = score_basic(answers.get("q13"))
-    q14 = score_basic(answers.get("q14"))
+    q13 = score_risk(answers.get("q13"))
+    q14 = score_risk(answers.get("q14"))
 
-    q15 = score_basic(answers.get("q15"))
-    q16 = score_basic(answers.get("q16"))
+    q15 = score_risk(answers.get("q15"))
+    q16 = score_risk(answers.get("q16"))
 
     developer_legitimacy = (q7 * 0.7) + (q8 * 0.3)
 
