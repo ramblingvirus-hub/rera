@@ -267,4 +267,64 @@ describe("ReportView teaser hardening", () => {
     expect(screen.getByText("Weak")).toBeInTheDocument();
     expect(screen.getAllByText("High Risk").length).toBeGreaterThan(0);
   });
+
+  it("renders Not Applicable categories with hidden numeric scores", async () => {
+    isAuthenticated.mockReturnValue(true);
+    getReport.mockResolvedValue({
+      report: {
+        ...teaserReport,
+        category_interpretations: {
+          developer_legitimacy: { label: "Not Applicable" },
+          project_compliance: { label: "Not Applicable" },
+          title_land: { label: "Moderate" },
+          financial_exposure: { label: "Moderate" },
+          lgu_environment: { label: "Weak" },
+        },
+        category_applicability: {
+          developer_legitimacy: false,
+          project_compliance: false,
+          title_land: true,
+          financial_exposure: true,
+          lgu_environment: true,
+        },
+        assessment_summary: "Summary",
+        strengths: ["Strength A"],
+        signals: ["Signal A"],
+        information_gaps: ["Gap A"],
+        suggestions: ["Suggestion A"],
+      },
+      access: {
+        can_view_full_report: true,
+        credit_balance: 0,
+        subscription_active: false,
+        subscription_days_remaining: 0,
+        locked_sections: [],
+      },
+      context: teaserContext,
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/report/req-123",
+            state: {
+              anonymousPreview: true,
+              submittedReport: teaserReport,
+              submittedContext: teaserContext,
+            },
+          },
+        ]}
+      >
+        <Routes>
+          <Route path="/report/:request_id" element={<ReportView />} />
+          <Route path="/login" element={<LoginProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/category scores/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Not Applicable").length).toBe(2);
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
+  });
 })
