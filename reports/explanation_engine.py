@@ -19,6 +19,104 @@ def _normalize(value):
     return str(value or "").strip().lower()
 
 
+def _normalize_sale_mode(value):
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _is_developer_project(answers: dict) -> bool:
+    # Backward compatible default: if q6 is missing, keep legacy developer-style evaluation.
+    sale_mode = _normalize_sale_mode(answers.get("q6"))
+    return sale_mode in {"", "developer_project"}
+
+
+def _normalize_suggestion_text(text):
+    lowered = (text or "").lower()
+    cleaned = "".join(ch for ch in lowered if ch.isalnum() or ch.isspace())
+    return " ".join(cleaned.split())
+
+
+def _suggestion_category(text):
+    normalized = _normalize_suggestion_text(text)
+
+    if any(token in normalized for token in ["title", "registry of deeds", "ownership"]):
+        return "title_verification"
+    if any(token in normalized for token in ["license to sell", "dhsud", "permit", "ecc", "denr", "zoning", "local government"]):
+        return "regulatory_check"
+    if any(token in normalized for token in ["payment", "deed of sale", "notarized", "schedule"]):
+        return "transaction_safety"
+    if any(token in normalized for token in ["lawyer", "legal professional", "broker", "licensed professional"]):
+        return "professional_support"
+    if any(token in normalized for token in ["hazard", "site visit", "environmental assessment", "hazard maps"]):
+        return "site_validation"
+
+    return "transaction_safety"
+
+
+def _optimize_suggestions(suggestions, answers):
+    sale_mode = _normalize_sale_mode(answers.get("q6"))
+    developer_project = _is_developer_project(answers)
+
+    filtered = []
+    for item in suggestions:
+        normalized = _normalize_suggestion_text(item)
+        # Section 14 rule: never show LTS suggestions outside developer-project context.
+        if not developer_project and (
+            "license to sell" in normalized or "dhsud" in normalized or "lts" in normalized
+        ):
+            continue
+        filtered.append(item)
+
+    deduped = []
+    seen = set()
+    for item in filtered:
+        key = _normalize_suggestion_text(item)
+        if key and key not in seen:
+            seen.add(key)
+            deduped.append(item)
+
+    priority_order = [
+        "title_verification",
+        "regulatory_check",
+        "transaction_safety",
+        "professional_support",
+        "site_validation",
+    ]
+
+    first_per_category = {}
+    extras = []
+    for item in deduped:
+        category = _suggestion_category(item)
+        if category not in first_per_category:
+            first_per_category[category] = item
+        else:
+            extras.append(item)
+
+    ordered = [first_per_category[c] for c in priority_order if c in first_per_category]
+
+    for item in extras:
+        if len(ordered) >= 5:
+            break
+        ordered.append(item)
+
+    baseline = [
+        "Verify property ownership by requesting a certified true copy of the title from the Registry of Deeds.",
+        "Confirm permit and zoning status with the local government unit.",
+        "Ensure a notarized Deed of Sale is prepared.",
+        "Engage a licensed real estate broker or legal professional.",
+    ]
+    if developer_project:
+        baseline.insert(1, "Verify the License to Sell with DHSUD before making payments.")
+
+    for item in baseline:
+        if len(ordered) >= 5:
+            break
+        key = _normalize_suggestion_text(item)
+        if key and key not in {_normalize_suggestion_text(existing) for existing in ordered}:
+            ordered.append(item)
+
+    return ordered[:5]
+
+
 def category_strength_label(score):
     if score >= 80:
         return "Strong"
@@ -52,11 +150,12 @@ def build_category_interpretations(category_breakdown):
 def generate_strengths(answers: dict, context_profile: str | None = None):
     strengths = []
     context = context_profile or get_context_profile(answers)
+    developer_project = _is_developer_project(answers)
 
-    if context != "private_sale" and answers.get("q7") == "Yes":
+    if developer_project and context != "private_sale" and answers.get("q7") == "Yes":
         _append_unique(strengths, "Developer has presented a valid License to Sell.")
 
-    if context != "private_sale" and answers.get("q9") == "Yes":
+    if developer_project and context != "private_sale" and answers.get("q9") == "Yes":
         _append_unique(strengths, "Development permit evidence appears available.")
 
     if answers.get("q11") in {"TCT", "CCT"}:
@@ -181,13 +280,14 @@ def generate_explanations(answers: dict):
     gaps = []
     suggestions = []
     context_profile = get_context_profile(answers)
+    developer_project = _is_developer_project(answers)
     strengths = generate_strengths(answers, context_profile=context_profile)
 
     # -----------------------------
     # License to Sell
     # -----------------------------
 
-    if context_profile != "private_sale":
+    if developer_project and context_profile != "private_sale":
         if answers.get("q7") in ["No", "No documents shown"]:
             signals.append("The developer has not shown a valid License to Sell for this project.")
             suggestions.append("Verify the License to Sell through the DHSUD registry before committing to any purchase.")
@@ -200,7 +300,7 @@ def generate_explanations(answers: dict):
     # Development Permit
     # -----------------------------
 
-    if context_profile != "private_sale":
+    if developer_project and context_profile != "private_sale":
         if answers.get("q9") in ["No", "No documents shown"]:
             signals.append("No development permit has been shown for the project.")
             suggestions.append("Verify the development permit with the local government planning office.")
@@ -213,7 +313,7 @@ def generate_explanations(answers: dict):
     # Environmental Compliance
     # -----------------------------
 
-    if context_profile != "private_sale":
+    if developer_project and context_profile != "private_sale":
         if answers.get("q10") in ["No", "No documents shown"]:
             signals.append("Environmental approval documentation has not been shown.")
             suggestions.append("Verify whether an Environmental Compliance Certificate is required for the project.")
@@ -265,13 +365,7 @@ def generate_explanations(answers: dict):
     if context_profile == "private_sale":
         _apply_private_sale_logic(answers, signals, gaps, suggestions)
 
-    baseline_suggestions = [
-        "Verify the License to Sell with DHSUD or the relevant regulator before making payments.",
-        "Request and review certified true copies of title and ownership records.",
-        "Confirm permit and zoning status directly with the local government unit.",
-    ]
-    for item in baseline_suggestions:
-        _append_unique(suggestions, item)
+    suggestions = _optimize_suggestions(suggestions, answers)
 
     if not gaps:
         gaps.append("No major information gaps identified.")

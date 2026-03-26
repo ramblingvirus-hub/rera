@@ -91,3 +91,36 @@ class ConditionalScoringTests(TestCase):
 
 		self.assertEqual(scores["developer_legitimacy"], 0)
 		self.assertEqual(scores["project_compliance"], 0)
+
+
+class SuggestionOptimizationTests(TestCase):
+	def test_non_developer_flow_excludes_lts_suggestions(self):
+		answers = {
+			"q6": "Private Sale",
+			"q12": "Not Sure",
+			"q14": "Not Sure",
+			"q16": "Not Sure",
+		}
+
+		result = generate_explanations(answers)
+		suggestions = result["suggestions"]
+
+		self.assertLessEqual(len(suggestions), 5)
+		self.assertFalse(any("license to sell" in s.lower() or "dhsud" in s.lower() for s in suggestions))
+
+	def test_developer_flow_includes_lts_baseline_suggestion(self):
+		answers = {
+			"q6": "Developer Project",
+			"q7": "Not Sure",
+			"q9": "Not Sure",
+			"q10": "Not Sure",
+			"q12": "Not Sure",
+			"q14": "Not Sure",
+			"q16": "Not Sure",
+		}
+
+		result = generate_explanations(answers)
+		suggestions = result["suggestions"]
+
+		self.assertLessEqual(len(suggestions), 5)
+		self.assertTrue(any("license to sell" in s.lower() or "dhsud" in s.lower() for s in suggestions))
