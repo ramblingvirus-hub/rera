@@ -83,6 +83,33 @@ describe("ReportView teaser hardening", () => {
     expect(getReport).not.toHaveBeenCalled();
   });
 
+  it("shows QA unlock button on a locked report when test_unlock flag is present", async () => {
+    isAuthenticated.mockReturnValue(false);
+    getReport.mockRejectedValue({ status: 401, message: "Unauthorized" });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/report/req-123",
+            search: "?test_unlock=1",
+            state: {
+              submittedReport: teaserReport,
+              submittedContext: teaserContext,
+            },
+          },
+        ]}
+      >
+        <Routes>
+          <Route path="/report/:request_id" element={<ReportView />} />
+          <Route path="/login" element={<LoginProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole("button", { name: /continue to full report \(qa\)/i })).toBeInTheDocument();
+  });
+
   it("preserves the report path when an anonymous user starts an unlock action", () => {
     isAuthenticated.mockReturnValue(false);
 

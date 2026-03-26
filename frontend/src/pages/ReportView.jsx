@@ -245,10 +245,7 @@ export default function ReportView() {
   const submittedContext = location.state?.submittedContext || null;
   const anonymousPreview = Boolean(location.state?.anonymousPreview);
   const searchParams = new URLSearchParams(location.search);
-  const testUnlockEnabled =
-    anonymousPreview &&
-    !isAuthenticated() &&
-    (import.meta.env.DEV || searchParams.get("test_unlock") === "1");
+  const testUnlockRequested = import.meta.env.DEV || searchParams.get("test_unlock") === "1";
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -294,6 +291,10 @@ export default function ReportView() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canViewFullReport = Boolean(access?.can_view_full_report || isTestUnlocked);
+  const testUnlockEnabled =
+    testUnlockRequested &&
+    !canViewFullReport &&
+    Boolean(report || submittedReport);
   const subscriptionActive = Boolean(access?.subscription_active);
   const subscriptionDaysRemaining = Number(access?.subscription_days_remaining ?? 0);
   const lockedSections =
