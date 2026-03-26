@@ -506,10 +506,21 @@ export default function ReportView() {
       can_view_full_report: true,
       locked_sections: [],
     }));
+    setContext((prev) => ({
+      project_name: prev?.project_name || submittedContext?.project_name || "QA Preview Report",
+      city: prev?.city || submittedContext?.city || "Testing Context",
+      location: prev?.location || submittedContext?.location || "Unlocked via test flag",
+    }));
 
     setReport((prev) => {
       const base = prev || submittedReport || {};
-      const breakdown = base.category_breakdown || {};
+      const breakdown = base.category_breakdown || {
+        developer_legitimacy: 64,
+        project_compliance: 58,
+        title_land: 71,
+        financial_exposure: 62,
+        lgu_environment: 55,
+      };
       const existingInterpretations = base.category_interpretations || {};
 
       const normalizedInterpretations = {
@@ -532,6 +543,9 @@ export default function ReportView() {
 
       return {
         ...base,
+        total_score: base.total_score ?? 62,
+        risk_band: base.risk_band || "MODERATE_RISK",
+        category_breakdown: breakdown,
         category_interpretations: normalizedInterpretations,
         assessment_summary:
           base.assessment_summary ||
@@ -604,6 +618,37 @@ export default function ReportView() {
           <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "20px" }}>
             {errorMessage || "Authentication is required to access this report."}
           </p>
+          {testUnlockRequested && (
+            <div
+              style={{
+                backgroundColor: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                marginBottom: "18px",
+              }}
+            >
+              <p style={{ margin: 0, fontSize: "12.5px", color: "#1e3a8a", marginBottom: "8px", lineHeight: "1.5" }}>
+                QA test mode detected. You can open a safe full-report preview for interface testing without signing in.
+              </p>
+              <button
+                type="button"
+                onClick={handleEnableTestUnlock}
+                style={{
+                  padding: "8px 12px",
+                  backgroundColor: "#1d4ed8",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Continue to Full Report (QA)
+              </button>
+            </div>
+          )}
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: "14px" }}>
               <label

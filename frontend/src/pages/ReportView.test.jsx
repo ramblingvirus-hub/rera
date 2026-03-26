@@ -110,6 +110,27 @@ describe("ReportView teaser hardening", () => {
     expect(await screen.findByRole("button", { name: /continue to full report \(qa\)/i })).toBeInTheDocument();
   });
 
+  it("allows QA unlock from auth gate on direct deep link with no preloaded report", async () => {
+    isAuthenticated.mockReturnValue(false);
+    getReport.mockRejectedValue({ status: 401, message: "Unauthorized" });
+
+    render(
+      <MemoryRouter
+        initialEntries={["/report/req-123?test_unlock=1"]}
+      >
+        <Routes>
+          <Route path="/report/:request_id" element={<ReportView />} />
+          <Route path="/login" element={<LoginProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /continue to full report \(qa\)/i }));
+
+    expect(await screen.findByText(/qa preview report/i)).toBeInTheDocument();
+    expect(screen.getByText(/assessment summary/i)).toBeInTheDocument();
+  });
+
   it("preserves the report path when an anonymous user starts an unlock action", () => {
     isAuthenticated.mockReturnValue(false);
 
