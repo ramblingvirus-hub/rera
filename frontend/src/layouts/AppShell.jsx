@@ -20,6 +20,20 @@ function getUsername() {
   }
 }
 
+function getUserBadgeText(username) {
+  const text = String(username || "").trim();
+  if (!text) {
+    return "ME";
+  }
+
+  const parts = text.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
+  return text.slice(0, 2).toUpperCase();
+}
+
 const NAV_SECTIONS = [
   {
     title: null,
@@ -412,24 +426,6 @@ export default function AppShell({ children, breadcrumb }) {
             </>
           )}
 
-          {!isDashboardPage && (
-            <button
-              type="button"
-              style={{
-                padding: "8px 12px",
-                borderRadius: "10px",
-                border: "1px solid #e5e7eb",
-                backgroundColor: "#ffffff",
-                color: "#475569",
-                fontSize: "12px",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Alerts
-            </button>
-          )}
-
           {loggedIn ? (
             <button
               type="button"
@@ -452,7 +448,7 @@ export default function AppShell({ children, breadcrumb }) {
                 flexShrink: 0,
               }}
             >
-              {(username || "U").charAt(0).toUpperCase()}
+              {getUserBadgeText(username)}
             </button>
           ) : (
             <Link

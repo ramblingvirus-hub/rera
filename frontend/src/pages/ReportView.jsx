@@ -244,6 +244,11 @@ export default function ReportView() {
   const submittedReport = location.state?.submittedReport || null;
   const submittedContext = location.state?.submittedContext || null;
   const anonymousPreview = Boolean(location.state?.anonymousPreview);
+  const searchParams = new URLSearchParams(location.search);
+  const testUnlockEnabled =
+    anonymousPreview &&
+    !isAuthenticated() &&
+    (import.meta.env.DEV || searchParams.get("test_unlock") === "1");
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -277,6 +282,7 @@ export default function ReportView() {
   const [subscriptionPeriodDays, setSubscriptionPeriodDays] = useState(30);
 
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [isTestUnlocked, setIsTestUnlocked] = useState(false);
 
   // Detect ?payment=success after returning from PayMongo checkout
   useEffect(() => {
@@ -287,7 +293,7 @@ export default function ReportView() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const canViewFullReport = Boolean(access?.can_view_full_report);
+  const canViewFullReport = Boolean(access?.can_view_full_report || isTestUnlocked);
   const subscriptionActive = Boolean(access?.subscription_active);
   const subscriptionDaysRemaining = Number(access?.subscription_days_remaining ?? 0);
   const lockedSections =
@@ -490,6 +496,63 @@ export default function ReportView() {
 
   function handlePrintReport() {
     window.print();
+  }
+
+  function handleEnableTestUnlock() {
+    setIsTestUnlocked(true);
+    setAccess((prev) => ({
+      ...(prev || {}),
+      can_view_full_report: true,
+      locked_sections: [],
+    }));
+
+    setReport((prev) => {
+      const base = prev || submittedReport || {};
+      const breakdown = base.category_breakdown || {};
+      const existingInterpretations = base.category_interpretations || {};
+
+      const normalizedInterpretations = {
+        developer_legitimacy: existingInterpretations.developer_legitimacy || {
+          label: categoryLabel(breakdown.developer_legitimacy),
+        },
+        project_compliance: existingInterpretations.project_compliance || {
+          label: categoryLabel(breakdown.project_compliance),
+        },
+        title_land: existingInterpretations.title_land || {
+          label: categoryLabel(breakdown.title_land),
+        },
+        financial_exposure: existingInterpretations.financial_exposure || {
+          label: categoryLabel(breakdown.financial_exposure),
+        },
+        lgu_environment: existingInterpretations.lgu_environment || {
+          label: categoryLabel(breakdown.lgu_environment),
+        },
+      };
+
+      return {
+        ...base,
+        category_interpretations: normalizedInterpretations,
+        assessment_summary:
+          base.assessment_summary ||
+          "Test unlock mode is active. Use this preview only for QA interface validation.",
+        strengths:
+          Array.isArray(base.strengths) && base.strengths.length > 0
+            ? base.strengths
+            : ["Sample strength for QA preview."],
+        signals:
+          Array.isArray(base.signals) && base.signals.length > 0
+            ? base.signals
+            : ["Sample risk signal for QA preview."],
+        information_gaps:
+          Array.isArray(base.information_gaps) && base.information_gaps.length > 0
+            ? base.information_gaps
+            : ["Sample information gap for QA preview."],
+        suggestions:
+          Array.isArray(base.suggestions) && base.suggestions.length > 0
+            ? base.suggestions
+            : ["Sample recommendation for QA preview."],
+      };
+    });
   }
 
   function handleEmailReport() {
@@ -1186,6 +1249,38 @@ export default function ReportView() {
                   UNLOCK REQUIRED
                 </span>
               </div>
+
+              {testUnlockEnabled && !isTestUnlocked && (
+                <div
+                  style={{
+                    backgroundColor: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "10px",
+                    padding: "12px 14px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <p style={{ margin: 0, fontSize: "12.5px", color: "#1e3a8a", marginBottom: "8px" }}>
+                    QA test mode detected. Unlock full report view without payment for interface testing.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleEnableTestUnlock}
+                    style={{
+                      padding: "8px 12px",
+                      backgroundColor: "#1d4ed8",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "12.5px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Continue to Full Report (QA)
+                  </button>
+                </div>
+              )}
 
               <p style={{ fontSize: "13.5px", color: "#6b7280", marginBottom: "20px", lineHeight: "1.6" }}>
                 Activate a subscription or use a credit to reveal the full category
