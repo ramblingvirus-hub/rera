@@ -8,6 +8,7 @@ vi.mock("../api/apiClient", () => ({
   login: vi.fn(),
   register: vi.fn(),
   initiateCreditPurchase: vi.fn(),
+  logAuditEvent: vi.fn(() => Promise.resolve({})),
 }));
 
 import { login } from "../api/apiClient";

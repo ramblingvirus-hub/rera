@@ -9,6 +9,7 @@ import {
   activateSubscription,
   login,
   isAuthenticated,
+  logAuditEvent,
 } from "../api/apiClient";
 
 const CREDIT_PACKAGE_OPTIONS = [
@@ -336,6 +337,12 @@ export default function ReportView() {
       setCreditBalance(data?.access?.credit_balance ?? null);
       setAuthError("");
       setIsReportNotFound(false);
+
+      Promise.resolve(logAuditEvent(
+        "REPORT_VIEWED",
+        { request_id },
+        { requestId: request_id }
+      )).catch(() => {});
     } catch (error) {
       if (error?.status === 404) {
         setReport(null);
@@ -347,6 +354,11 @@ export default function ReportView() {
         setIsReportNotFound(false);
         setErrorMessage(error.message || "Error loading report");
       }
+      Promise.resolve(logAuditEvent(
+        "REPORT_VIEW_FAILED",
+        { request_id, status: error?.status || null, message: error?.message || "" },
+        { requestId: request_id, severity: "WARNING" }
+      )).catch(() => {});
       if (error?.status === 401) {
         setIsLoggedIn(false);
       }
@@ -377,6 +389,7 @@ export default function ReportView() {
     setAuthError("");
     try {
       await login(username, password);
+      Promise.resolve(logAuditEvent("SESSION_STARTED", { source: "report_auth_gate" })).catch(() => {});
       setIsLoggedIn(true);
       setUsername("");
       setPassword("");

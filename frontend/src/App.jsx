@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 import AppShell from "./layouts/AppShell";
-import { GuestRoute, ProtectedRoute } from "./components/AuthGuards";
+import { GuestRoute, ProtectedRoute, SuperadminRoute } from "./components/AuthGuards";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import LandingPage from "./pages/LandingPage";
@@ -13,10 +15,31 @@ import BillingPage from "./pages/BillingPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import RegisterPage from "./pages/RegisterPage";
+import AuditDashboard from "./pages/AuditDashboard";
+import { isAuthenticated, logAuditEvent } from "./api/apiClient";
+
+function AuditRouteTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      return;
+    }
+
+    Promise.resolve(logAuditEvent("PAGE_VIEW", {
+      path: `${location.pathname}${location.search}`,
+    })).catch(() => {
+      // Logging failures must not block navigation.
+    });
+  }, [location.pathname, location.search]);
+
+  return null;
+}
 
 function App() {
   return (
     <BrowserRouter>
+      <AuditRouteTracker />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
@@ -97,6 +120,17 @@ function App() {
                 <AccountPage />
               </AppShell>
             </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/audit"
+          element={
+            <SuperadminRoute>
+              <AppShell breadcrumb={{ parent: "Dashboard", current: "Audit Dashboard" }}>
+                <AuditDashboard />
+              </AppShell>
+            </SuperadminRoute>
           }
         />
 

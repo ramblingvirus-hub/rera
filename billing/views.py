@@ -16,6 +16,13 @@ import hashlib
 import hmac
 import json
 import logging
+from audit.services import log_audit_event
+from audit.constants import (
+    CREDIT_PURCHASE_INITIATED,
+    PAYMENT_FAILED,
+    PAYMENT_VERIFIED,
+    PAYMENT_WEBHOOK_RECEIVED,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -125,6 +132,19 @@ class InitiateCreditPurchaseView(APIView):
                 status="pending"
             )
 
+            log_audit_event(
+                user=request.user,
+                event_type=CREDIT_PURCHASE_INITIATED,
+                severity="INFO",
+                request_id=purchase.id,
+                metadata={
+                    "package": package_key,
+                    "amount_php": package["amount_php"],
+                    "credits": package["credits"],
+                    "checkout_session_id": checkout_session_id,
+                },
+            )
+
             return Response(
                 {
                     "purchase_id": str(purchase.id),
@@ -139,6 +159,12 @@ class InitiateCreditPurchaseView(APIView):
             )
 
         except PayMongoException as e:
+            log_audit_event(
+                user=request.user,
+                event_type=PAYMENT_FAILED,
+                severity="CRITICAL",
+                metadata={"stage": "purchase_initiation", "error": str(e)},
+            )
             return Response(
                 {"error": f"Payment initiation failed: {str(e)}"},
                 status=status.HTTP_502_BAD_GATEWAY
@@ -223,6 +249,18 @@ class ConfirmCreditPurchaseView(APIView):
                         purchase.status = "completed"
                         purchase.save(update_fields=["status", "updated_at"])
 
+                log_audit_event(
+                    user=request.user,
+                    event_type=PAYMENT_VERIFIED,
+                    severity="INFO",
+                    request_id=purchase.id,
+                    metadata={
+                        "payment_status": payment_status,
+                        "paymongo_payment_id": purchase.paymongo_payment_id,
+                        "credits_added": purchase.credits_purchased,
+                    },
+                )
+
                 return Response(
                     {
                         "purchase_id": str(purchase.id),
@@ -236,6 +274,16 @@ class ConfirmCreditPurchaseView(APIView):
             if payment_status in self.FAILED_STATUSES:
                 purchase.status = "failed"
                 purchase.save(update_fields=["status", "updated_at"])
+                log_audit_event(
+                    user=request.user,
+                    event_type=PAYMENT_FAILED,
+                    severity="CRITICAL",
+                    request_id=purchase.id,
+                    metadata={
+                        "payment_status": payment_status,
+                        "paymongo_payment_id": purchase.paymongo_payment_id,
+                    },
+                )
                 return Response(
                     {
                         "purchase_id": str(purchase.id),
@@ -257,6 +305,12 @@ class ConfirmCreditPurchaseView(APIView):
             )
 
         except PayMongoException as e:
+            log_audit_event(
+                user=request.user,
+                event_type=PAYMENT_FAILED,
+                severity="CRITICAL",
+                metadata={"stage": "purchase_confirmation", "error": str(e)},
+            )
             return Response(
                 {"error": f"Payment verification failed: {str(e)}"},
                 status=status.HTTP_502_BAD_GATEWAY
@@ -369,6 +423,14 @@ class PayMongoWebhookView(APIView):
 
         event_type = self._event_type(event)
         payment_intent_id = self._payment_intent_id(event)
+
+        log_audit_event(
+            user=None,
+            event_type=PAYMENT_WEBHOOK_RECEIVED,
+            severity="INFO",
+            request_id=None,
+            metadata={"provider_event_type": event_type},
+        )
 
         if not event_type or not payment_intent_id:
             return Response({"status": "ignored"}, status=status.HTTP_200_OK)

@@ -11,6 +11,7 @@ import {
   getInterview as getInterviewRequest,
   saveInterview as saveInterviewRequest,
   submitInterview,
+  logAuditEvent,
 } from "../api/apiClient";
 
 const BTN_PRIMARY = {
@@ -70,6 +71,7 @@ export default function InterviewPage() {
       const data = await startInterviewRequest();
       const id = data.id || data.interview_id;
       localStorage.setItem("rera_interview_id", id);
+      Promise.resolve(logAuditEvent("INTERVIEW_STARTED", { interview_id: id })).catch(() => {});
       await loadInterview(id);
     } catch (error) {
       setFlowMessage(error.message || "Failed to start evaluation");
@@ -90,6 +92,7 @@ export default function InterviewPage() {
   async function saveInterview(id, nextResponses) {
     try {
       await saveInterviewRequest(id, nextResponses);
+      Promise.resolve(logAuditEvent("INTERVIEW_SAVED", { interview_id: id })).catch(() => {});
     } catch {
       // Autosave errors are surfaced only when user takes explicit actions.
     }
@@ -150,6 +153,12 @@ export default function InterviewPage() {
       ]);
       const requestId = result?.request_id;
       if (!requestId) throw new Error("Submission succeeded but no request_id was returned.");
+
+      Promise.resolve(logAuditEvent(
+        "INTERVIEW_SUBMITTED",
+        { interview_id: interview.id, request_id: requestId },
+        { requestId }
+      )).catch(() => {});
 
       const anonymousPreview = Boolean(result?.preview);
       if (!anonymousPreview) {

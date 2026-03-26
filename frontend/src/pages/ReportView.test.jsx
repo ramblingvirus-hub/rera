@@ -13,6 +13,7 @@ vi.mock("../api/apiClient", () => ({
   activateSubscription: vi.fn(),
   login: vi.fn(),
   isAuthenticated: vi.fn(),
+  logAuditEvent: vi.fn(() => Promise.resolve({})),
 }));
 
 import {

@@ -12,6 +12,23 @@ const REFRESH_TOKEN_KEY = "refresh_token";
 
 let refreshPromise = null;
 
+function parseJwtPayload(token) {
+  if (!token || typeof token !== "string") {
+    return null;
+  }
+
+  try {
+    const base64 = token.split(".")[1];
+    if (!base64) {
+      return null;
+    }
+
+    return JSON.parse(atob(base64));
+  } catch {
+    return null;
+  }
+}
+
 function buildApiUrl(path) {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
@@ -212,6 +229,20 @@ export function isAuthenticated() {
   return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
 }
 
+export function getCurrentUser() {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const payload = parseJwtPayload(token);
+  if (!payload) {
+    return null;
+  }
+
+  return {
+    user_id: payload.user_id ?? null,
+    username: payload.username || null,
+    is_superuser: Boolean(payload.is_superuser),
+  };
+}
+
 export async function register(username, email, password, confirmPassword) {
   return apiRequest("/auth/register/", {
     method: "POST",
@@ -316,6 +347,48 @@ export async function activateSubscription(paymongoSubscriptionId, periodDays = 
       period_days: periodDays,
     },
     auth: true,
+  });
+}
+
+export async function getAdminAuditEvents(filters = {}) {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") {
+      return;
+    }
+    params.set(key, String(value));
+  });
+
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const payload = await apiRequest(`/admin/audit/${suffix}`, {
+    auth: true,
+  });
+
+  if (Array.isArray(payload)) {
+    return {
+      count: payload.length,
+      limit: Number(filters.limit || payload.length || 0),
+      offset: Number(filters.offset || 0),
+      next_offset: null,
+      results: payload,
+    };
+  }
+
+  return payload;
+}
+
+export async function logAuditEvent(eventType, metadata = {}, options = {}) {
+  const { requestId = null, severity = "INFO" } = options;
+  return apiRequest("/audit/log/", {
+    method: "POST",
+    auth: true,
+    body: {
+      event_type: eventType,
+      severity,
+      request_id: requestId,
+      metadata,
+    },
   });
 }
 

@@ -15,10 +15,12 @@ def log_audit_event(
     All audit events must go through this function.
     """
 
-    AuditEvent.objects.create(
+    event = AuditEvent(
         user=user,
         event_type=event_type,
         severity=severity,
         request_id=request_id,
         metadata=metadata or {},
     )
+    event.full_clean()
+    event.save()

@@ -2,13 +2,14 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { GuestRoute, ProtectedRoute } from "./AuthGuards";
+import { GuestRoute, ProtectedRoute, SuperadminRoute } from "./AuthGuards";
 
 vi.mock("../api/apiClient", () => ({
   isAuthenticated: vi.fn(),
+  getCurrentUser: vi.fn(),
 }));
 
-import { isAuthenticated } from "../api/apiClient";
+import { getCurrentUser, isAuthenticated } from "../api/apiClient";
 
 describe("auth guards", () => {
   afterEach(() => {
@@ -78,5 +79,50 @@ describe("auth guards", () => {
     );
 
     expect(screen.getByText("Dashboard content")).toBeInTheDocument();
+  });
+
+  it("redirects non-superusers away from admin audit page", () => {
+    isAuthenticated.mockReturnValue(true);
+    getCurrentUser.mockReturnValue({ is_superuser: false });
+
+    render(
+      <MemoryRouter initialEntries={["/admin/audit"]}>
+        <Routes>
+          <Route
+            path="/admin/audit"
+            element={
+              <SuperadminRoute>
+                <div>Audit dashboard</div>
+              </SuperadminRoute>
+            }
+          />
+          <Route path="/dashboard" element={<div>Dashboard content</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText("Dashboard content")).toBeInTheDocument();
+  });
+
+  it("renders admin page for superusers", () => {
+    isAuthenticated.mockReturnValue(true);
+    getCurrentUser.mockReturnValue({ is_superuser: true });
+
+    render(
+      <MemoryRouter initialEntries={["/admin/audit"]}>
+        <Routes>
+          <Route
+            path="/admin/audit"
+            element={
+              <SuperadminRoute>
+                <div>Audit dashboard</div>
+              </SuperadminRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText("Audit dashboard")).toBeInTheDocument();
   });
 })

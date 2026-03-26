@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
     TokenRefreshView,
 )
 from rest_framework.permissions import AllowAny
@@ -14,6 +13,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 import re
+from config.jwt import RERATokenObtainPairView
 
 
 class RegisterView(APIView):
@@ -114,7 +114,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     path('api/token/',
-        TokenObtainPairView.as_view(permission_classes=[AllowAny]),
+        RERATokenObtainPairView.as_view(permission_classes=[AllowAny]),
         name='token_obtain_pair'
     ),
 
@@ -130,6 +130,7 @@ urlpatterns = [
 
     path("api/v1/", include("reports.urls")),
     path("api/v1/billing/", include("billing.urls")),
+    path("api/v1/", include("audit.urls")),
 ]
 
 if settings.DEBUG:

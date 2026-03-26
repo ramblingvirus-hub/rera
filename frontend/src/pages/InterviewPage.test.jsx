@@ -35,6 +35,7 @@ vi.mock("../api/apiClient", () => ({
   getInterview: vi.fn(),
   saveInterview: vi.fn(),
   submitInterview: vi.fn(),
+  logAuditEvent: vi.fn(() => Promise.resolve({})),
 }));
 
 import {

@@ -2,22 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   clearAuthTokens,
+  getCurrentUser,
   getCreditBalance,
   isAuthenticated,
+  logAuditEvent,
 } from "../api/apiClient";
 
 function getUsername() {
-  const token = localStorage.getItem("access_token");
-
-  if (!token) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(atob(token.split(".")[1]))?.username || null;
-  } catch {
-    return null;
-  }
+  return getCurrentUser()?.username || null;
 }
 
 function getUserBadgeText(username) {
@@ -57,6 +49,7 @@ const NAV_SECTIONS = [
     items: [
       { path: "/reports", label: "Reports" },
       { path: "/billing", label: "Billing" },
+      { path: "/admin/audit", label: "Audit Dashboard", requiresSuperuser: true },
       { label: "History", disabled: true },
     ],
   },
@@ -145,7 +138,9 @@ export default function AppShell({ children, breadcrumb }) {
   const location = useLocation();
   const navigate = useNavigate();
   const loggedIn = isAuthenticated();
-  const username = getUsername();
+  const currentUser = getCurrentUser();
+  const username = currentUser?.username || getUsername();
+  const isSuperuser = Boolean(currentUser?.is_superuser);
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -161,7 +156,8 @@ export default function AppShell({ children, breadcrumb }) {
   const isDashboardPage =
     location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard/");
 
-  function handleLogout() {
+  async function handleLogout() {
+    await Promise.resolve(logAuditEvent("SESSION_ENDED", { source: "logout" })).catch(() => {});
     clearAuthTokens();
     navigate("/login");
   }
@@ -331,12 +327,14 @@ export default function AppShell({ children, breadcrumb }) {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               {section.items.map((item) => (
+                item.requiresSuperuser && !isSuperuser ? null : (
                 <SidebarItem
                   key={item.label}
                   item={item}
                   active={isItemActive(item, location.pathname)}
                   onSelect={closeSidebar}
                 />
+                )
               ))}
             </div>
           </div>

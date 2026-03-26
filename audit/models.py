@@ -1,25 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
 import uuid
+from .constants import EVENT_TYPE_CHOICES, SEVERITY_CHOICES
 
 
 class AuditEvent(models.Model):
-
-    SEVERITY_CHOICES = [
-        ("INFO", "Info"),
-        ("WARNING", "Warning"),
-        ("CRITICAL", "Critical"),
-    ]
-
-    EVENT_TYPES = [
-        ("EVALUATION_ATTEMPT", "Evaluation Attempt"),
-        ("EVALUATION_SUCCESS", "Evaluation Success"),
-        ("EVALUATION_VALIDATION_FAIL", "Evaluation Validation Fail"),
-        ("BILLING_SUBSCRIPTION_APPLIED", "Billing Subscription Applied"),
-        ("BILLING_CREDIT_DEDUCTED", "Billing Credit Deducted"),
-        ("BILLING_INSUFFICIENT_CREDIT", "Billing Insufficient Credit"),
-        ("THROTTLE_TRIGGERED", "Throttle Triggered"),
-    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -32,7 +17,7 @@ class AuditEvent(models.Model):
 
     event_type = models.CharField(
         max_length=50,
-        choices=EVENT_TYPES,
+        choices=EVENT_TYPE_CHOICES,
         db_index=True,
     )
 

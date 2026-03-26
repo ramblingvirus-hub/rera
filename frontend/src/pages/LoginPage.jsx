@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { login, register, initiateCreditPurchase } from "../api/apiClient";
+import { login, register, initiateCreditPurchase, logAuditEvent } from "../api/apiClient";
 import { resolveRedirectTarget } from "../utils/navigation";
 
 export default function LoginPage() {
@@ -44,6 +44,11 @@ export default function LoginPage() {
       }
 
       await login(username, password);
+      Promise.resolve(logAuditEvent("SESSION_STARTED", {
+        source: "login",
+      })).catch(() => {
+        // Session logging failures should not block signin.
+      });
 
       const pendingPackage = location.state?.pendingPackage;
       const from = location.state?.from || "/dashboard";
