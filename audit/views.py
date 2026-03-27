@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.conf import settings
 
 from .models import AuditEvent
 from .serializers import (
@@ -83,3 +84,16 @@ class AuditLogView(APIView):
 		)
 
 		return Response({"status": "logged"}, status=status.HTTP_201_CREATED)
+
+
+class AdminSystemFlagsView(APIView):
+	permission_classes = [IsAdminUser]
+
+	def get(self, request):
+		return Response(
+			{
+				"qa_bypass_unlock": bool(getattr(settings, "QA_BYPASS_UNLOCK", False)),
+				"paymongo_enabled": bool(getattr(settings, "PAYMONGO_ENABLED", True)),
+			},
+			status=status.HTTP_200_OK,
+		)

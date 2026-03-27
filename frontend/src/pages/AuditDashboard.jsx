@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   getAdminAuditEvents,
+  getAdminSystemFlags,
   listAdminManualPayments,
   reviewManualPayment,
 } from "../api/apiClient";
@@ -206,6 +207,7 @@ export default function AuditDashboard() {
   const [paymentReviewingId, setPaymentReviewingId] = useState(null);
   const [paymentReviewNotes, setPaymentReviewNotes] = useState("");
   const [paymentMessage, setPaymentMessage] = useState("");
+  const [systemFlags, setSystemFlags] = useState(null);
 
   function dismissAlert(alertId) {
     const updated = [...dismissedAlerts, alertId];
@@ -342,6 +344,15 @@ export default function AuditDashboard() {
     }
   }
 
+  async function loadSystemFlags() {
+    try {
+      const payload = await getAdminSystemFlags();
+      setSystemFlags(payload || null);
+    } catch {
+      setSystemFlags(null);
+    }
+  }
+
   async function handleReviewPayment(paymentId, action) {
     setPaymentMessage("");
     try {
@@ -359,6 +370,7 @@ export default function AuditDashboard() {
   useEffect(() => {
     loadEvents();
     loadPendingPayments();
+    loadSystemFlags();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -402,6 +414,39 @@ export default function AuditDashboard() {
           padding: "12px 14px",
         }}
       >
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "10px" }}>
+          <span
+            style={{
+              display: "inline-block",
+              borderRadius: "999px",
+              padding: "4px 10px",
+              fontSize: "11px",
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              color: systemFlags?.qa_bypass_unlock ? "#991b1b" : "#166534",
+              backgroundColor: systemFlags?.qa_bypass_unlock ? "#fee2e2" : "#dcfce7",
+              border: `1px solid ${systemFlags?.qa_bypass_unlock ? "#fecaca" : "#86efac"}`,
+            }}
+          >
+            QA BYPASS: {systemFlags?.qa_bypass_unlock ? "ON" : "OFF"}
+          </span>
+          <span
+            style={{
+              display: "inline-block",
+              borderRadius: "999px",
+              padding: "4px 10px",
+              fontSize: "11px",
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              color: systemFlags?.paymongo_enabled ? "#92400e" : "#334155",
+              backgroundColor: systemFlags?.paymongo_enabled ? "#fef3c7" : "#e2e8f0",
+              border: `1px solid ${systemFlags?.paymongo_enabled ? "#fde68a" : "#cbd5e1"}`,
+            }}
+          >
+            PAYMONGO: {systemFlags?.paymongo_enabled ? "ON" : "OFF"}
+          </span>
+        </div>
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
           <div style={{ fontWeight: 800, fontSize: "13px", letterSpacing: "0.04em" }}>
             {maxAlertLevel ? `${maxAlertLevel} ALERT` : "SYSTEM HEALTHY"}

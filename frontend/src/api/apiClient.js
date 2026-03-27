@@ -433,6 +433,12 @@ export async function getAdminAuditEvents(filters = {}) {
   return payload;
 }
 
+export async function getAdminSystemFlags() {
+  return apiRequest("/admin/audit/system-flags/", {
+    auth: true,
+  });
+}
+
 export async function logAuditEvent(eventType, metadata = {}, options = {}) {
   const { requestId = null, severity = "INFO" } = options;
   return apiRequest("/audit/log/", {
