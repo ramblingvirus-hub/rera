@@ -38,6 +38,7 @@ export default function BillingPage() {
   const [referenceNumber, setReferenceNumber] = useState("");
   const [referenceNote, setReferenceNote] = useState("");
   const [proofFile, setProofFile] = useState(null);
+  const [qrPreviewUrl, setQrPreviewUrl] = useState("");
 
   const selectedPackage = useMemo(() => {
     if (!config?.packages) {
@@ -198,19 +199,18 @@ export default function BillingPage() {
               <div style={{ fontSize: "13px", color: "#374151" }}>Number: {methodInstructions.number || "Not configured"}</div>
               {methodInstructions.qr_url && (
                 <div style={{ marginTop: "6px" }}>
-                  <a
-                    href={methodInstructions.qr_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="Open full-size QR code"
-                    style={{ display: "inline-block" }}
+                  <button
+                    type="button"
+                    onClick={() => setQrPreviewUrl(methodInstructions.qr_url)}
+                    title="Open QR preview"
+                    style={{ display: "inline-block", border: "none", background: "transparent", padding: 0, cursor: "zoom-in" }}
                   >
                     <img
                       src={methodInstructions.qr_url}
                       alt={`${paymentMethod} QR Code`}
-                      style={{ width: "160px", height: "160px", objectFit: "contain", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "6px", backgroundColor: "#fff", display: "block", cursor: "zoom-in" }}
+                      style={{ width: "160px", height: "160px", objectFit: "contain", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "6px", backgroundColor: "#fff", display: "block" }}
                     />
-                  </a>
+                  </button>
                 </div>
               )}
               <div style={{ marginTop: "6px", fontSize: "12px", color: "#6b7280" }}>
@@ -331,6 +331,56 @@ export default function BillingPage() {
           </div>
         )}
       </div>
+
+      {qrPreviewUrl && (
+        <div
+          onClick={() => setQrPreviewUrl("")}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "min(92vw, 460px)",
+              backgroundColor: "#ffffff",
+              borderRadius: "12px",
+              padding: "14px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.22)",
+              display: "grid",
+              gap: "12px",
+            }}
+          >
+            <img
+              src={qrPreviewUrl}
+              alt="QR Code Preview"
+              style={{ width: "100%", height: "auto", maxHeight: "70vh", objectFit: "contain", borderRadius: "8px", border: "1px solid #e5e7eb" }}
+            />
+            <button
+              type="button"
+              onClick={() => setQrPreviewUrl("")}
+              style={{
+                border: "none",
+                borderRadius: "8px",
+                padding: "10px 12px",
+                backgroundColor: "#0f766e",
+                color: "#ffffff",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
