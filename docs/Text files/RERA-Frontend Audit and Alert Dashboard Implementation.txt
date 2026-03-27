@@ -1,0 +1,959 @@
+
+RERA – Frontend Audit & Alert Dashboard Implementation
+Date: March 26, 2026
+Status: READY FOR IMPLEMENTATION
+
+---
+
+## OBJECTIVE
+
+Implement a Superadmin-only Audit Dashboard in the frontend that provides:
+
+1. Full visibility into system audit events
+2. Real-time detection of critical failures
+3. Immediate alerting for:
+
+   * Refund-triggering events
+   * User experience gaps
+   * Security intrusion attempts
+
+This dashboard is NOT analytics.
+
+It is a forensic and operational control panel.
+
+---
+
+## ACCESS CONTROL (CRITICAL)
+
+* Route: /admin/audit
+* Access: Superadmin ONLY
+* Enforced via:
+
+  * Backend: IsAdminUser permission
+  * Frontend: route guard using user.is_superuser
+
+NO public exposure of audit data.
+
+---
+
+## DATA SOURCE
+
+Primary Table: AuditEvent
+
+Fields:
+
+* id
+* request_id
+* event_type
+* severity (INFO / WARNING / ERROR)
+* created_at
+* metadata (JSON – optional but recommended)
+
+Audit events are immutable and correlated via request_id.
+
+---
+
+## API CONTRACT
+
+GET /api/v1/admin/audit/
+
+Query params:
+
+* request_id (optional)
+* user_id (optional)
+* event_type (optional)
+* severity (optional)
+* limit (default 100–200)
+
+Response:
+[
+{
+id,
+request_id,
+event_type,
+severity,
+created_at,
+metadata
+}
+]
+
+---
+
+## FRONTEND STRUCTURE
+
+Page: AuditDashboard.jsx
+
+Sections:
+
+1. Alert Banner (CRITICAL)
+2. Filters Panel
+3. Event Table
+4. Request Timeline Viewer (modal or side panel)
+
+---
+
+1. ALERT BANNER (TOP PRIORITY FEATURE)
+
+---
+
+Purpose:
+Immediately surface critical issues without requiring filtering.
+
+Display conditions:
+Triggered when ANY of the following events appear:
+
+REFUND-RELATED EVENTS:
+
+* PAYMENT_FAILED
+* PAYMENT_VERIFIED but credit not issued
+* BILLING_CREDIT_DEDUCTED without EVALUATION_SUCCESS
+* Duplicate billing anomaly
+
+USER EXPERIENCE GAPS:
+
+* EVALUATION_VALIDATION_FAIL
+* TIMEOUT / delayed evaluation (>20s)
+* Missing category input errors
+* Report generation failure
+
+SECURITY / INTRUSION:
+
+* LOGIN_FAILED (multiple attempts)
+* THROTTLE_TRIGGERED
+* SUSPICIOUS_ACTIVITY
+
+---
+
+UI Behavior:
+
+* Sticky banner at top
+* Color-coded:
+
+  RED → Financial risk / refund required
+  ORANGE → UX issue
+  YELLOW → Security warning
+
+---
+
+Example:
+
+[ RED ALERT ]
+Possible refund required:
+
+* Request ID: abc-123
+* Credit deducted but evaluation failed
+
+[ ACTION BUTTON ]
+→ View Timeline
+
+---
+
+Logic (Frontend):
+
+Scan latest audit events (last N = 50–100)
+
+If:
+
+* BILLING_CREDIT_DEDUCTED exists
+  AND
+* NO EVALUATION_SUCCESS for same request_id
+
+→ Trigger REFUND ALERT
+
+---
+
+2. FILTER PANEL
+
+---
+
+Inputs:
+
+* Request ID (text)
+* User ID (text)
+* Event Type (dropdown)
+* Severity (dropdown)
+* Date range (optional)
+
+Buttons:
+
+* Search
+* Reset
+
+---
+
+3. EVENT TABLE
+
+---
+
+Columns:
+
+* Timestamp
+* Event Type
+* Severity
+* Request ID
+* User ID (if available)
+
+Behavior:
+
+* Sort: newest first
+* Click row → open timeline view
+
+---
+
+Severity Color Mapping:
+
+INFO → gray
+WARNING → yellow
+ERROR → red
+
+---
+
+4. REQUEST TIMELINE VIEW
+
+---
+
+Triggered by clicking a row.
+
+Displays all events with same request_id.
+
+Format:
+
+Request ID: XXXXX
+
+[10:01:01] EVALUATION_ATTEMPT
+[10:01:02] BILLING_CREDIT_DEDUCTED
+[10:01:03] EVALUATION_SUCCESS
+
+OR
+
+[10:01:01] EVALUATION_ATTEMPT
+[10:01:02] BILLING_CREDIT_DEDUCTED
+[10:01:05] ERROR (evaluation failed)
+
+---
+
+Purpose:
+
+* Debug issues
+* Validate billing correctness
+* Investigate disputes
+
+---
+
+## CRITICAL ALERT RULES (MUST IMPLEMENT)
+
+1. REFUND RISK DETECTION
+
+Condition:
+
+* BILLING_CREDIT_DEDUCTED exists
+* NO EVALUATION_SUCCESS within same request_id
+
+Action:
+→ Show RED alert
+
+Reason:
+User may have been charged without receiving value.
+
+---
+
+2. PAYMENT FAILURE DETECTION
+
+Condition:
+
+* PAYMENT_FAILED event
+
+Action:
+→ Show RED alert
+
+Reason:
+User attempted payment but did not receive credits.
+
+---
+
+3. UX FAILURE DETECTION
+
+Condition:
+
+* EVALUATION_VALIDATION_FAIL > threshold
+* Repeated failures per user
+
+Action:
+→ Show ORANGE alert
+
+Reason:
+Frontend UX confusion or API mismatch.
+
+---
+
+4. SECURITY ALERT
+
+Condition:
+
+* > 3 LOGIN_FAILED within short window
+* THROTTLE_TRIGGERED spike
+
+Action:
+→ Show YELLOW alert
+
+Reason:
+Possible brute-force or scraping attempt.
+
+---
+
+## OPTIONAL (HIGH VALUE)
+
+Add "System Health Indicator":
+
+Source:
+Operational monitoring (Phase 3I)
+
+Display:
+
+System Status: HEALTHY / ANOMALY DETECTED
+
+---
+
+## FRONTEND STATE MODEL
+
+State:
+
+* events[]
+* filters{}
+* alerts[]
+* selectedRequestId
+
+Derived:
+
+* groupedEventsByRequestId
+* alertConditions
+
+---
+
+## PERFORMANCE NOTES
+
+* Limit queries (max 200 rows)
+* Do NOT load entire audit table
+* Add pagination later if needed
+
+---
+
+## DESIGN PRINCIPLES
+
+1. Read-only only (NO mutation)
+2. Fast scanning > visual complexity
+3. Color = signal
+4. Timeline = truth
+5. Alerts = attention driver
+
+---
+
+## FINAL INTENT
+
+This dashboard ensures:
+
+* No silent billing failures
+* No hidden refund scenarios
+* Immediate detection of UX issues
+* Visibility into intrusion attempts
+* Full traceability via request_id
+
+Without this dashboard:
+
+The system is operationally blind.
+
+With this dashboard:
+
+The system becomes defensible, monitorable, and trustworthy.
+
+RERA – Frontend Audit, Alerts & Usage Monitoring Dashboard
+Date: March 26, 2026
+Status: READY FOR IMPLEMENTATION (EXTENDED)
+
+---
+
+## OBJECTIVE
+
+Extend the Superadmin Audit Dashboard to include:
+
+1. Audit Events (system truth)
+2. Usage Signals (user behavior)
+3. Visit Tracking (traffic visibility)
+4. Real-time Alerts:
+
+   * Refund risks
+   * UX gaps
+   * Security threats
+   * Abnormal usage patterns
+
+This is NOT analytics.
+
+This is operational visibility + abuse detection + UX diagnostics.
+
+---
+
+## NEW CONCEPT: USAGE SIGNALS
+
+AuditEvent is extended to include behavioral events.
+
+These are NOT business logic events — they are interaction signals.
+
+All signals must still be:
+
+* Immutable
+* Timestamped
+* Correlated (when possible)
+
+---
+
+## NEW EVENT TYPES (REQUIRED)
+
+VISIT & SESSION EVENTS:
+
+* PAGE_VIEW
+* SESSION_STARTED
+* SESSION_ENDED
+
+USER FLOW EVENTS:
+
+* INTERVIEW_STARTED
+* INTERVIEW_SAVED
+* INTERVIEW_SUBMITTED
+* REPORT_VIEWED
+* REPORT_DOWNLOAD_CLICKED
+* BILLING_PAGE_VIEWED
+* CREDIT_PURCHASE_INITIATED
+
+FAILURE / DROP-OFF EVENTS:
+
+* INTERVIEW_ABANDONED
+* PAYMENT_INITIATED_NO_COMPLETION
+* REPORT_VIEW_FAILED
+
+SECURITY / ABUSE SIGNALS:
+
+* RAPID_PAGE_REQUESTS
+* BOT_SUSPECTED
+
+---
+
+## BACKEND REQUIREMENT
+
+All events recorded via same AuditEvent table.
+
+Example:
+
+log_audit_event(
+event_type="PAGE_VIEW",
+severity="INFO",
+metadata={
+"path": "/dashboard",
+"user_id": user.id,
+"ip": request.META.get("REMOTE_ADDR")
+}
+)
+
+IMPORTANT:
+Do NOT create a new table.
+Keep everything inside AuditEvent for correlation consistency.
+
+---
+
+## FRONTEND ADDITIONS
+
+New Sections:
+
+1. Alert Banner (Enhanced)
+2. Audit Event Table (existing)
+3. Usage Panel (NEW)
+4. Traffic Snapshot (NEW)
+5. Request Timeline Viewer (existing)
+
+---
+
+1. ALERT BANNER (ENHANCED)
+
+---
+
+Now includes:
+
+A. FINANCIAL ALERTS (RED)
+
+* Credit deducted but no success
+* Payment failure
+* Payment success but no credit issued
+
+B. UX ALERTS (ORANGE)
+
+* High INTERVIEW_ABANDONED rate
+* REPORT_VIEW_FAILED
+* Repeated validation failures
+
+C. SECURITY ALERTS (YELLOW)
+
+* LOGIN_FAILED spikes
+* THROTTLE_TRIGGERED
+* BOT_SUSPECTED
+* RAPID_PAGE_REQUESTS
+
+D. USAGE ANOMALY ALERTS (NEW)
+
+* Sudden spike in PAGE_VIEW
+* High SESSION_STARTED but low INTERVIEW_STARTED
+* Many INTERVIEW_STARTED but low INTERVIEW_SUBMITTED
+
+---
+
+## ALERT EXAMPLES
+
+[ RED ALERT ]
+Refund Risk:
+Credit deducted but evaluation failed
+Request ID: abc-123
+
+[ ORANGE ALERT ]
+UX Issue:
+High interview abandonment detected (75%)
+
+[ YELLOW ALERT ]
+Security Warning:
+Rapid page requests detected from IP 192.168.x.x
+
+---
+
+2. USAGE PANEL (NEW)
+
+---
+
+Purpose:
+Quick understanding of user behavior.
+
+Metrics (last 5–15 minutes):
+
+* Active sessions
+* Page views
+* Interviews started
+* Interviews submitted
+* Reports viewed
+* Payments initiated
+
+---
+
+Example UI:
+
+Active Sessions: 12
+Page Views: 145
+Interviews Started: 20
+Interviews Submitted: 8
+Conversion Rate: 40%
+
+---
+
+Derived Metrics:
+
+Conversion Rate:
+INTERVIEW_SUBMITTED / INTERVIEW_STARTED
+
+Drop-off Rate:
+INTERVIEW_ABANDONED / INTERVIEW_STARTED
+
+---
+
+3. TRAFFIC SNAPSHOT (NEW)
+
+---
+
+Purpose:
+Detect bots vs real users.
+
+Display:
+
+Top IPs (last N minutes):
+
+* IP: 192.168.x.x → 80 requests
+* IP: 10.x.x.x → 65 requests
+
+Top Pages:
+
+* /dashboard
+* /interview
+* /billing
+
+---
+
+Bot Detection Heuristics:
+
+IF:
+
+* Same IP > 50 requests in short window
+  OR
+* High PAGE_VIEW with zero SESSION duration
+
+→ Trigger BOT_SUSPECTED alert
+
+---
+
+4. EVENT TABLE (UNCHANGED + EXTENDED TYPES)
+
+---
+
+Now includes both:
+
+* System audit events
+* Usage events
+
+Filterable by:
+
+* event_type
+* severity
+* user_id
+* request_id
+
+---
+
+5. REQUEST TIMELINE VIEW (ENHANCED)
+
+---
+
+Now shows BOTH:
+
+* System events
+* User interaction events
+
+Example:
+
+[10:01] SESSION_STARTED
+[10:02] PAGE_VIEW (/interview)
+[10:03] INTERVIEW_STARTED
+[10:05] INTERVIEW_SUBMITTED
+[10:05] EVALUATION_ATTEMPT
+[10:05] BILLING_CREDIT_DEDUCTED
+[10:05] EVALUATION_SUCCESS
+[10:06] REPORT_VIEWED
+
+---
+
+This gives FULL story of user journey.
+
+---
+
+## CRITICAL NEW ALERT RULES
+
+1. ABANDONMENT ALERT
+
+Condition:
+INTERVIEW_STARTED >> INTERVIEW_SUBMITTED
+
+Threshold:
+
+> 50% drop-off
+
+Action:
+→ ORANGE alert
+
+Reason:
+UX friction or confusion
+
+---
+
+2. PAYMENT DROP ALERT
+
+Condition:
+CREDIT_PURCHASE_INITIATED exists
+BUT no PAYMENT_VERIFIED
+
+Action:
+→ RED alert
+
+Reason:
+Users attempting to pay but failing
+
+---
+
+3. BOT TRAFFIC ALERT
+
+Condition:
+Single IP high request volume
+OR repeated PAGE_VIEW without progression
+
+Action:
+→ YELLOW alert
+
+---
+
+4. LOW CONVERSION ALERT
+
+Condition:
+INTERVIEW_SUBMITTED / INTERVIEW_STARTED < threshold
+
+Action:
+→ ORANGE alert
+
+---
+
+## FRONTEND EVENT LOGGING (REQUIRED)
+
+Frontend must send events:
+
+Example:
+
+POST /api/v1/audit/log/
+
+Payload:
+{
+event_type: "PAGE_VIEW",
+metadata: {
+path: "/dashboard"
+}
+}
+
+Trigger points:
+
+* On route change → PAGE_VIEW
+* On login → SESSION_STARTED
+* On logout/timeout → SESSION_ENDED
+* On interview start → INTERVIEW_STARTED
+* On submit → INTERVIEW_SUBMITTED
+* On report open → REPORT_VIEWED
+* On billing page → BILLING_PAGE_VIEWED
+
+---
+
+## PERFORMANCE RULES
+
+* Limit queries (max 200 rows)
+* Aggregate usage in frontend (lightweight)
+* Avoid heavy charts
+* Use simple counters
+
+---
+
+## DESIGN PRINCIPLES
+
+1. Audit = truth
+2. Usage = behavior
+3. Alerts = attention
+4. Timeline = story
+5. Correlation = power
+
+---
+
+## FINAL OUTCOME
+
+With this system, you can:
+
+* Detect refund risks immediately
+* See where users drop off
+* Identify payment friction
+* Detect bots vs real users
+* Trace full user journey per request
+* Operate the platform with confidence
+
+Without this:
+
+You are blind to user behavior and abuse patterns.
+
+===========================
+
+RERA – Frontend Audit, Alerts & Observability Dashboard (FINAL SPEC)
+Date: March 26, 2026
+Status: IMPLEMENTATION READY (ALIGNED WITH BACKEND)
+
+---
+
+## OBJECTIVE
+
+Implement a Superadmin-only Audit & Observability Dashboard that provides:
+
+1. Full audit visibility (system truth)
+2. Real-time alert detection (financial, UX, security)
+3. Usage monitoring (behavior signals)
+4. Request-level traceability via request_id
+
+This system is NOT analytics.
+This is operational control + financial protection + system observability.
+
+---
+
+## SECTION 1 — BACKEND ALIGNMENT (REQUIRED FIRST)
+
+The frontend MUST NOT be built until the following backend items are completed.
+
+1.1 AUDIT ENDPOINT (BLOCKER)
+
+Create:
+
+GET /api/v1/admin/audit/
+
+Permissions:
+
+* IsAdminUser ONLY
+
+Query params:
+
+* request_id (optional)
+* user_id (optional)
+* event_type (optional)
+* severity (optional)
+* limit (default 100–200)
+
+Response format:
+
+[
+{
+id,
+request_id,
+event_type,
+severity,
+timestamp,
+metadata
+}
+]
+
+---
+
+1.2 JWT SUPERADMIN FLAG (BLOCKER)
+
+Modify JWT payload:
+
+token["is_superuser"] = user.is_superuser
+
+Frontend must decode and enforce:
+
+IF is_superuser != true
+→ deny access to /admin/audit
+
+---
+
+1.3 CANONICAL AUDIT EVENT TAXONOMY (LOCK THIS)
+
+All audit events MUST come from this controlled list.
+
+---
+
+EVALUATION EVENTS
+
+* EVALUATION_ATTEMPT
+* EVALUATION_SUCCESS
+* EVALUATION_VALIDATION_FAIL
+
+BILLING EVENTS
+
+* BILLING_CREDIT_DEDUCTED
+* BILLING_INSUFFICIENT_CREDIT
+* CREDIT_PURCHASE_CREATED
+
+PAYMENT EVENTS
+
+* PAYMENT_WEBHOOK_RECEIVED
+* PAYMENT_VERIFIED
+* PAYMENT_FAILED
+
+SECURITY EVENTS
+
+* LOGIN_FAILED
+* THROTTLE_TRIGGERED
+* SUSPICIOUS_ACTIVITY
+
+USAGE EVENTS (NEW)
+
+* SESSION_STARTED
+* SESSION_ENDED
+* PAGE_VIEW
+* INTERVIEW_STARTED
+* INTERVIEW_SAVED
+* INTERVIEW_SUBMITTED
+* INTERVIEW_ABANDONED
+* REPORT_VIEWED
+* REPORT_VIEW_FAILED
+* BILLING_PAGE_VIEWED
+* CREDIT_PURCHASE_INITIATED
+
+---
+
+Model MUST enforce choices (no free-text drift).
+
+---
+
+1.4 SEVERITY STANDARD (LOCK THIS)
+
+Use existing backend:
+
+INFO
+WARNING
+CRITICAL
+
+DO NOT introduce "ERROR"
+
+---
+
+1.5 FIELD STANDARD (LOCK THIS)
+
+Use:
+
+timestamp (NOT created_at)
+
+---
+
+## SECTION 2 — FRONTEND ROUTE
+
+Route:
+
+/admin/audit
+
+Guard:
+
+* Must be authenticated
+* Must have is_superuser = true
+
+Otherwise redirect to /dashboard
+
+---
+
+## SECTION 3 — FRONTEND STRUCTURE
+
+Page: AuditDashboard.jsx
+
+Main Sections:
+
+1. Alert Banner (CRITICAL)
+2. Usage Snapshot (NEW)
+3. Traffic Snapshot (NEW)
+4. Filters Panel
+5. Event Table
+6. Request Timeline Viewer
+
+---
+
+## SECTION 4 — ALERT BANNER (TOP PRIORITY)
+
+Sticky top banner.
+
+Scans latest audit events (last 50–100).
+
+---
+
+
+
+
+
+END OF SPEC
+
+
+END OF SPEC
+
+---
+Implementation Addendum - March 27, 2026
+
+Actual delivered implementation for the audit dashboard includes:
+- Alert dismiss and permanent-dismiss controls
+- Pending manual payments review panel (approve/reject with notes)
+- Direct proof-file access from the dashboard
+- Environment status indicators: QA BYPASS and PAYMONGO
+
+Operational note:
+- QA_BYPASS_UNLOCK was identified as a production risk and corrected to false.
+
+Continuation note for next session:
+- Consider adding persistent server-side alert acknowledgements (not only localStorage)
+- Consider adding a louder warning banner when QA BYPASS is ON

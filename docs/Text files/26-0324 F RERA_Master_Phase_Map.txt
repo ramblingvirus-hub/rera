@@ -307,3 +307,22 @@ Objective:
 – Staging smoke pass: teaser → login → purchase → unlock full report
 – Operational monitoring alert routing
 – Production domain, DNS, SSL, and secret hardening
+
+Phase 11A - Manual Payment Ops + Audit Controls (March 27, 2026)
+Status: Completed
+
+Delivered:
+- Superadmin route /admin/payments for in-app payment approval/rejection.
+- Audit page now includes pending manual payment queue and review actions.
+- Alert controls added: dismiss + dismiss permanently + reset.
+- Production flags surfaced in audit header (QA BYPASS and PAYMONGO).
+- Anonymous teaser continuity improved via claim/finalize and recovery actions.
+- Locked report now includes explicit post-approval refresh action.
+
+Critical Ops Correction:
+- QA_BYPASS_UNLOCK found ON in production and allowed free unlock.
+- Set to false in Railway and redeploy verified.
+
+Known Constraints:
+- Teaser recovery depends on browser-local continuity.
+- If teaser local state is lost, user must rerun evaluation.

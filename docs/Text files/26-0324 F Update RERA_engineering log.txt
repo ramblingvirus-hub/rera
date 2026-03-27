@@ -193,3 +193,61 @@ Summary for March 24, 2026:
 – ReportView force-refetches full report after inline login
 – Vercel SPA routing correctly handles all direct URL access
 – Enter key supported in interview navigation flow
+
+---------------------------------------------------
+PHASE 11A - MANUAL PAYMENT OPERATIONS + AUDIT ACTIONS
+Date: March 27, 2026
+Status: COMPLETE
+---------------------------------------------------
+
+Delivered
+
+1) Manual payment review in superadmin app UI
+   - Added superadmin route: /admin/payments
+   - Added in-app review flow with approve/reject and admin notes
+   - Added proof file access and status filtering
+
+2) Audit dashboard operational controls
+   - Added dismiss and dismiss-permanently controls for alerts
+   - Added reset controls for dismissed alerts
+   - Added pending manual payments panel in audit page
+   - Added approve/reject actions directly in audit page
+
+3) Admin data visibility fix
+   - Root cause: user-scoped manual payment listing endpoint used by admin UI
+   - Added admin endpoint returning all manual payments with filters
+   - Added username fields in manual payment serializer for reviewer context
+
+4) Report unlock flow adjustments
+   - Added explicit action on locked report view:
+     "I Already Paid - Unlock Report"
+   - Refreshes access and report state immediately after manual approval
+
+5) Anonymous teaser to account continuity
+   - Added teaser claim/finalize path after registration/login
+   - Added reports-page recovery action:
+     "Recover My Last Teaser Report"
+   - Added interview ownership assignment on successful authenticated finalize
+
+6) Production safety controls
+   - Added audit API endpoint for system flags
+   - Surfaced QA BYPASS and PAYMONGO statuses in audit dashboard header
+   - Production incident found and fixed:
+     QA_BYPASS_UNLOCK was true and allowed free unlocks
+     QA_BYPASS_UNLOCK set to false and redeploy confirmed
+
+Validation
+   - Backend pytest: 19 passed
+   - Frontend Vitest: 17 passed
+   - Frontend Vite build: success
+
+Key Commits
+   - 312d319  Add admin payments page and permanent alert dismissal
+   - 7a4ecd1  Enable superadmin payment review in audit dashboard
+   - 97e6d0f  Add manual-payment unlock refresh action on report page
+   - 3654a5e  Allow anonymous previews to be claimed after registration
+   - a6ca4a8  Add reports-page recovery for anonymous teaser drafts
+   - 25caf5a  Show QA bypass and PayMongo status in audit dashboard
+
+Ops Change (Railway env)
+   - QA_BYPASS_UNLOCK=false

@@ -165,3 +165,32 @@ Next Priorities (Phase 11)
 – Full staging smoke pass: teaser → login → purchase → unlock
 – Production domain, DNS, SSL, and environment secret hardening
 – Operational monitoring alert routing and incident runbook completion
+
+---
+Summary for March 27, 2026:
+
+- Manual payment system moved to active beta flow (GCash first), including proof upload and admin review.
+- Superadmin in-app operations improved: manual payment review controls now available in app (not only Django admin).
+- Audit dashboard upgraded with alert dismiss and permanent dismiss controls.
+- Added pending manual payments panel inside audit dashboard with approve/reject and proof access.
+- Added system flag visibility in audit dashboard header:
+	- QA BYPASS: ON/OFF
+	- PAYMONGO: ON/OFF
+- Production misconfiguration detected and fixed:
+	- QA_BYPASS_UNLOCK was ON in production and caused free unlocks.
+	- Flag switched OFF and redeploy confirmed.
+- Report unlock UX improved after manual approval:
+	- Added explicit "I Already Paid - Unlock Report" action on locked report page.
+- Anonymous teaser continuity improved:
+	- Added claim/finalize flow after registration so teaser can be saved to account when recoverable.
+	- Added reports-page recovery action for recoverable teaser drafts.
+
+Production Notes (current):
+- PAYMONGO_ENABLED=false
+- QA_BYPASS_UNLOCK=false
+- Manual payments are active and reviewable from superadmin UI.
+
+Open Risks / Constraints:
+- Teaser recovery currently depends on browser-local draft continuity.
+- If teaser browser state is lost (different device/incognito cleared), user must rerun evaluation.
+- Payment proof storage is still filesystem-based unless cloud media storage is enabled.
