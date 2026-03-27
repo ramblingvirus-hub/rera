@@ -587,6 +587,8 @@ class SubmitInterviewView(APIView):
 
         if response.status_code == 200:
             interview.status = InterviewStatus.SUBMITTED
+            if request.user.is_authenticated and interview.user_id is None:
+                interview.user = request.user
             interview.save()
 
         return response

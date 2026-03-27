@@ -161,6 +161,15 @@ export default function InterviewPage() {
       )).catch(() => {});
 
       const anonymousPreview = Boolean(result?.preview);
+      if (anonymousPreview) {
+        try {
+          const existing = JSON.parse(localStorage.getItem("rera_preview_claims") || "{}");
+          existing[String(requestId)] = String(interview.id);
+          localStorage.setItem("rera_preview_claims", JSON.stringify(existing));
+        } catch {
+          // Non-blocking fallback: preview still works even if localStorage is unavailable.
+        }
+      }
       if (!anonymousPreview) {
         localStorage.removeItem("rera_interview_id");
       }

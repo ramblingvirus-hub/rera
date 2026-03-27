@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   getReport,
@@ -7,6 +7,7 @@ import {
   initiateCreditPurchase,
   confirmCreditPurchase,
   activateSubscription,
+  submitInterview,
   login,
   isAuthenticated,
   logAuditEvent,
@@ -275,9 +276,20 @@ export default function ReportView() {
   const [selectedPackage, setSelectedPackage] = useState("single");
   const [purchaseId, setPurchaseId] = useState("");
   const [isBillingLoading, setIsBillingLoading] = useState(false);
+  const [isClaimingPreview, setIsClaimingPreview] = useState(false);
 
   const [subscriptionId, setSubscriptionId] = useState("");
   const [subscriptionPeriodDays, setSubscriptionPeriodDays] = useState(30);
+
+  const claimableInterviewId = useMemo(() => {
+    try {
+      const map = JSON.parse(localStorage.getItem("rera_preview_claims") || "{}");
+      const interviewId = map?.[String(request_id)];
+      return interviewId ? String(interviewId) : "";
+    } catch {
+      return "";
+    }
+  }, [request_id]);
 
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [isTestUnlocked, setIsTestUnlocked] = useState(false);
@@ -505,6 +517,46 @@ export default function ReportView() {
       setBillingMessage(error.message || "Failed to activate subscription");
     } finally {
       setIsBillingLoading(false);
+    }
+  }
+
+  async function handleClaimAnonymousPreview() {
+    if (!isLoggedIn) {
+      setErrorMessage("Please sign in first.");
+      return;
+    }
+
+    if (!claimableInterviewId) {
+      setErrorMessage("This preview can no longer be claimed. Please run a new evaluation.");
+      return;
+    }
+
+    setIsClaimingPreview(true);
+    setErrorMessage("");
+    try {
+      const result = await submitInterview(claimableInterviewId);
+      const nextRequestId = result?.request_id;
+      if (!nextRequestId) {
+        throw new Error("Could not finalize preview into a saved report.");
+      }
+
+      try {
+        const existing = JSON.parse(localStorage.getItem("rera_preview_claims") || "{}");
+        delete existing[String(request_id)];
+        localStorage.setItem("rera_preview_claims", JSON.stringify(existing));
+      } catch {
+        // Ignore localStorage cleanup failures.
+      }
+
+      navigate(`/report/${nextRequestId}`, { replace: true });
+    } catch (error) {
+      if (error?.status === 402) {
+        setErrorMessage("Credits are required to finalize this preview. Purchase/approve credit first, then try again.");
+      } else {
+        setErrorMessage(error?.message || "Failed to save preview to your account.");
+      }
+    } finally {
+      setIsClaimingPreview(false);
     }
   }
 
@@ -767,6 +819,26 @@ export default function ReportView() {
           <p style={{ fontSize: "15px", color: "#374151", marginBottom: "18px" }}>
             Report not found.
           </p>
+          {isLoggedIn && claimableInterviewId && (
+            <button
+              onClick={handleClaimAnonymousPreview}
+              disabled={isClaimingPreview}
+              style={{
+                padding: "9px 20px",
+                backgroundColor: "#0f766e",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "13.5px",
+                fontWeight: 600,
+                cursor: isClaimingPreview ? "not-allowed" : "pointer",
+                marginRight: "10px",
+                opacity: isClaimingPreview ? 0.7 : 1,
+              }}
+            >
+              {isClaimingPreview ? "Finalizing..." : "Save This Preview To My Account"}
+            </button>
+          )}
           {isLoggedIn && (
             <button
               onClick={handleLoadLatestReport}
