@@ -1,25 +1,39 @@
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from billing.models import CreditTransaction, CreditPurchase
+from billing.models import CreditPurchase, CreditTransaction, ManualPayment, Subscription
+from billing.serializers import (
+    AdminManualPaymentReviewSerializer,
+    ManualPaymentConfigSerializer,
+    ManualPaymentCreateResultSerializer,
+    ManualPaymentSerializer,
+    ManualPaymentSubmitSerializer,
+)
 from billing.paymongo_service import PayMongoService, PayMongoException
-from billing.services import calculate_user_balance
+from billing.services import (
+    MANUAL_CREDIT_PACKAGES,
+    calculate_user_balance,
+    get_credit_package,
+    paymongo_enabled,
+    review_manual_payment,
+)
 from django.utils import timezone
 from django.db import transaction
 from django.conf import settings
 from datetime import timedelta
 import uuid
-from billing.models import CreditPurchase, CreditTransaction, Subscription
 import hashlib
 import hmac
 import json
 import logging
+from django.core.mail import send_mail
 from audit.services import log_audit_event
 from audit.constants import (
     CREDIT_PURCHASE_INITIATED,
     PAYMENT_FAILED,
+    PAYMENT_MANUAL_SUBMITTED,
     PAYMENT_VERIFIED,
     PAYMENT_WEBHOOK_RECEIVED,
 )
@@ -51,6 +65,21 @@ CREDIT_PACKAGES = {
 }
 
 
+def build_manual_payment_instructions():
+    return {
+        "GCASH": {
+            "number": getattr(settings, "GCASH_NUMBER", ""),
+            "name": getattr(settings, "GCASH_NAME", ""),
+            "qr_url": getattr(settings, "GCASH_QR_URL", ""),
+        },
+        "MAYA": {
+            "number": getattr(settings, "MAYA_NUMBER", ""),
+            "name": getattr(settings, "MAYA_NAME", ""),
+            "qr_url": getattr(settings, "MAYA_QR_URL", ""),
+        },
+    }
+
+
 class InitiateCreditPurchaseView(APIView):
     """
     Step 1 of credit purchase flow.
@@ -75,6 +104,12 @@ class InitiateCreditPurchaseView(APIView):
         return (None, None)
 
     def post(self, request):
+        if not paymongo_enabled():
+            return Response(
+                {"error": "PayMongo is temporarily disabled. Please use manual payment."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
         package_key = request.data.get("package")
 
         if not package_key:
@@ -136,8 +171,9 @@ class InitiateCreditPurchaseView(APIView):
                 user=request.user,
                 event_type=CREDIT_PURCHASE_INITIATED,
                 severity="INFO",
-                request_id=purchase.id,
+                request_id=None,
                 metadata={
+                    "purchase_id": purchase.id,
                     "package": package_key,
                     "amount_php": package["amount_php"],
                     "credits": package["credits"],
@@ -186,6 +222,12 @@ class ConfirmCreditPurchaseView(APIView):
     FAILED_STATUSES = {"cancelled", "failed", "expired"}
 
     def post(self, request):
+        if not paymongo_enabled():
+            return Response(
+                {"error": "PayMongo is temporarily disabled. Please use manual payment."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
         purchase_id = request.data.get("purchase_id")
 
         if not purchase_id:
@@ -253,8 +295,9 @@ class ConfirmCreditPurchaseView(APIView):
                     user=request.user,
                     event_type=PAYMENT_VERIFIED,
                     severity="INFO",
-                    request_id=purchase.id,
+                    request_id=None,
                     metadata={
+                        "purchase_id": purchase.id,
                         "payment_status": payment_status,
                         "paymongo_payment_id": purchase.paymongo_payment_id,
                         "credits_added": purchase.credits_purchased,
@@ -278,8 +321,9 @@ class ConfirmCreditPurchaseView(APIView):
                     user=request.user,
                     event_type=PAYMENT_FAILED,
                     severity="CRITICAL",
-                    request_id=purchase.id,
+                    request_id=None,
                     metadata={
+                        "purchase_id": purchase.id,
                         "payment_status": payment_status,
                         "paymongo_payment_id": purchase.paymongo_payment_id,
                     },
@@ -331,6 +375,126 @@ class CreditBalanceView(APIView):
         return Response(
             {"credit_balance": balance},
             status=status.HTTP_200_OK
+        )
+
+
+class ManualPaymentConfigView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        payload = {
+            "paymongo_enabled": paymongo_enabled(),
+            "packages": MANUAL_CREDIT_PACKAGES,
+            "methods": [ManualPayment.PAYMENT_METHOD_GCASH, ManualPayment.PAYMENT_METHOD_MAYA],
+            "instructions": build_manual_payment_instructions(),
+        }
+        serializer = ManualPaymentConfigSerializer(payload)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ManualPaymentListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        queryset = ManualPayment.objects.filter(user=request.user).select_related("reviewed_by").all()
+        serializer = ManualPaymentSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = ManualPaymentSubmitSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        package = get_credit_package(data["package"])
+        if not package:
+            return Response({"error": "Invalid package."}, status=status.HTTP_400_BAD_REQUEST)
+
+        payment = ManualPayment.objects.create(
+            user=request.user,
+            package_key=data["package"],
+            amount_php=package["amount_php"],
+            credits_purchased=package["credits"],
+            payment_method=data["payment_method"],
+            reference_number=data["reference_number"],
+            reference_note=data.get("reference_note", ""),
+            proof_file=data["proof_file"],
+            status=ManualPayment.STATUS_PENDING,
+        )
+
+        log_audit_event(
+            user=request.user,
+            event_type=PAYMENT_MANUAL_SUBMITTED,
+            severity="INFO",
+            metadata={
+                "payment_id": payment.id,
+                "user_id": request.user.id,
+                "amount": float(payment.amount_php),
+                "package_key": payment.package_key,
+                "payment_method": payment.payment_method,
+                "reference_number": payment.reference_number,
+            },
+        )
+
+        admin_email = getattr(settings, "ADMIN_EMAIL", "")
+        if admin_email:
+            try:
+                send_mail(
+                    subject="RERA: New Payment Submitted",
+                    message=(
+                        f"User: {request.user.username}\n"
+                        f"Amount: PHP {payment.amount_php}\n"
+                        f"Method: {payment.payment_method}\n"
+                        f"Reference Number: {payment.reference_number}\n"
+                        f"Timestamp: {payment.created_at.isoformat()}\n"
+                    ),
+                    from_email=None,
+                    recipient_list=[admin_email],
+                    fail_silently=True,
+                )
+            except Exception:
+                # Email must never block payment submission.
+                pass
+
+        result = ManualPaymentCreateResultSerializer(ManualPaymentCreateResultSerializer.build(payment))
+        return Response(
+            {
+                "message": "Payment submitted for review",
+                "payment": result.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AdminManualPaymentReviewView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, payment_id):
+        payload = AdminManualPaymentReviewSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+
+        payment = ManualPayment.objects.filter(id=payment_id).select_related("user").first()
+        if not payment:
+            return Response({"error": "Manual payment not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        action = payload.validated_data["action"]
+        admin_notes = payload.validated_data.get("admin_notes", "")
+
+        try:
+            updated = review_manual_payment(
+                payment=payment,
+                reviewer=request.user,
+                action=action,
+                admin_notes=admin_notes,
+            )
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "status": updated.status,
+                "payment_id": updated.id,
+            },
+            status=status.HTTP_200_OK,
         )
 
 class ActivateSubscriptionView(APIView):
@@ -397,6 +561,9 @@ class PayMongoWebhookView(APIView):
     FAILED_EVENT_TYPES = {"payment_intent.payment_failed", "payment.failed"}
 
     def post(self, request):
+        if not paymongo_enabled():
+            return Response({"status": "disabled"}, status=status.HTTP_200_OK)
+
         webhook_secret = getattr(settings, "PAYMONGO_WEBHOOK_SECRET", None)
         if not webhook_secret:
             return Response(

@@ -153,8 +153,6 @@ export default function AppShell({ children, breadcrumb }) {
 
   const userMenuRef = useRef(null);
   const currentPageLabel = breadcrumb?.current || "Workspace";
-  const isDashboardPage =
-    location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard/");
 
   async function handleLogout() {
     await Promise.resolve(logAuditEvent("SESSION_ENDED", { source: "logout" })).catch(() => {});
@@ -293,7 +291,22 @@ export default function AppShell({ children, breadcrumb }) {
             style={{ height: "44px", width: "auto", display: "block" }}
           />
           <div>
-            <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>RERA</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>RERA</div>
+              <span
+                style={{
+                  borderRadius: "999px",
+                  padding: "2px 8px",
+                  backgroundColor: "#ccfbf1",
+                  color: "#115e59",
+                  fontSize: "10px",
+                  fontWeight: 800,
+                  letterSpacing: "0.14em",
+                }}
+              >
+                BETA
+              </span>
+            </div>
             <div style={{ fontSize: "11.5px", color: "#6b7280" }}>Powered by HeptaGeeks</div>
           </div>
         </div>
@@ -584,7 +597,22 @@ export default function AppShell({ children, breadcrumb }) {
                 PRODUCT WORKSPACE
               </div>
               <div style={{ marginTop: "4px" }}>
-                <div style={{ fontSize: "24px", fontWeight: 800, color: "#0f172a" }}>RERA</div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{ fontSize: "24px", fontWeight: 800, color: "#0f172a" }}>RERA</div>
+                  <span
+                    style={{
+                      borderRadius: "999px",
+                      padding: "3px 10px",
+                      backgroundColor: "#ccfbf1",
+                      color: "#115e59",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      letterSpacing: "0.16em",
+                    }}
+                  >
+                    BETA
+                  </span>
+                </div>
                 <div style={{ fontSize: "13px", color: "#64748b" }}>{currentPageLabel}</div>
               </div>
 

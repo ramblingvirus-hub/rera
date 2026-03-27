@@ -197,6 +197,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
 
@@ -326,6 +328,16 @@ PAYMONGO_WEBHOOK_SECRET = os.getenv("PAYMONGO_WEBHOOK_SECRET")
 PAYMONGO_CHECKOUT_FRONTEND_ORIGIN = os.getenv("PAYMONGO_CHECKOUT_FRONTEND_ORIGIN")
 PAYMONGO_CHECKOUT_SUCCESS_URL = os.getenv("PAYMONGO_CHECKOUT_SUCCESS_URL")
 PAYMONGO_CHECKOUT_CANCEL_URL = os.getenv("PAYMONGO_CHECKOUT_CANCEL_URL")
+PAYMONGO_ENABLED = env_bool("PAYMONGO_ENABLED", True)
+
+# Manual payment instructions
+GCASH_NUMBER = os.getenv("GCASH_NUMBER", "")
+GCASH_NAME = os.getenv("GCASH_NAME", "")
+GCASH_QR_URL = os.getenv("GCASH_QR_URL", "")
+MAYA_NUMBER = os.getenv("MAYA_NUMBER", "")
+MAYA_NAME = os.getenv("MAYA_NAME", "")
+MAYA_QR_URL = os.getenv("MAYA_QR_URL", "")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")
 
 # Temporary QA switch to bypass report paywall and credit deduction checks.
 QA_BYPASS_UNLOCK = env_bool("QA_BYPASS_UNLOCK", False)

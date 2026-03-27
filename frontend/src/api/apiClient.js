@@ -339,6 +339,46 @@ export async function getCreditBalance() {
   });
 }
 
+export async function getManualPaymentConfig() {
+  return apiRequest("/billing/manual-payments/config/", {
+    auth: true,
+  });
+}
+
+export async function listManualPayments() {
+  return apiRequest("/billing/manual-payments/", {
+    auth: true,
+  });
+}
+
+export async function submitManualPayment({ packageKey, paymentMethod, referenceNumber, referenceNote, proofFile }) {
+  const form = new FormData();
+  form.append("package", packageKey);
+  form.append("payment_method", paymentMethod);
+  form.append("reference_number", referenceNumber);
+  if (referenceNote) {
+    form.append("reference_note", referenceNote);
+  }
+  form.append("proof_file", proofFile);
+
+  return apiRequest("/billing/manual-payments/", {
+    method: "POST",
+    body: form,
+    auth: true,
+  });
+}
+
+export async function reviewManualPayment(paymentId, action, adminNotes = "") {
+  return apiRequest(`/billing/admin/manual-payments/${paymentId}/review/`, {
+    method: "POST",
+    auth: true,
+    body: {
+      action,
+      admin_notes: adminNotes,
+    },
+  });
+}
+
 export async function activateSubscription(paymongoSubscriptionId, periodDays = 30) {
   return apiRequest("/billing/subscription/activate/", {
     method: "POST",

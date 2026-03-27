@@ -8,7 +8,12 @@ export default function LandingPage() {
       <div className="max-w-6xl mx-auto flex flex-col gap-4 px-6 lg:px-8 py-6 sm:flex-row sm:justify-between sm:items-center">
         <div className="flex items-center gap-3">
           <img src="/rera-logo.png" alt="RERA" className="h-12 w-auto" />
-          <div className="font-bold text-xl">RERA</div>
+          <div className="flex items-center gap-2">
+            <div className="font-bold text-xl">RERA</div>
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold tracking-[0.18em] text-white">
+              BETA
+            </span>
+          </div>
         </div>
         <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-4">
           <Link to="/login" className="text-white/80 hover:text-white transition-colors">

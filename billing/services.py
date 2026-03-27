@@ -2,10 +2,41 @@ from django.utils import timezone
 from django.db.models import Sum, Q
 from django.conf import settings
 from audit.services import log_audit_event
-from .models import CreditTransaction, Subscription
+from .models import CreditPurchase, CreditTransaction, ManualPayment, Subscription
 from django.db import transaction
-from audit.constants import BILLING_CREDIT_DEDUCTED
+from audit.constants import (
+    PAYMENT_MANUAL_APPROVED,
+    PAYMENT_MANUAL_REJECTED,
+)
 import uuid
+from datetime import timedelta
+
+
+MANUAL_CREDIT_PACKAGES = {
+    "single": {
+        "credits": 1,
+        "amount_php": 550,
+        "description": "1 RERA Report Credit - PHP 550",
+    },
+    "bundle_3": {
+        "credits": 3,
+        "amount_php": 1500,
+        "description": "3 RERA Report Credits - PHP 1,500",
+    },
+    "bundle_5": {
+        "credits": 5,
+        "amount_php": 2000,
+        "description": "5 RERA Report Credits - PHP 2,000",
+    },
+}
+
+
+def paymongo_enabled():
+    return bool(getattr(settings, "PAYMONGO_ENABLED", True))
+
+
+def get_credit_package(package_key):
+    return MANUAL_CREDIT_PACKAGES.get(package_key)
 
 
 def user_has_admin_bypass(user):
@@ -167,13 +198,112 @@ def create_credit_purchase(user, credit_amount, expiry_date, reference_id=None, 
             user=user,
             event_type="CREDIT_PURCHASE_CREATED",
             severity="INFO",
-            request_id=reference_id if reference_id else None,
+            request_id=None,
             metadata={
                 "amount": credit_amount,
-                "source": source
+                "source": source,
+                "reference_id": reference_id,
             }
         )
 
     return calculate_user_balance(user)
+
+
+def review_manual_payment(payment, reviewer, action, admin_notes=""):
+    """
+    Review a pending manual payment.
+
+    Rules:
+    - approved is idempotent (re-approve does nothing)
+    - rejected is terminal
+    - only pending can transition
+    """
+    action_normalized = str(action or "").strip().lower()
+    if action_normalized not in {"approve", "reject"}:
+        raise ValueError("action must be approve or reject")
+
+    with transaction.atomic():
+        locked = ManualPayment.objects.select_for_update().select_related("user").get(id=payment.id)
+
+        if locked.status == ManualPayment.STATUS_APPROVED:
+            return locked
+
+        if locked.status == ManualPayment.STATUS_REJECTED:
+            raise ValueError("Rejected payments cannot be reopened.")
+
+        now = timezone.now()
+
+        if action_normalized == "reject":
+            locked.status = ManualPayment.STATUS_REJECTED
+            locked.reviewed_at = now
+            locked.reviewed_by = reviewer
+            locked.admin_notes = (admin_notes or "").strip()
+            locked.save(update_fields=["status", "reviewed_at", "reviewed_by", "admin_notes"])
+
+            log_audit_event(
+                user=reviewer,
+                event_type=PAYMENT_MANUAL_REJECTED,
+                severity="WARNING",
+                metadata={
+                    "payment_id": locked.id,
+                    "user_id": locked.user_id,
+                    "amount": float(locked.amount_php),
+                    "package_key": locked.package_key,
+                    "payment_method": locked.payment_method,
+                    "reference_number": locked.reference_number,
+                },
+            )
+            return locked
+
+        package = get_credit_package(locked.package_key)
+        if not package:
+            raise ValueError("Unknown package key.")
+
+        if int(locked.credits_purchased) != int(package["credits"]):
+            raise ValueError("Payment credits do not match the configured package.")
+
+        if float(locked.amount_php) != float(package["amount_php"]):
+            raise ValueError("Payment amount does not match the configured package.")
+
+        purchase = CreditPurchase.objects.create(
+            user=locked.user,
+            credits_purchased=locked.credits_purchased,
+            amount_php=locked.amount_php,
+            payment_method=f"manual_{locked.payment_method.lower()}",
+            paymongo_payment_id=None,
+            status="completed",
+        )
+
+        reference_id = f"manual-{locked.id}"
+        create_credit_purchase(
+            user=locked.user,
+            credit_amount=locked.credits_purchased,
+            expiry_date=now + timedelta(days=365),
+            reference_id=reference_id,
+            source="manual_review",
+        )
+
+        locked.status = ManualPayment.STATUS_APPROVED
+        locked.reviewed_at = now
+        locked.reviewed_by = reviewer
+        locked.admin_notes = (admin_notes or "").strip()
+        locked.credit_purchase = purchase
+        locked.save(update_fields=["status", "reviewed_at", "reviewed_by", "admin_notes", "credit_purchase"])
+
+        log_audit_event(
+            user=reviewer,
+            event_type=PAYMENT_MANUAL_APPROVED,
+            severity="INFO",
+            metadata={
+                "payment_id": locked.id,
+                "user_id": locked.user_id,
+                "amount": float(locked.amount_php),
+                "package_key": locked.package_key,
+                "payment_method": locked.payment_method,
+                "reference_number": locked.reference_number,
+            },
+        )
+
+        return locked
 
 

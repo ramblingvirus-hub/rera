@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getQuestionsForContext,
@@ -185,13 +185,13 @@ export default function InterviewPage() {
     : 0;
 
   // ── Next handler (shared by button + Enter key) ──
-  function handleNext() {
+  const handleNext = useCallback(() => {
     if (currentIndex === interviewQuestions.length - 1) {
       setReviewMode(true);
     } else {
       setCurrentIndex(currentIndex + 1);
     }
-  }
+  }, [currentIndex, interviewQuestions.length]);
 
   // Keep hook order stable across all render paths.
   useEffect(() => {
@@ -208,7 +208,7 @@ export default function InterviewPage() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [interview, reviewMode, currentIndex, interviewQuestions.length]);
+  }, [interview, reviewMode, handleNext]);
 
   // ── Not started ──
   if (!interview) {

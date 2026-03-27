@@ -22,7 +22,7 @@ export default function Dashboard() {
           marginBottom: "28px",
         }}
       >
-        Welcome to RERA — Real Estate Risk Assessment.
+        Welcome to RERA Beta — Real Estate Risk Assessment.
       </p>
 
       <div

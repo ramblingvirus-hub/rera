@@ -107,12 +107,25 @@ export default function LoginPage() {
         }}
       >
         {/* Logo */}
-        <div style={{ marginBottom: "30px" }}>
+        <div style={{ marginBottom: "30px", display: "flex", alignItems: "center", gap: "12px" }}>
           <img
             src="/rera-logo.png"
             alt="RERA"
             style={{ height: "52px", width: "auto", display: "block" }}
           />
+          <span
+            style={{
+              borderRadius: "999px",
+              padding: "4px 10px",
+              backgroundColor: "#ccfbf1",
+              color: "#115e59",
+              fontSize: "10px",
+              fontWeight: 800,
+              letterSpacing: "0.16em",
+            }}
+          >
+            BETA
+          </span>
         </div>
 
         <h1
