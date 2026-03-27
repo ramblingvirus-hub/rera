@@ -508,6 +508,20 @@ export default function ReportView() {
     }
   }
 
+  async function handleRefreshUnlockedAccess() {
+    setIsBillingLoading(true);
+    setBillingMessage("");
+    try {
+      await refreshBalance();
+      await loadReport(true);
+      setBillingMessage("Access refreshed. If your payment was approved, your full report should now be available.");
+    } catch (error) {
+      setBillingMessage(error?.message || "Unable to refresh access right now.");
+    } finally {
+      setIsBillingLoading(false);
+    }
+  }
+
   function handlePrintReport() {
     window.print();
   }
@@ -1359,6 +1373,34 @@ export default function ReportView() {
                   paddingTop: "22px",
                 }}
               >
+                <div style={{ marginBottom: "22px" }}>
+                  <h3 style={{ fontSize: "14px", fontWeight: 600, color: "#1a2332", marginBottom: "10px" }}>
+                    Manual Payment Approved?
+                  </h3>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                    <button
+                      onClick={handleRefreshUnlockedAccess}
+                      disabled={isBillingLoading}
+                      style={{
+                        padding: "9px 18px",
+                        backgroundColor: "#0f766e",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "13.5px",
+                        fontWeight: 600,
+                        cursor: isBillingLoading ? "not-allowed" : "pointer",
+                        opacity: isBillingLoading ? 0.7 : 1,
+                      }}
+                    >
+                      I Already Paid - Unlock Report
+                    </button>
+                    <span style={{ fontSize: "12px", color: "#6b7280" }}>
+                      Use this after admin approves your manual payment.
+                    </span>
+                  </div>
+                </div>
+
                 {/* Buy Credits */}
                 <div style={{ marginBottom: "22px" }}>
                   <h3 style={{ fontSize: "14px", fontWeight: 600, color: "#1a2332", marginBottom: "10px" }}>
