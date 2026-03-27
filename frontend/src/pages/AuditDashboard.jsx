@@ -174,6 +174,20 @@ export default function AuditDashboard() {
   const [error, setError] = useState("");
   const [selectedRequestId, setSelectedRequestId] = useState("");
   const [selectedTimelineSource, setSelectedTimelineSource] = useState(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("dismissedAlerts") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [permanentlyDismissedAlerts, setPermanentlyDismissedAlerts] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("permanentlyDismissedAlerts") || "[]");
+    } catch {
+      return [];
+    }
+  });
   const [filters, setFilters] = useState({
     request_id: "",
     user_id: "",
@@ -184,7 +198,36 @@ export default function AuditDashboard() {
     limit: 100,
   });
 
-  const alerts = useMemo(() => buildAlerts(events), [events]);
+  function dismissAlert(alertId) {
+    const updated = [...dismissedAlerts, alertId];
+    setDismissedAlerts(updated);
+    localStorage.setItem("dismissedAlerts", JSON.stringify(updated));
+  }
+
+  function dismissAlertPermanently(alertId) {
+    const updated = [...permanentlyDismissedAlerts, alertId];
+    setPermanentlyDismissedAlerts(updated);
+    localStorage.setItem("permanentlyDismissedAlerts", JSON.stringify(updated));
+    // Also dismiss temporarily
+    dismissAlert(alertId);
+  }
+
+  function resetDismissedAlerts() {
+    setDismissedAlerts([]);
+    localStorage.removeItem("dismissedAlerts");
+  }
+
+  function resetPermanentDismissals() {
+    setPermanentlyDismissedAlerts([]);
+    localStorage.removeItem("permanentlyDismissedAlerts");
+    resetDismissedAlerts();
+  }
+
+  const allAlerts = useMemo(() => buildAlerts(events), [events]);
+  const alerts = useMemo(
+    () => allAlerts.filter((alert) => !dismissedAlerts.includes(alert.id) && !permanentlyDismissedAlerts.includes(alert.id)),
+    [allAlerts, dismissedAlerts, permanentlyDismissedAlerts]
+  );
 
   const usageSnapshot = useMemo(() => {
     const count = (type) => events.filter((event) => event.event_type === type).length;
@@ -326,22 +369,47 @@ export default function AuditDashboard() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
           <div style={{ fontWeight: 800, fontSize: "13px", letterSpacing: "0.04em" }}>
             {maxAlertLevel ? `${maxAlertLevel} ALERT` : "SYSTEM HEALTHY"}
+            {(dismissedAlerts.length > 0 || permanentlyDismissedAlerts.length > 0) && (
+              <span style={{ fontWeight: 400, fontSize: "12px", marginLeft: "8px" }}>
+                ({dismissedAlerts.length} temporary, {permanentlyDismissedAlerts.length} permanent)
+              </span>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={() => loadEvents({ ...filters, limit: EVENT_WINDOW_FOR_ALERTS })}
-            style={{
-              border: "1px solid rgba(15,23,42,0.15)",
-              backgroundColor: "#ffffff",
-              borderRadius: "8px",
-              fontSize: "12px",
-              fontWeight: 700,
-              padding: "6px 10px",
-              cursor: "pointer",
-            }}
-          >
-            Refresh Alerts
-          </button>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              type="button"
+              onClick={() => loadEvents({ ...filters, limit: EVENT_WINDOW_FOR_ALERTS })}
+              style={{
+                border: "1px solid rgba(15,23,42,0.15)",
+                backgroundColor: "#ffffff",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontWeight: 700,
+                padding: "6px 10px",
+                cursor: "pointer",
+              }}
+            >
+              Refresh Alerts
+            </button>
+            {(dismissedAlerts.length > 0 || permanentlyDismissedAlerts.length > 0) && (
+              <button
+                type="button"
+                onClick={resetPermanentDismissals}
+                style={{
+                  border: "1px solid rgba(15,23,42,0.15)",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  padding: "6px 10px",
+                  cursor: "pointer",
+                  color: "#0f766e",
+                }}
+              >
+                Reset All
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ marginTop: "8px", display: "grid", gap: "8px" }}>
@@ -351,22 +419,40 @@ export default function AuditDashboard() {
             </div>
           )}
 
-          {alerts.slice(0, 4).map((alert) => (
-            <div key={alert.id} style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center" }}>
-              <div>
+          {alerts.map((alert) => (
+            <div key={alert.id} style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" }}>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: "13px", fontWeight: 700 }}>{alert.title}</div>
                 <div style={{ fontSize: "12px" }}>{alert.message}</div>
                 {alert.requestId && (
                   <div style={{ fontSize: "12px", marginTop: "2px" }}>Request ID: {alert.requestId}</div>
                 )}
               </div>
-              {alert.requestId && (
+              <div style={{ display: "flex", gap: "6px", flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {alert.requestId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRequestId(alert.requestId);
+                      setSelectedTimelineSource("alert");
+                    }}
+                    style={{
+                      border: "1px solid rgba(15,23,42,0.18)",
+                      backgroundColor: "#ffffff",
+                      borderRadius: "8px",
+                      padding: "6px 10px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    View Timeline
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedRequestId(alert.requestId);
-                    setSelectedTimelineSource("alert");
-                  }}
+                  onClick={() => dismissAlert(alert.id)}
                   style={{
                     border: "1px solid rgba(15,23,42,0.18)",
                     backgroundColor: "#ffffff",
@@ -376,11 +462,30 @@ export default function AuditDashboard() {
                     fontWeight: 700,
                     cursor: "pointer",
                     whiteSpace: "nowrap",
+                    color: "#6b7280",
                   }}
                 >
-                  View Timeline
+                  Dismiss
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => dismissAlertPermanently(alert.id)}
+                  style={{
+                    border: "1px solid rgba(15,23,42,0.18)",
+                    backgroundColor: "#ffffff",
+                    borderRadius: "8px",
+                    padding: "6px 10px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    color: "#059669",
+                  }}
+                  title="Dismiss until manually reset"
+                >
+                  Dismiss Permanently
+                </button>
+              </div>
             </div>
           ))}
         </div>

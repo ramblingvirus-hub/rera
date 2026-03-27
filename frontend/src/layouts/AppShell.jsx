@@ -50,6 +50,7 @@ const NAV_SECTIONS = [
       { path: "/reports", label: "Reports" },
       { path: "/billing", label: "Billing" },
       { path: "/admin/audit", label: "Audit Dashboard", requiresSuperuser: true },
+      { path: "/admin/payments", label: "Manual Payments", requiresSuperuser: true },
       { label: "History", disabled: true },
     ],
   },

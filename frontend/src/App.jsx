@@ -16,6 +16,7 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import RegisterPage from "./pages/RegisterPage";
 import AuditDashboard from "./pages/AuditDashboard";
+import AdminPaymentsPage from "./pages/AdminPaymentsPage";
 import { isAuthenticated, logAuditEvent } from "./api/apiClient";
 
 function AuditRouteTracker() {
@@ -129,6 +130,17 @@ function App() {
             <SuperadminRoute>
               <AppShell breadcrumb={{ parent: "Dashboard", current: "Audit Dashboard" }}>
                 <AuditDashboard />
+              </AppShell>
+            </SuperadminRoute>
+          }
+        />
+
+        <Route
+          path="/admin/payments"
+          element={
+            <SuperadminRoute>
+              <AppShell breadcrumb={{ parent: "Dashboard", current: "Manual Payments" }}>
+                <AdminPaymentsPage />
               </AppShell>
             </SuperadminRoute>
           }
