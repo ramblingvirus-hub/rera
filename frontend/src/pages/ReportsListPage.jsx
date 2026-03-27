@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { listReports } from "../api/apiClient";
+import { listReports, submitInterview } from "../api/apiClient";
 
 const RISK_COLORS = {
   LOW_RISK: { color: "#16a34a", bg: "#f0fdf4" },
@@ -34,6 +34,16 @@ export default function ReportsListPage() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [recovering, setRecovering] = useState(false);
+  const [recoverMessage, setRecoverMessage] = useState("");
+
+  const savedInterviewId = (() => {
+    try {
+      return localStorage.getItem("rera_interview_id") || "";
+    } catch {
+      return "";
+    }
+  })();
 
   useEffect(() => {
     async function fetchReports() {
@@ -59,6 +69,35 @@ export default function ReportsListPage() {
     return (
       <p style={{ fontSize: "14px", color: "#dc2626" }}>{error}</p>
     );
+  }
+
+  async function handleRecoverTeaser() {
+    if (!savedInterviewId) {
+      setRecoverMessage("No recoverable teaser draft found in this browser.");
+      return;
+    }
+
+    setRecovering(true);
+    setRecoverMessage("");
+    try {
+      const result = await submitInterview(savedInterviewId);
+      const nextRequestId = result?.request_id;
+      if (!nextRequestId) {
+        throw new Error("Recovery failed: no request id returned.");
+      }
+      localStorage.removeItem("rera_interview_id");
+      navigate(`/report/${nextRequestId}`);
+    } catch (err) {
+      if (err?.status === 402) {
+        setRecoverMessage("This draft is valid, but credits are required to finalize it. After payment approval, click recover again.");
+      } else if (err?.message?.toLowerCase().includes("already submitted")) {
+        setRecoverMessage("This draft was already submitted. Please open Reports and refresh.");
+      } else {
+        setRecoverMessage(err?.message || "Unable to recover teaser draft.");
+      }
+    } finally {
+      setRecovering(false);
+    }
   }
 
   return (
@@ -105,6 +144,32 @@ export default function ReportsListPage() {
           <p style={{ fontSize: "15px", marginBottom: "16px" }}>
             No evaluations yet.
           </p>
+          {savedInterviewId && (
+            <div style={{ marginBottom: "14px" }}>
+              <button
+                onClick={handleRecoverTeaser}
+                disabled={recovering}
+                style={{
+                  padding: "10px 22px",
+                  backgroundColor: "#0f766e",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: recovering ? "not-allowed" : "pointer",
+                  opacity: recovering ? 0.7 : 1,
+                }}
+              >
+                {recovering ? "Recovering..." : "Recover My Last Teaser Report"}
+              </button>
+              {recoverMessage && (
+                <p style={{ marginTop: "10px", fontSize: "12px", color: "#475569" }}>
+                  {recoverMessage}
+                </p>
+              )}
+            </div>
+          )}
           <button
             onClick={() => navigate("/new")}
             style={{
