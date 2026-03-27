@@ -198,11 +198,19 @@ export default function BillingPage() {
               <div style={{ fontSize: "13px", color: "#374151" }}>Number: {methodInstructions.number || "Not configured"}</div>
               {methodInstructions.qr_url && (
                 <div style={{ marginTop: "6px" }}>
-                  <img
-                    src={methodInstructions.qr_url}
-                    alt={`${paymentMethod} QR Code`}
-                    style={{ width: "160px", height: "160px", objectFit: "contain", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "6px", backgroundColor: "#fff", display: "block" }}
-                  />
+                  <a
+                    href={methodInstructions.qr_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Open full-size QR code"
+                    style={{ display: "inline-block" }}
+                  >
+                    <img
+                      src={methodInstructions.qr_url}
+                      alt={`${paymentMethod} QR Code`}
+                      style={{ width: "160px", height: "160px", objectFit: "contain", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "6px", backgroundColor: "#fff", display: "block", cursor: "zoom-in" }}
+                    />
+                  </a>
                 </div>
               )}
               <div style={{ marginTop: "6px", fontSize: "12px", color: "#6b7280" }}>
