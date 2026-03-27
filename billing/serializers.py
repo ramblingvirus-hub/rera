@@ -52,12 +52,15 @@ class ManualPaymentSubmitSerializer(serializers.Serializer):
 
 class ManualPaymentSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source="user.id", read_only=True)
+    user_username = serializers.CharField(source="user.username", read_only=True)
+    reviewed_by_username = serializers.CharField(source="reviewed_by.username", read_only=True)
 
     class Meta:
         model = ManualPayment
         fields = [
             "id",
             "user_id",
+            "user_username",
             "package_key",
             "amount_php",
             "credits_purchased",
@@ -70,6 +73,7 @@ class ManualPaymentSerializer(serializers.ModelSerializer):
             "created_at",
             "reviewed_at",
             "reviewed_by",
+            "reviewed_by_username",
         ]
         read_only_fields = fields
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listManualPayments, reviewManualPayment } from "../api/apiClient";
+import { listAdminManualPayments, reviewManualPayment } from "../api/apiClient";
 
 const CARD_STYLE = {
   backgroundColor: "#ffffff",
@@ -42,14 +42,14 @@ export default function AdminPaymentsPage() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    loadPayments();
-  }, []);
+    loadPayments(filter);
+  }, [filter]);
 
-  async function loadPayments() {
+  async function loadPayments(status = "pending") {
     setLoading(true);
     setMessage("");
     try {
-      const data = await listManualPayments();
+      const data = await listAdminManualPayments({ status: status === "all" ? "" : status });
       setPayments(Array.isArray(data) ? data : []);
     } catch (error) {
       setMessage(error?.message || "Failed to load payments.");
@@ -64,14 +64,12 @@ export default function AdminPaymentsPage() {
       await reviewManualPayment(paymentId, action, reviewNotes);
       setReviewingId(null);
       setReviewNotes("");
-      await loadPayments();
+      await loadPayments(filter);
       setMessage(`Payment ${action} successfully.`);
     } catch (error) {
       setMessage(error?.message || `Failed to ${action} payment.`);
     }
   }
-
-  const filtered = filter === "all" ? payments : payments.filter((p) => p.status === filter);
 
   return (
     <div style={{ maxWidth: "1000px", display: "grid", gap: "18px" }}>
@@ -116,11 +114,11 @@ export default function AdminPaymentsPage() {
 
         {loading ? (
           <p style={{ color: "#6b7280", fontSize: "14px" }}>Loading payments...</p>
-        ) : filtered.length === 0 ? (
+        ) : payments.length === 0 ? (
           <p style={{ color: "#6b7280", fontSize: "14px" }}>No payments found.</p>
         ) : (
           <div style={{ display: "grid", gap: "12px" }}>
-            {filtered.map((payment) => (
+            {payments.map((payment) => (
               <div
                 key={payment.id}
                 style={{

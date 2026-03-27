@@ -497,6 +497,28 @@ class AdminManualPaymentReviewView(APIView):
             status=status.HTTP_200_OK,
         )
 
+
+class AdminManualPaymentListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        queryset = ManualPayment.objects.select_related("user", "reviewed_by").all().order_by("-created_at")
+
+        status_filter = (request.query_params.get("status") or "").strip().lower()
+        if status_filter in {
+            ManualPayment.STATUS_PENDING,
+            ManualPayment.STATUS_APPROVED,
+            ManualPayment.STATUS_REJECTED,
+        }:
+            queryset = queryset.filter(status=status_filter)
+
+        username_filter = (request.query_params.get("username") or "").strip()
+        if username_filter:
+            queryset = queryset.filter(user__username__icontains=username_filter)
+
+        serializer = ManualPaymentSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class ActivateSubscriptionView(APIView):
     """
     Activates or renews a user's subscription.

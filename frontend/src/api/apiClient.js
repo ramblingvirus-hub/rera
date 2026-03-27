@@ -351,6 +351,21 @@ export async function listManualPayments() {
   });
 }
 
+export async function listAdminManualPayments(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") {
+      return;
+    }
+    params.set(key, String(value));
+  });
+
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest(`/billing/admin/manual-payments/${suffix}`, {
+    auth: true,
+  });
+}
+
 export async function submitManualPayment({ packageKey, paymentMethod, referenceNumber, referenceNote, proofFile }) {
   const form = new FormData();
   form.append("package", packageKey);

@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { getAdminAuditEvents } from "../api/apiClient";
+import {
+  getAdminAuditEvents,
+  listAdminManualPayments,
+  reviewManualPayment,
+} from "../api/apiClient";
 
 const EVENT_WINDOW_FOR_ALERTS = 100;
 
@@ -197,6 +201,11 @@ export default function AuditDashboard() {
     timestamp_to: "",
     limit: 100,
   });
+  const [pendingPayments, setPendingPayments] = useState([]);
+  const [loadingPendingPayments, setLoadingPendingPayments] = useState(true);
+  const [paymentReviewingId, setPaymentReviewingId] = useState(null);
+  const [paymentReviewNotes, setPaymentReviewNotes] = useState("");
+  const [paymentMessage, setPaymentMessage] = useState("");
 
   function dismissAlert(alertId) {
     const updated = [...dismissedAlerts, alertId];
@@ -321,8 +330,35 @@ export default function AuditDashboard() {
     }
   }
 
+  async function loadPendingPayments() {
+    setLoadingPendingPayments(true);
+    try {
+      const payload = await listAdminManualPayments({ status: "pending" });
+      setPendingPayments(Array.isArray(payload) ? payload : []);
+    } catch {
+      setPendingPayments([]);
+    } finally {
+      setLoadingPendingPayments(false);
+    }
+  }
+
+  async function handleReviewPayment(paymentId, action) {
+    setPaymentMessage("");
+    try {
+      await reviewManualPayment(paymentId, action, paymentReviewNotes);
+      setPaymentReviewingId(null);
+      setPaymentReviewNotes("");
+      await loadPendingPayments();
+      await loadEvents({ ...filters, limit: EVENT_WINDOW_FOR_ALERTS });
+      setPaymentMessage(`Payment ${action}d successfully.`);
+    } catch (error) {
+      setPaymentMessage(error?.message || `Failed to ${action} payment.`);
+    }
+  }
+
   useEffect(() => {
     loadEvents();
+    loadPendingPayments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -489,6 +525,178 @@ export default function AuditDashboard() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div style={{ backgroundColor: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "10px", padding: "12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+          <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>
+            Pending Manual Payments ({pendingPayments.length})
+          </div>
+          <button
+            type="button"
+            onClick={loadPendingPayments}
+            style={{
+              border: "1px solid #cbd5e1",
+              backgroundColor: "#ffffff",
+              color: "#334155",
+              borderRadius: "8px",
+              padding: "6px 10px",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Refresh Payments
+          </button>
+        </div>
+
+        {paymentMessage && (
+          <div
+            style={{
+              marginBottom: "10px",
+              borderRadius: "8px",
+              padding: "8px 10px",
+              fontSize: "12px",
+              color: paymentMessage.toLowerCase().includes("failed") ? "#b91c1c" : "#065f46",
+              backgroundColor: paymentMessage.toLowerCase().includes("failed") ? "#fee2e2" : "#dcfce7",
+            }}
+          >
+            {paymentMessage}
+          </div>
+        )}
+
+        {loadingPendingPayments && (
+          <div style={{ fontSize: "12px", color: "#64748b" }}>Loading pending payments...</div>
+        )}
+
+        {!loadingPendingPayments && pendingPayments.length === 0 && (
+          <div style={{ fontSize: "12px", color: "#64748b" }}>No pending manual payments found.</div>
+        )}
+
+        {!loadingPendingPayments && pendingPayments.length > 0 && (
+          <div style={{ display: "grid", gap: "10px" }}>
+            {pendingPayments.map((payment) => {
+              const proofUrl = payment.proof_file
+                ? new URL(payment.proof_file, import.meta.env.VITE_BACKEND_ORIGIN || window.location.origin).toString()
+                : "";
+
+              return (
+                <div key={payment.id} style={{ border: "1px solid #e5e7eb", borderRadius: "10px", padding: "10px", backgroundColor: "#f8fafc" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>
+                    {payment.user_username || `User ${payment.user_id}`} • {payment.payment_method} • PHP {payment.amount_php}
+                  </div>
+                  <div style={{ marginTop: "4px", fontSize: "12px", color: "#334155" }}>
+                    Ref: {payment.reference_number} • {new Date(payment.created_at).toLocaleString()}
+                  </div>
+                  {payment.reference_note && (
+                    <div style={{ marginTop: "4px", fontSize: "12px", color: "#475569" }}>
+                      Note: {payment.reference_note}
+                    </div>
+                  )}
+
+                  {proofUrl && (
+                    <a
+                      href={proofUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ display: "inline-block", marginTop: "6px", fontSize: "12px", fontWeight: 700, color: "#0284c7" }}
+                    >
+                      View Proof
+                    </a>
+                  )}
+
+                  <div style={{ marginTop: "8px", display: "grid", gap: "8px" }}>
+                    {paymentReviewingId === payment.id && (
+                      <textarea
+                        value={paymentReviewNotes}
+                        onChange={(event) => setPaymentReviewNotes(event.target.value)}
+                        placeholder="Admin notes (optional)"
+                        style={{ border: "1px solid #d1d5db", borderRadius: "8px", padding: "8px", fontSize: "12px", minHeight: "58px" }}
+                      />
+                    )}
+
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {paymentReviewingId !== payment.id && (
+                        <button
+                          type="button"
+                          onClick={() => setPaymentReviewingId(payment.id)}
+                          style={{
+                            border: "1px solid #0f766e",
+                            backgroundColor: "#f0fdfa",
+                            color: "#0f766e",
+                            borderRadius: "8px",
+                            padding: "6px 10px",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Review
+                        </button>
+                      )}
+
+                      {paymentReviewingId === payment.id && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleReviewPayment(payment.id, "approve")}
+                            style={{
+                              border: "none",
+                              backgroundColor: "#16a34a",
+                              color: "#ffffff",
+                              borderRadius: "8px",
+                              padding: "6px 10px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReviewPayment(payment.id, "reject")}
+                            style={{
+                              border: "none",
+                              backgroundColor: "#dc2626",
+                              color: "#ffffff",
+                              borderRadius: "8px",
+                              padding: "6px 10px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Reject
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPaymentReviewingId(null);
+                              setPaymentReviewNotes("");
+                            }}
+                            style={{
+                              border: "1px solid #cbd5e1",
+                              backgroundColor: "#ffffff",
+                              color: "#334155",
+                              borderRadius: "8px",
+                              padding: "6px 10px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
