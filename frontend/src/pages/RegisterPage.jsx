@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { register, login, initiateCreditPurchase } from "../api/apiClient";
+import { register, login } from "../api/apiClient";
 import { resolveRedirectTarget } from "../utils/navigation";
 
 export default function RegisterPage() {
@@ -43,21 +43,11 @@ export default function RegisterPage() {
       await login(username, password);
 
       const pendingPackage = location.state?.pendingPackage;
-      const from = location.state?.from || "/dashboard";
 
+      // PayMongo is disabled — send users with a pending purchase to billing
       if (pendingPackage) {
-        const origin = window.location.origin;
-        const cancelUrl = `${origin}${from}`;
-        const successBase = new URL(from, origin);
-        successBase.searchParams.set("payment", "success");
-        const data = await initiateCreditPurchase(pendingPackage, {
-          successUrl: successBase.toString(),
-          cancelUrl,
-        });
-        if (data?.checkout_url) {
-          window.location.assign(data.checkout_url);
-          return;
-        }
+        navigate("/billing", { replace: true });
+        return;
       }
 
       navigate(resolveRedirectTarget(location.state, "/dashboard"), {
