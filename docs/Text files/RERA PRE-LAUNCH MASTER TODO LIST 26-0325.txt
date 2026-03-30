@@ -1,6 +1,6 @@
 RERA PRE-LAUNCH MASTER TODO LIST
-Date: March 25, 2026
-Status: FINAL PRE-LAUNCH EXECUTION
+Date: March 30, 2026
+Status: ACTIVE PRE-LAUNCH TRACKER
 
 ---
 
@@ -8,27 +8,37 @@ Status: FINAL PRE-LAUNCH EXECUTION
 
 [LEGAL & COMPLIANCE]
 
-* Create Terms of Service page
-* Create Privacy Policy page
-* Add Disclaimer text inside report UI
+COMPLETE
+* Terms of Service page created
+* Privacy Policy page created
+
+OPEN
+* Add disclaimer text inside report UI
 * Verify non-accusation language
 * Verify limitation of liability
 
 [PAYMENT SYSTEM]
 
+OPEN
 * Switch PayMongo to LIVE (production) keys
 * Verify payment webhook handling
-* Ensure failed payments DO NOT create credits
+* Ensure failed payments do not create credits
 * Ensure successful payments create correct ledger entries
-* Verify reference_id traceability (payment → ledger → audit)
+* Verify reference_id traceability (payment -> ledger -> audit)
 
 [PRODUCTION CONFIGURATION]
 
-* Confirm DEBUG = False
-* Confirm ALLOWED_HOSTS configured correctly
-* Ensure no dev/test endpoints exposed
-* Confirm JWT authentication only (no session auth)
-* Verify API throttling (429)
+COMPLETE
+* DEBUG = False in production
+* ALLOWED_HOSTS configured correctly
+* JWT-only API auth enforced in production paths
+* Contact submission throttling implemented
+* Gunicorn configured as production app server
+* WhiteNoise + collectstatic configured for Django admin/static assets
+
+OPEN
+* Verify no dev/test endpoints remain exposed
+* Verify evaluation/billing throttling strategy before launch
 
 ---
 
@@ -36,57 +46,76 @@ Status: FINAL PRE-LAUNCH EXECUTION
 
 [LANDING PAGE]
 
-* Create landing page
-* Add clear product description (what RERA does)
-* Add target user explanation (buyers, investors)
-* Add CTA: "Start Evaluation"
-* Add trust framing (neutral, non-legal positioning)
+COMPLETE
+* Landing page created
+* Product description added
+* Target-user framing added
+* Start Evaluation CTA added
+* Trust framing implemented
 
 [REPORT UI — CRITICAL]
 
-* Display category breakdown
-* Display risk signals
-* Display information gaps
-* Display due diligence suggestions
-* Remove reliance on score-only display
+COMPLETE
+* Category breakdown displayed
+* Risk signals displayed
+* Information gaps displayed
+* Due diligence suggestions displayed
+* Score-only dependency removed
+
+OPEN
+* Add in-report disclaimer copy
 
 [TEASER → PAID FLOW]
 
-* Verify teaser report shows:
+COMPLETE
+* Teaser report shows:
 
   * total score
   * risk band
   * basic context (project info)
-* Ensure smooth transition:
-  teaser → login → purchase → unlock full report
-* Confirm report unlock logic works after payment
+* Teaser -> login transition works
+* Manual-payment unlock recovery path exists
+
+OPEN
+* Execute final production dry run for teaser -> login -> purchase -> unlock full report
+* Confirm PayMongo unlock logic after live-key cutover
 
 ---
 
 ## PHASE 3 — INTERVIEW UX IMPROVEMENTS
 
-* Add consistent (?) hover tooltips for helper explanations
-* Ensure helper content appears reliably for all relevant questions
-* Fix conditional logic visibility (context-driven questions must always trigger)
-* Improve clarity of question wording if needed
-* Ensure all required categories (5) are always captured (no validation failures)
+PARTIAL
+* Required categories are captured and validated
+* Enter-key navigation added
+
+OPEN
+* Add/normalize helper tooltips where still missing
+* Verify helper content appears reliably for all relevant questions
+* Recheck conditional question visibility against latest content rules
+* Improve question wording where needed
 
 ---
 
 ## PHASE 4 — POST-PAYMENT EXPERIENCE
 
-* Add "Print Report" functionality (window.print or equivalent)
-* Add "Download Report" option (optional but preferred)
-* (Optional) Add "Email Report" functionality
+OPEN
+* Add Print Report functionality
+* Add Download Report option
+* Optional: Email Report functionality
 
 ---
 
 ## PHASE 5 — FRONTEND & UI POLISH
 
-* Make web app fully responsive (mobile layout fixes)
-* Ensure logout/signout button placement is intuitive (beside user info)
-* Remove any leftover test buttons or debug UI elements
-* Ensure consistent styling across pages
+PARTIAL
+* Footer link consistency completed across public pages
+* Contact page UX refined with auto-dismiss and manual close
+
+OPEN
+* Finish responsive/mobile layout fixes
+* Reconfirm logout/signout placement is intuitive
+* Remove any leftover debug/test UI elements
+* Final consistency pass across pages
 
 ---
 
@@ -112,21 +141,35 @@ Validate:
 * Report access control
 * UX flow consistency
 
+STATUS
+* Not yet signed off as complete for live-payment launch
+* Manual payment and teaser continuity paths exist
+* Final live-key PayMongo run still pending
+
 ---
 
 ## PHASE 7 — BETA LAUNCH PREPARATION
 
+PARTIAL
+* Beta-user preparation artifacts exist in docs
+
+OPEN
 * Insert beta users into production database
-* Prepare beta user credentials
-* Limit initial users (3–5 only)
+* Prepare final beta user credentials
+* Limit initial users (3-5 only)
 * Observe behavior and gather feedback
 
 ---
 
 ## PHASE 8 — MONITORING & OPERATIONS
 
-* Run anomaly detection command regularly:
+COMPLETE / OPEN
+* Anomaly detection command exists:
   python manage.py check_operational_anomalies
+* Audit operations surface exists in app and Django admin
+* Contact submissions are audited and reviewable
+
+OPEN
 * Monitor:
 
   * credit usage spikes
@@ -138,6 +181,7 @@ Validate:
 
 ## PHASE 9 — OPTIONAL (DO ONLY IF TIME PERMITS)
 
+OPEN
 * Email report delivery
 * Improved mobile UX refinements
 * Minor UI polish enhancements
@@ -158,11 +202,21 @@ Validate:
 
 Launch ONLY if:
 
-* All Phase 1 items complete
-* Payment flow fully verified
-* End-to-end dry run successful
-* Report UI fully displays value (not just score)
-* No critical UX blockers observed
+* Remaining legal copy items are complete
+* PayMongo live payment flow is fully verified
+* End-to-end dry run is successful
+* Report UI fully displays value and disclaimer text
+* No critical UX or operational blockers are observed
+
+---
+
+CURRENT HIGHEST-PRIORITY OPEN ITEMS
+
+1. Switch PayMongo to live keys and verify webhook behavior
+2. Run final end-to-end production dry run
+3. Add report disclaimer text and complete legal wording review
+4. Finish responsive/mobile polish
+5. Insert beta users and prepare controlled beta rollout
 
 ---
 

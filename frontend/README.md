@@ -1,16 +1,58 @@
-# React + Vite
+# RERA Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This frontend is a React + Vite single-page application for the RERA platform.
 
-Currently, two official plugins are available:
+It handles:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- public landing pages
+- authentication pages
+- authenticated report and billing flows
+- the Contact Us page wired to the Django backend
 
-## React Compiler
+## Local development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Install dependencies and start the Vite dev server:
 
-## Expanding the ESLint configuration
+```bash
+npm install
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Run tests:
+
+```bash
+npm run test:run
+```
+
+Create a production build:
+
+```bash
+npm run build
+```
+
+## Environment variable
+
+Required:
+
+- `VITE_BACKEND_ORIGIN`
+
+Example:
+
+```env
+VITE_BACKEND_ORIGIN=https://api-rera.heptageeks.com
+```
+
+This value must point at the Django backend origin, not the frontend domain.
+
+## Key frontend behavior
+
+- API requests are sent to the backend configured by `VITE_BACKEND_ORIGIN`.
+- The Contact Us page submits to `POST /api/v1/contact/`.
+- Contact success and error banners auto-dismiss after 5 seconds and can also be closed manually.
+- Footer navigation includes Privacy Policy, Contact, and Terms of Service links across the public app.
+
+## Deployment notes
+
+- The frontend is deployed separately from Django.
+- Any change to `VITE_BACKEND_ORIGIN` requires a rebuild and redeploy.
+- Production frontend should point to the live backend domain, currently `https://api-rera.heptageeks.com`.

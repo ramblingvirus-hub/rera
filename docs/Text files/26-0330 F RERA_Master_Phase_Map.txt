@@ -1,0 +1,198 @@
+RERA Master Phase Map
+Last Updated: 2026-03-30
+
+Phase 1 - Core Evaluation Engine
+Development of the real-estate risk scoring model
+Category scoring structure implemented
+Evaluation report generation
+Baseline API endpoint for evaluation
+
+Phase 2 - Ledger & Billing Foundations
+Immutable credit ledger design
+CreditTransaction model implemented
+AuditEvent system introduced
+Service-layer billing abstraction created
+
+Phase 3 - Revenue Activation
+JWT authentication layer
+Evaluation endpoint protected
+Billing deduction tied to evaluation lifecycle
+Idempotency protection added
+
+Phase 3G - Revenue Flow Simulation & Freeze Validation
+Status: Completed
+
+Validated:
+- Credit purchase simulation
+- Multiple credit deductions
+- Idempotency replay protection
+- Idempotency conflict protection (HTTP 409)
+- Insufficient credit enforcement (HTTP 402)
+- Audit logging
+
+Phase 3H - Operational Safety & Abuse Guardrails
+Status: Completed
+
+Implemented:
+- HTTP method restriction for evaluation endpoint
+- Idempotency key cleanup command
+- Row-level locking for credit deduction
+
+Phase 3I - Operational Monitoring & Anomaly Detection
+Status: Completed
+
+Implemented:
+- Operational monitoring command
+- Billing velocity detection
+- Validation failure detection
+- Evaluation request velocity detection
+- Per-user credit activity inspection
+- System health aggregation
+
+Phase 3J - Monitoring Automation
+Status: Completed
+
+Implemented:
+- Monitoring command logging integration
+- Healthy system monitoring logs
+- Anomaly detection error logs
+- Persistent evidence in logs/errors.log
+
+Phase 4A - Interview Scoring & Risk Interpretation Layer
+Status: Completed
+
+Phase 4B - Interview Save & Resume Architecture
+Status: Completed
+
+Phase 4C - Interview Workflow API
+Status: Completed
+
+Delivered endpoints:
+POST   /api/v1/interview/start/
+PATCH  /api/v1/interview/<id>/save/
+GET    /api/v1/interview/<id>/
+POST   /api/v1/interview/<id>/submit/
+
+Phase 4D - Interview -> Evaluation Engine Integration
+Status: Completed
+
+Phase 4E - Interview Workflow Hardening
+Status: Completed
+
+Phase 4F - Report Retrieval & Evaluation History API
+Status: Completed
+
+Phase 5 - Frontend Interview Engine
+Status: Completed
+
+Phase 6 - Interview Navigation & UX
+Status: Completed
+
+Phase 7 - Report Display UI
+Status: Completed
+
+Phase 8 - Report Paywall & Monetization
+Status: Completed
+
+Delivered:
+- Credit purchase and subscription models
+- Purchase initiate/confirm endpoints
+- Subscription activation endpoint
+- Report unlock gating
+- Frontend paywall and teaser display
+
+Phase 9 - Website Design Port
+Status: Completed
+
+Delivered:
+- Frontend dashboard and report surfaces ported to finalized design
+- Interview flow surfaced as structured itemized experience
+- Footer branding and public-site navigation patterns
+
+Phase 10A - Frontend Hardening, QA Baseline & Teaser-First Conversion Flow
+Status: Completed
+
+Phase 10B - Superadmin Billing Bypass & Frontend Authentication Hardening
+Status: Completed
+
+Phase 10C - Vercel SPA Routing Fix
+Status: Completed
+
+Phase 10D - Interview Enter Key Navigation
+Status: Completed
+
+Phase 11A - Manual Payment Operations + Audit Actions
+Status: Completed
+Date: March 27, 2026
+
+Delivered:
+- Superadmin route: /admin/payments
+- Manual payment approve/reject flow with notes
+- Pending manual payments panel in audit dashboard
+- QA BYPASS and PAYMONGO status surfacing
+- Report unlock refresh action after approval
+- Anonymous teaser claim/finalize path
+
+Phase 11B - Contact Intake System + Public Navigation
+Status: Completed
+Date: March 30, 2026
+
+Delivered:
+- ContactMessage backend model and API
+- Contact admin support
+- Contact submission throttling
+- Audit logging for contact submissions
+- Public Contact page in frontend
+- Footer link consistency across public app surfaces
+
+Validation:
+- Backend pytest: 19 passed
+- Frontend Vitest: 18 passed
+
+Phase 11C - Email Delivery Hardening + Gunicorn Runtime
+Status: Completed
+Date: March 30, 2026
+
+Delivered:
+- Resend HTTP integration for contact delivery
+- Async/non-blocking notification behavior
+- Gunicorn production runtime for Railway
+- Startup control via Procfile and railway.toml
+- Contact form success/error auto-dismiss UX
+
+Phase 11D - Audit Admin Cleanup + Static Asset Recovery
+Status: Completed
+Date: March 30, 2026
+
+Delivered:
+- AuditEvent admin list_display, filters, search, ordering, fieldsets
+- Explicit read-only view access for AuditEvent admin
+- WhiteNoise production static-file serving
+- collectstatic during startup for Railway app boot
+- Production admin CSS/JS asset recovery
+
+Phase 11E - Documentation Synchronization
+Status: Completed
+Date: March 30, 2026
+
+Delivered:
+- Deployment documentation updated for Resend, Gunicorn, WhiteNoise
+- Recovery playbook updated for ContactMessage and env dependencies
+- Frontend README replaced default Vite template text
+- March 30 text-file snapshots added for engineering, context, and phase map
+
+Current Active Program State
+- Public product flow is live on custom domains
+- Contact intake is live and operational
+- Manual payment review remains active
+- Audit and admin operations are production-usable
+- System is in pre-launch hardening rather than greenfield build
+
+Recommended Next Phase
+Phase 12 - Launch Readiness and Payment Production Cutover
+
+Proposed focus:
+- PayMongo live-key activation and webhook verification
+- Full end-to-end production smoke pass
+- Final responsive/mobile polish
+- Cloud media strategy for uploaded proofs

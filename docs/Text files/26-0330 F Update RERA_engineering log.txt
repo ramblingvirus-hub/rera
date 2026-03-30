@@ -1,0 +1,174 @@
+RERA - Engineering Log
+Date: March 30, 2026 (Manila Time)
+Session Type: Production Feature Delivery + Deployment Hardening + Documentation Sync
+
+---------------------------------------------------
+OVERVIEW
+---------------------------------------------------
+
+This session delivered the public Contact Us system end-to-end, hardened
+production runtime and email delivery, corrected Django admin operability,
+and synchronized repository documentation with the deployed system.
+
+At session start:
+- Contact intake did not exist as a complete product surface.
+- Footer link placement was inconsistent across public pages.
+- Production email delivery was unreliable because SMTP was blocked.
+- Railway runtime was not explicitly pinned to Gunicorn startup behavior.
+- AuditEvent admin was hard to use and later exposed a read-only/view issue.
+- Django admin static assets were not loading correctly in production.
+
+At session end:
+- Contact submissions are stored, audited, throttled, and emailed.
+- Public footer links consistently include Privacy, Contact, and Terms.
+- Email delivery runs through Resend instead of SMTP.
+- Backend startup uses Gunicorn and collects static files in production.
+- AuditEvent admin is readable, filterable, and intentionally read-only.
+- Production documentation is updated to match the current deployed stack.
+
+---------------------------------------------------
+PHASE 11B - CONTACT INTAKE SYSTEM + PUBLIC NAVIGATION
+Date: March 30, 2026
+Status: COMPLETE
+---------------------------------------------------
+
+Delivered
+
+1) Full Contact Us backend
+   - Added ContactMessage model with request tracking and categorization
+   - Added serializer validation for email, subject, and message length
+   - Added rate limiting for repeated submissions
+   - Added API endpoint: POST /api/v1/contact/
+   - Added Django admin support for contact submissions
+
+2) Audit integration
+   - Added contact submission event logging into AuditEvent
+   - Preserved request correlation through request_id metadata
+
+3) Full Contact Us frontend
+   - Added Contact page in React frontend
+   - Added form categories and validation
+   - Added success/error feedback and later auto-dismiss behavior
+
+4) Footer and route consistency
+   - Added Contact link alongside Privacy Policy and Terms of Service
+   - Applied across landing, login, register, and authenticated shell flows
+
+Validation
+   - Backend pytest: 19 passed
+   - Frontend Vitest: 18 passed
+
+---------------------------------------------------
+PHASE 11C - EMAIL DELIVERY HARDENING + GUNICORN RUNTIME
+Date: March 30, 2026
+Status: COMPLETE
+---------------------------------------------------
+
+Problem
+
+Contact submissions returned success in the UI, but delivery to the admin
+inbox was failing in production.
+
+Root Cause
+
+Railway environment blocked outbound SMTP connectivity. Traditional Django
+SMTP email settings could not reliably deliver from production.
+
+Changes Delivered
+
+1) Email provider migration
+   - Replaced SMTP send flow with Resend HTTP API integration
+   - Added RESEND_API_KEY and RESEND_FROM_EMAIL support
+   - Kept CONTACT_ADMIN_EMAIL as destination inbox
+
+2) Non-blocking delivery behavior
+   - Email sending moved to a background thread so contact submission does
+     not stall on network timeouts
+   - Failures are logged without breaking the user-facing success response
+
+3) Runtime hardening
+   - Added Gunicorn as production WSGI server
+   - Added Procfile and railway.toml startup control
+   - Confirmed Railway starts Gunicorn workers instead of dev server
+
+4) UX refinement
+   - Added auto-dismiss and manual close behavior for contact success/error
+     alerts in the frontend
+
+Production Outcome
+   - Contact emails now deliver through Resend
+   - Backend starts under Gunicorn in production
+
+---------------------------------------------------
+PHASE 11D - AUDIT ADMIN CLEANUP + STATIC ASSET RECOVERY
+Date: March 30, 2026
+Status: COMPLETE
+---------------------------------------------------
+
+Problem
+
+AuditEvent admin remained difficult to use, and later rendered as raw HTML
+in production because Django admin static files were not being served.
+
+Changes Delivered
+
+1) Audit admin usability
+   - Added list_display for timestamp, event_type, severity, user, request_id
+   - Added list_filter for event_type, severity, timestamp
+   - Added search_fields for username, event_type, request_id
+   - Added newest-first ordering
+   - Added fieldsets with collapsible metadata section
+
+2) Read-only view correction
+   - Preserved no add / no change / no delete behavior
+   - Added explicit view permission so Audit events list can be opened
+
+3) Production static serving fix
+   - Added WhiteNoise middleware and compressed manifest storage
+   - Added collectstatic to Railway and Procfile startup commands
+   - Verified admin CSS asset responds successfully from production
+
+Production Outcome
+   - Audit admin is usable and styled correctly
+   - Read-only audit access works without redirect confusion
+
+---------------------------------------------------
+PHASE 11E - DOCUMENTATION SYNCHRONIZATION
+Date: March 30, 2026
+Status: COMPLETE
+---------------------------------------------------
+
+Updated documentation:
+- docs/STAGING_DEPLOYMENT.md
+- RERA_Disaster_Recovery_Playbook.md
+- frontend/README.md
+- New March 30 text snapshots for engineering, context, and phase map
+
+Documentation now reflects:
+- Contact Us architecture and env vars
+- Resend-based email delivery
+- Gunicorn + WhiteNoise production setup
+- Audit admin read-only operational model
+- Current frontend/backend live domains
+
+---------------------------------------------------
+KEY COMMITS
+---------------------------------------------------
+
+- e79ecd9  Cleanup: AuditEvent admin UI, Contact app, Gunicorn hardening, Resend integration
+- da2219f  Fix AuditEvent admin read-only view permission
+- f86f299  Fix production admin static assets via WhiteNoise
+- fb50f09  Run collectstatic at startup for admin assets
+
+---------------------------------------------------
+SESSION RESULT
+---------------------------------------------------
+
+System state at end of session:
+- Public Contact Us flow is live and operational
+- Contact messages persist in database and audit trail
+- Email delivery uses Resend, not SMTP
+- Backend is served by Gunicorn on Railway
+- Django admin static assets load correctly in production
+- AuditEvent admin is read-only, filterable, searchable, and usable
+- Documentation matches production behavior

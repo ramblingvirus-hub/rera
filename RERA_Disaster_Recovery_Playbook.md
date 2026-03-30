@@ -1,6 +1,6 @@
 # RERA – Disaster Recovery Playbook
 
-Last Updated: March 3, 2026 (Manila Time)
+Last Updated: March 30, 2026 (Manila Time)
 System Classification:
 Integrity-Hardened, Versioned, Retry-Protected,
 PostgreSQL-Backed, Environment-Disciplined,
@@ -19,6 +19,7 @@ Guarantee recoverability of:
 - REPORT
 - CREDIT_TRANSACTION (ledger)
 - AUDIT_EVENT
+- CONTACT_MESSAGE
 - SUBSCRIPTION
 - AUTH_USER
 
@@ -82,6 +83,7 @@ Restore drill must be executed at least once before revenue activation.
     - Schema changes
     - Major deployment
     - Migration
+    - Contact or billing workflow changes
 • Store monthly backup copy outside local machine.
 • Never edit backup files.
 
@@ -94,6 +96,7 @@ A disaster includes:
 • Accidental table deletion
 • Ledger corruption
 • Audit corruption
+• Contact message loss
 • Database engine failure
 • Hardware failure
 • Production data loss
@@ -118,3 +121,21 @@ Those belong to Phase 4+.
 --------------------------------------------------
 
 Status: Phase 3F Baseline Established
+
+--------------------------------------------------
+
+## 7. Operational Recovery Notes
+
+After restoring a production backup, also verify:
+
+1. `CONTACT_MESSAGE` rows are present if Contact Us was live at backup time.
+2. `AUDIT_EVENT` still contains contact submission events and billing events.
+3. Environment variables required for recovery are still configured:
+    - `DATABASE_URL`
+    - `DB_SSLMODE`
+    - `RESEND_API_KEY`
+    - `RESEND_FROM_EMAIL`
+    - `CONTACT_ADMIN_EMAIL`
+4. Django admin static assets load correctly after restore or redeploy.
+
+Restore is not considered complete until admin access, API access, and contact submission intake all function again.

@@ -62,6 +62,9 @@ Minimum backend variables:
 - `DB_SSLMODE=require` for Railway Postgres
 - `CORS_ALLOWED_ORIGINS`
 - `CSRF_TRUSTED_ORIGINS`
+- `CONTACT_ADMIN_EMAIL`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
 
 Frontend variable:
 
@@ -72,6 +75,13 @@ If frontend and backend are split across different domains:
 - `VITE_BACKEND_ORIGIN` must point to the backend domain.
 - `CORS_ALLOWED_ORIGINS` must contain the frontend domain.
 - `CSRF_TRUSTED_ORIGINS` must contain the frontend domain if browser-authenticated POST requests will originate there.
+
+Email notes:
+
+- Contact form delivery uses the Resend HTTP API, not SMTP.
+- Railway environments that block outbound SMTP still work with this setup.
+- On Resend's onboarding sender, `RESEND_FROM_EMAIL` should remain a verified sender such as `RERA <onboarding@resend.dev>` until a custom domain is verified.
+- `CONTACT_ADMIN_EMAIL` is the inbox that receives Contact Us submissions.
 
 ## 4. Railway PostgreSQL
 
@@ -140,13 +150,21 @@ That script will:
 - run `manage.py check --deploy`
 - restart the staging service
 
+If you deploy on Railway instead of a VPS:
+
+- `railway.toml` already runs `collectstatic`, `migrate`, and Gunicorn at startup.
+- Django admin static files are served through WhiteNoise.
+- Do not remove WhiteNoise middleware unless another static file server is configured in front of Django.
+
 ## 8. Validation checklist
 
 Verify all of the following after deployment:
 
 - `https://staging.rera.example.com` loads the frontend
 - `https://staging.rera.example.com/admin/` loads the Django admin login
+- `https://staging.rera.example.com/static/admin/css/base.css` returns `200` or loads in the browser
 - `https://staging.rera.example.com/api/token/` responds
+- `POST /api/v1/contact/` accepts a valid submission and creates a `ContactMessage`
 - `sudo systemctl status rera-staging --no-pager` shows the service as active
 - `sudo journalctl -u rera-staging -n 100 --no-pager` shows no boot errors
 
@@ -172,3 +190,6 @@ git pull
 - Production-like security settings are environment-driven, not hard-coded.
 - The frontend must be rebuilt whenever `VITE_BACKEND_ORIGIN` changes.
 - Railway PostgreSQL is supported through `DATABASE_URL` plus optional `DB_SSLMODE`.
+- Contact submissions are stored in the database, audited, and emailed asynchronously.
+- Audit admin is intentionally read-only; staff can view and filter events but cannot edit them.
+- WhiteNoise is required in app-hosted environments where Django must serve its own static assets.

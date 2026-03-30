@@ -1,8 +1,22 @@
-RERA Launch To-Do List (as of 2026-03-24)
+RERA Launch To-Do List (as of 2026-03-30)
 
-1. Make web app fully responsive (fix mobile layout issues)
-2. Switch PayMongo to live (production) keys
-3. Insert beta users into production database
-4. Upload, Data privacy, terms and conditions
+Completed since the original March 24 list:
+1. Privacy Policy page added.
+2. Terms of Service page added.
+3. Contact Us page delivered and linked across the public app.
+4. Production backend hardened with Gunicorn, WhiteNoise, and collectstatic.
+5. Audit admin cleaned up for read-only operational use.
 
-Add more items as needed!
+Remaining launch blockers:
+1. Make the web app fully responsive and finish mobile layout fixes.
+2. Switch PayMongo to live production keys.
+3. Verify PayMongo webhook handling and ledger correctness.
+4. Insert beta users into the production database.
+5. Add final disclaimer/legal copy inside the report UI.
+6. Run the final end-to-end production smoke test.
+
+Recommended launch order:
+1. Legal copy finalization.
+2. PayMongo live cutover and webhook verification.
+3. End-to-end dry run.
+4. Beta-user insertion and controlled rollout.
