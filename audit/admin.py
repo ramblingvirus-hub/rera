@@ -31,3 +31,7 @@ class AuditEventAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    def has_view_permission(self, request, obj=None):
+        # Keep this model read-only but still accessible in admin.
+        return True
