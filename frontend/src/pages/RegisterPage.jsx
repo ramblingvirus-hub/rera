@@ -338,6 +338,10 @@ export default function RegisterPage() {
               Privacy Policy
             </Link>
             <span style={{ margin: "0 8px" }}>•</span>
+            <Link to="/contact" style={{ color: "#0f766e" }}>
+              Contact
+            </Link>
+            <span style={{ margin: "0 8px" }}>•</span>
             <Link to="/terms-of-service" style={{ color: "#0f766e" }}>
               Terms of Service
             </Link>

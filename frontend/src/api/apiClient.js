@@ -250,6 +250,14 @@ export async function register(username, email, password, confirmPassword) {
   });
 }
 
+export async function submitContactMessage(payload) {
+  return apiRequest("/contact/", {
+    method: "POST",
+    body: payload,
+    auth: false,
+  });
+}
+
 export async function login(username, password) {
   const response = await fetchWithNetworkHandling(TOKEN_OBTAIN_URL, {
     method: "POST",

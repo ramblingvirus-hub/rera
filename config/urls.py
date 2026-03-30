@@ -130,6 +130,7 @@ urlpatterns = [
 
     path("api/v1/", include("reports.urls")),
     path("api/v1/billing/", include("billing.urls")),
+    path("api/v1/", include("contact.urls")),
     path("api/v1/", include("audit.urls")),
 ]
 

@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'billing',
+    'contact',
     'idempotency',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -260,6 +261,20 @@ SIMPLE_JWT = {
 }
 
 LOGIN_REDIRECT_URL = "/"
+
+# Email settings
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "RERA <onboarding@resend.dev>")
+CONTACT_ADMIN_EMAIL = os.environ.get("CONTACT_ADMIN_EMAIL", "admin.heptageeks@gmail.com")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "RERA <onboarding@resend.dev>")
 
 LOGGING = {
     "version": 1,

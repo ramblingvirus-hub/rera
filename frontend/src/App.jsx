@@ -14,6 +14,7 @@ import AccountPage from "./pages/AccountPage";
 import BillingPage from "./pages/BillingPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
+import ContactPage from "./pages/ContactPage";
 import RegisterPage from "./pages/RegisterPage";
 import AuditDashboard from "./pages/AuditDashboard";
 import AdminPaymentsPage from "./pages/AdminPaymentsPage";
@@ -45,6 +46,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route
           path="/login"
           element={

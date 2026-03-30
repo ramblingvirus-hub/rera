@@ -137,6 +137,10 @@ export default function LandingPage() {
             Privacy Policy
           </Link>
           <span>•</span>
+          <Link to="/contact" className="underline hover:text-white">
+            Contact
+          </Link>
+          <span>•</span>
           <Link to="/terms-of-service" className="underline hover:text-white">
             Terms of Service
           </Link>

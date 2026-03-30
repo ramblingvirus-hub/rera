@@ -58,6 +58,7 @@ const NAV_SECTIONS = [
     title: "SYSTEM",
     items: [
       { path: "/account", label: "Settings" },
+      { path: "/contact", label: "Contact" },
       { label: "Help", disabled: true },
     ],
   },
@@ -659,6 +660,10 @@ export default function AppShell({ children, breadcrumb }) {
             >
               <Link to="/privacy-policy" style={{ color: "#0f766e", fontWeight: 600 }}>
                 Privacy Policy
+              </Link>
+              <span aria-hidden="true">•</span>
+              <Link to="/contact" style={{ color: "#0f766e", fontWeight: 600 }}>
+                Contact
               </Link>
               <span aria-hidden="true">•</span>
               <Link to="/terms-of-service" style={{ color: "#0f766e", fontWeight: 600 }}>
