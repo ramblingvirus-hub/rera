@@ -1,8 +1,5 @@
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import (
-    TokenRefreshView,
-)
 from rest_framework.permissions import AllowAny
 from django.conf import settings
 from django.conf.urls.static import static
@@ -19,7 +16,7 @@ from django.core.mail import send_mail
 from rest_framework.permissions import IsAuthenticated
 import re
 import logging
-from config.jwt import RERATokenObtainPairView
+from config.jwt import RERATokenObtainPairView, RERATokenRefreshView
 
 
 logger = logging.getLogger(__name__)
@@ -283,7 +280,7 @@ urlpatterns = [
     ),
 
     path('api/token/refresh/',
-        TokenRefreshView.as_view(permission_classes=[AllowAny]),
+        RERATokenRefreshView.as_view(permission_classes=[AllowAny]),
         name='token_refresh'
     ),
 

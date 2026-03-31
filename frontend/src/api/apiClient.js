@@ -154,7 +154,7 @@ async function refreshAccessToken() {
         }
 
         const payload = await parseResponse(response);
-        storeTokens({ access: payload?.access });
+        storeTokens({ access: payload?.access, refresh: payload?.refresh });
         return true;
       } catch {
         return false;

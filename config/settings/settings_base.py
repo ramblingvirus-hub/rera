@@ -242,7 +242,10 @@ from datetime import timedelta
 
 SIMPLE_JWT = {
     # Access token lifetime (short-lived)
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+
+    # Superadmin access token lifetime override
+    "SUPERADMIN_ACCESS_TOKEN_LIFETIME": timedelta(hours=8),
 
     # Refresh token lifetime (longer-lived)
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),

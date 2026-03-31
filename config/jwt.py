@@ -1,9 +1,18 @@
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
+from django.conf import settings
 from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.serializers import (
+    TokenObtainPairSerializer,
+    TokenRefreshSerializer,
+)
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from audit.constants import LOGIN_FAILED
 from audit.services import log_audit_event
+
+
+def get_superadmin_access_lifetime():
+    return settings.SIMPLE_JWT.get("SUPERADMIN_ACCESS_TOKEN_LIFETIME")
 
 
 class RERATokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -17,7 +26,7 @@ class RERATokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         try:
-            return super().validate(attrs)
+            data = super().validate(attrs)
         except InvalidToken:
             request = self.context.get("request")
             username = attrs.get("username")
@@ -34,6 +43,36 @@ class RERATokenObtainPairSerializer(TokenObtainPairSerializer):
             )
             raise
 
+        if getattr(self.user, "is_superuser", False):
+            refresh = self.get_token(self.user)
+            access = refresh.access_token
+            access.set_exp(lifetime=get_superadmin_access_lifetime())
+            data["refresh"] = str(refresh)
+            data["access"] = str(access)
+
+        return data
+
+
+class RERATokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+
+        try:
+            refresh_token = RefreshToken(attrs.get("refresh"))
+        except Exception:
+            return data
+
+        if bool(refresh_token.get("is_superuser", False)):
+            access = refresh_token.access_token
+            access.set_exp(lifetime=get_superadmin_access_lifetime())
+            data["access"] = str(access)
+
+        return data
+
 
 class RERATokenObtainPairView(TokenObtainPairView):
     serializer_class = RERATokenObtainPairSerializer
+
+
+class RERATokenRefreshView(TokenRefreshView):
+    serializer_class = RERATokenRefreshSerializer
