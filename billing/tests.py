@@ -175,6 +175,28 @@ class ManualPaymentFlowTests(TestCase):
 		self.assertEqual(CreditPurchase.objects.filter(user=self.user, status="completed").count(), 1)
 
 
+@override_settings(GCASH_QR_URL="/media/qr/gcash.png", MAYA_QR_URL="https://cdn.example.com/maya.png")
+class ManualPaymentConfigTests(TestCase):
+	def setUp(self):
+		self.client = APIClient()
+		self.user = User.objects.create_user(username="config_user", password="x")
+		self.client.force_authenticate(user=self.user)
+
+	def test_config_resolves_relative_qr_url_to_absolute(self):
+		response = self.client.get("/api/v1/billing/manual-payments/config/")
+
+		self.assertEqual(response.status_code, 200)
+		gcash_qr = response.data["instructions"]["GCASH"]["qr_url"]
+		self.assertTrue(gcash_qr.startswith("http://testserver/media/qr/gcash.png"))
+
+	def test_config_preserves_absolute_qr_url(self):
+		response = self.client.get("/api/v1/billing/manual-payments/config/")
+
+		self.assertEqual(response.status_code, 200)
+		maya_qr = response.data["instructions"]["MAYA"]["qr_url"]
+		self.assertEqual(maya_qr, "https://cdn.example.com/maya.png")
+
+
 @override_settings(PAYMONGO_ENABLED=False)
 class PayMongoDisabledTests(TestCase):
 	def setUp(self):

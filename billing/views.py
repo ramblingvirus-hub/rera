@@ -66,16 +66,39 @@ CREDIT_PACKAGES = {
 
 
 def build_manual_payment_instructions():
+    return build_manual_payment_instructions_for_request()
+
+
+def _resolve_instruction_asset_url(url_value, request=None):
+    url = (url_value or "").strip()
+    if not url:
+        return ""
+
+    if url.startswith(("http://", "https://", "data:")):
+        return url
+
+    if request is None:
+        return url
+
+    if url.startswith("//"):
+        scheme = "https" if request.is_secure() else "http"
+        return f"{scheme}:{url}"
+
+    normalized = url if url.startswith("/") else f"/{url}"
+    return request.build_absolute_uri(normalized)
+
+
+def build_manual_payment_instructions_for_request(request=None):
     return {
         "GCASH": {
             "number": getattr(settings, "GCASH_NUMBER", ""),
             "name": getattr(settings, "GCASH_NAME", ""),
-            "qr_url": getattr(settings, "GCASH_QR_URL", ""),
+            "qr_url": _resolve_instruction_asset_url(getattr(settings, "GCASH_QR_URL", ""), request=request),
         },
         "MAYA": {
             "number": getattr(settings, "MAYA_NUMBER", ""),
             "name": getattr(settings, "MAYA_NAME", ""),
-            "qr_url": getattr(settings, "MAYA_QR_URL", ""),
+            "qr_url": _resolve_instruction_asset_url(getattr(settings, "MAYA_QR_URL", ""), request=request),
         },
     }
 
@@ -386,7 +409,7 @@ class ManualPaymentConfigView(APIView):
             "paymongo_enabled": paymongo_enabled(),
             "packages": MANUAL_CREDIT_PACKAGES,
             "methods": [ManualPayment.PAYMENT_METHOD_GCASH, ManualPayment.PAYMENT_METHOD_MAYA],
-            "instructions": build_manual_payment_instructions(),
+            "instructions": build_manual_payment_instructions_for_request(request),
         }
         serializer = ManualPaymentConfigSerializer(payload)
         return Response(serializer.data, status=status.HTTP_200_OK)

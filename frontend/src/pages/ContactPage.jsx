@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { submitContactMessage } from "../api/apiClient";
 
@@ -20,10 +21,20 @@ const INITIAL_FORM = {
 };
 
 export default function ContactPage() {
+  const navigate = useNavigate();
   const [form, setForm] = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  function handleBack() {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate("/");
+  }
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -85,6 +96,23 @@ export default function ContactPage() {
           padding: "28px",
         }}
       >
+        <button
+          type="button"
+          onClick={handleBack}
+          style={{
+            marginBottom: "14px",
+            backgroundColor: "transparent",
+            color: "#0f766e",
+            border: "1px solid #99f6e4",
+            borderRadius: "10px",
+            fontWeight: 700,
+            padding: "8px 12px",
+            cursor: "pointer",
+          }}
+        >
+          Back
+        </button>
+
         <h1 style={{ fontSize: "30px", lineHeight: 1.2, marginBottom: "10px", color: "#0f172a", fontWeight: 800 }}>
           Contact RERA
         </h1>

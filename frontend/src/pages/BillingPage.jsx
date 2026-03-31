@@ -15,6 +15,45 @@ const CARD_STYLE = {
   padding: "24px",
 };
 
+const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:8000";
+const DEFAULT_GCASH_QR_PUBLIC_PATH = "/hg-gcash-qr-code.png";
+
+function resolveInstructionAssetUrl(rawUrl) {
+  const value = (rawUrl || "").trim();
+  if (!value) {
+    return "";
+  }
+
+  const backendOrigin = (import.meta.env.VITE_BACKEND_ORIGIN || DEFAULT_BACKEND_ORIGIN).replace(/\/$/, "");
+  const backendUrl = new URL(backendOrigin);
+  const isBackendHostedPath = (pathname) => /^\/(media|static)\b/i.test(pathname || "");
+
+  if (/^(https?:|data:)/i.test(value)) {
+    try {
+      const parsed = new URL(value);
+      if (parsed.origin === backendUrl.origin && !isBackendHostedPath(parsed.pathname)) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+    } catch {
+      // Fall back to returning the original value if URL parsing fails.
+    }
+    return value;
+  }
+
+  if (value.startsWith("//")) {
+    return `${window.location.protocol}${value}`;
+  }
+
+  if (value.startsWith("/")) {
+    if (isBackendHostedPath(value)) {
+      return `${backendOrigin}${value}`;
+    }
+    return value;
+  }
+
+  return `${backendOrigin}/${value}`;
+}
+
 function statusStyle(status) {
   if (status === "approved") {
     return { color: "#166534", backgroundColor: "#dcfce7" };
@@ -39,6 +78,8 @@ export default function BillingPage() {
   const [referenceNote, setReferenceNote] = useState("");
   const [proofFile, setProofFile] = useState(null);
   const [qrPreviewUrl, setQrPreviewUrl] = useState("");
+  const [qrImageFailed, setQrImageFailed] = useState(false);
+  const [activeQrUrl, setActiveQrUrl] = useState("");
 
   const selectedPackage = useMemo(() => {
     if (!config?.packages) {
@@ -46,6 +87,20 @@ export default function BillingPage() {
     }
     return config.packages[packageKey] || null;
   }, [config, packageKey]);
+
+  const methodInstructions = config?.instructions?.[paymentMethod] || {};
+  const methodQrUrl = useMemo(() => {
+    const configuredUrl = resolveInstructionAssetUrl(methodInstructions.qr_url);
+    if (configuredUrl) {
+      return configuredUrl;
+    }
+
+    if (paymentMethod === "GCASH") {
+      return DEFAULT_GCASH_QR_PUBLIC_PATH;
+    }
+
+    return "";
+  }, [methodInstructions.qr_url, paymentMethod]);
 
   useEffect(() => {
     Promise.resolve(logAuditEvent("BILLING_PAGE_VIEWED", {
@@ -82,6 +137,19 @@ export default function BillingPage() {
 
     load();
   }, []);
+
+  useEffect(() => {
+    setQrImageFailed(false);
+    setActiveQrUrl(methodQrUrl);
+  }, [methodQrUrl, paymentMethod]);
+
+  function handleQrImageError() {
+    if (paymentMethod === "GCASH" && activeQrUrl && activeQrUrl !== DEFAULT_GCASH_QR_PUBLIC_PATH) {
+      setActiveQrUrl(DEFAULT_GCASH_QR_PUBLIC_PATH);
+      return;
+    }
+    setQrImageFailed(true);
+  }
 
   async function refreshPayments() {
     try {
@@ -126,8 +194,6 @@ export default function BillingPage() {
       setSubmitting(false);
     }
   }
-
-  const methodInstructions = config?.instructions?.[paymentMethod] || {};
 
   return (
     <div style={{ maxWidth: "860px", display: "grid", gap: "18px" }}>
@@ -197,20 +263,26 @@ export default function BillingPage() {
               </div>
               <div style={{ fontSize: "13px", color: "#374151" }}>Account: {methodInstructions.name || "Not configured"}</div>
               <div style={{ fontSize: "13px", color: "#374151" }}>Number: {methodInstructions.number || "Not configured"}</div>
-              {methodInstructions.qr_url && (
+              {activeQrUrl && !qrImageFailed && (
                 <div style={{ marginTop: "6px" }}>
                   <button
                     type="button"
-                    onClick={() => setQrPreviewUrl(methodInstructions.qr_url)}
+                    onClick={() => setQrPreviewUrl(activeQrUrl)}
                     title="Open QR preview"
                     style={{ display: "inline-block", border: "none", background: "transparent", padding: 0, cursor: "zoom-in" }}
                   >
                     <img
-                      src={methodInstructions.qr_url}
+                      src={activeQrUrl}
                       alt={`${paymentMethod} QR Code`}
+                      onError={handleQrImageError}
                       style={{ width: "160px", height: "160px", objectFit: "contain", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "6px", backgroundColor: "#fff", display: "block" }}
                     />
                   </button>
+                </div>
+              )}
+              {activeQrUrl && qrImageFailed && (
+                <div style={{ marginTop: "6px", fontSize: "12px", color: "#b45309" }}>
+                  QR image could not be loaded. Please use the account number above and contact support if this persists.
                 </div>
               )}
               <div style={{ marginTop: "6px", fontSize: "12px", color: "#6b7280" }}>

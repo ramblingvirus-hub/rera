@@ -1626,8 +1626,10 @@ export default function ReportView() {
               lineHeight: "1.6",
             }}
           >
-            RERA provides structured risk indicators based on disclosed project information.
-            Results do not constitute legal or financial advice.
+            RERA provides structured risk indicators based on disclosed project information and available documents.
+            Results are informational only, do not constitute legal, financial, or investment advice, and are not an accusation
+            or definitive finding of wrongdoing against any person, developer, or project.
+            Users remain responsible for independent due diligence and professional consultation before making decisions.
           </p>
         </>
       )}

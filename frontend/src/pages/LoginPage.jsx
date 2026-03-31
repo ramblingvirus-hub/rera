@@ -394,6 +394,20 @@ export default function LoginPage() {
             {mode === "signin" ? "New here? Select Register above." : "Already have an account? Select Sign In above."}
           </p>
 
+          {mode === "signin" && (
+            <p
+              style={{
+                marginTop: "8px",
+                textAlign: "center",
+                fontSize: "13px",
+              }}
+            >
+              <Link to="/forgot-password" style={{ color: "#0f766e" }}>
+                Forgot password?
+              </Link>
+            </p>
+          )}
+
           <div
             style={{
               marginTop: "14px",

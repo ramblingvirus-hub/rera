@@ -250,6 +250,39 @@ export async function register(username, email, password, confirmPassword) {
   });
 }
 
+export async function forgotPassword(email) {
+  return apiRequest("/auth/password/forgot/", {
+    method: "POST",
+    body: { email },
+    auth: false,
+  });
+}
+
+export async function resetPassword(uid, token, password, confirmPassword) {
+  return apiRequest("/auth/password/reset/", {
+    method: "POST",
+    body: {
+      uid,
+      token,
+      password,
+      confirm_password: confirmPassword,
+    },
+    auth: false,
+  });
+}
+
+export async function changePassword(currentPassword, password, confirmPassword) {
+  return apiRequest("/auth/password/change/", {
+    method: "POST",
+    body: {
+      current_password: currentPassword,
+      password,
+      confirm_password: confirmPassword,
+    },
+    auth: true,
+  });
+}
+
 export async function submitContactMessage(payload) {
   return apiRequest("/contact/", {
     method: "POST",
