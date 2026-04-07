@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
@@ -212,6 +212,7 @@ export default function AuditDashboard() {
   const [selectedRequestId, setSelectedRequestId] = useState("");
   const [selectedTimelineSource, setSelectedTimelineSource] = useState(null);
   const [activeAlertRequestIds, setActiveAlertRequestIds] = useState([]);
+  const [alertActionNotice, setAlertActionNotice] = useState("");
   const [dismissedAlerts, setDismissedAlerts] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("dismissedAlerts") || "[]");
@@ -241,6 +242,14 @@ export default function AuditDashboard() {
   const [paymentReviewNotes, setPaymentReviewNotes] = useState("");
   const [paymentMessage, setPaymentMessage] = useState("");
   const [systemFlags, setSystemFlags] = useState(null);
+  const timelineSectionRef = useRef(null);
+  const eventsTableRef = useRef(null);
+  function scrollToRef(targetRef) {
+    setTimeout(() => {
+      targetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
 
   function dismissAlert(alertId) {
     const updated = [...dismissedAlerts, alertId];
@@ -368,6 +377,8 @@ export default function AuditDashboard() {
     setSelectedRequestId(requestId);
     setSelectedTimelineSource(source);
     setActiveAlertRequestIds([]);
+    setAlertActionNotice(`Opened timeline for request ${requestId}.`);
+    scrollToRef(timelineSectionRef);
     if (updateUrl) {
       updateUrlParams({ request_id: requestId, request_ids: null });
     }
@@ -385,6 +396,8 @@ export default function AuditDashboard() {
       setSelectedRequestId("");
       setSelectedTimelineSource("alert");
       setActiveAlertRequestIds(requestIds);
+      setAlertActionNotice(`Showing events for ${requestIds.length} request IDs.`);
+      scrollToRef(eventsTableRef);
       updateUrlParams({ request_ids: requestIds.join(","), request_id: null });
       return;
     }
@@ -397,6 +410,8 @@ export default function AuditDashboard() {
       setFilters(nextFilters);
       setActiveAlertRequestIds([]);
       await loadEvents(nextFilters);
+      setAlertActionNotice(`Filtered events by ${eventType}.`);
+      scrollToRef(eventsTableRef);
       updateUrlParams({
         event_type: eventType,
         window: timeWindow || "5m",
@@ -407,6 +422,8 @@ export default function AuditDashboard() {
     }
 
     updateUrlParams({ event_type: null, request_id: null, request_ids: null, window: null });
+    setAlertActionNotice("Showing all events.");
+    scrollToRef(eventsTableRef);
     navigate("/admin/audit");
   }
 
@@ -624,6 +641,21 @@ export default function AuditDashboard() {
         </div>
 
         <div style={{ marginTop: "8px", display: "grid", gap: "8px" }}>
+          {alertActionNotice && (
+            <div
+              style={{
+                fontSize: "12px",
+                color: "#0f172a",
+                backgroundColor: "rgba(255,255,255,0.75)",
+                border: "1px solid rgba(15,23,42,0.12)",
+                borderRadius: "8px",
+                padding: "6px 8px",
+              }}
+            >
+              {alertActionNotice}
+            </div>
+          )}
+
           {alerts.length === 0 && (
             <div style={{ fontSize: "13px", color: "#0f766e" }}>
               No critical alert conditions detected in the latest window.
@@ -1022,7 +1054,7 @@ export default function AuditDashboard() {
         </div>
       </div>
 
-      <div style={{ backgroundColor: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "10px", overflowX: "auto" }}>
+      <div ref={eventsTableRef} style={{ backgroundColor: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "10px", overflowX: "auto" }}>
         {loading && <div style={{ padding: "14px", fontSize: "13px", color: "#64748b" }}>Loading audit events...</div>}
         {error && <div style={{ padding: "14px", fontSize: "13px", color: "#b91c1c" }}>{error}</div>}
 
@@ -1147,7 +1179,7 @@ export default function AuditDashboard() {
       </div>
 
       {selectedRequestId && (
-        <div style={{ backgroundColor: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "10px", padding: "12px" }}>
+        <div ref={timelineSectionRef} style={{ backgroundColor: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "10px", padding: "12px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 700 }}>Request Timeline</div>
