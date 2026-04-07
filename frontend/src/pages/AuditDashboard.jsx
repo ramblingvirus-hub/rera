@@ -213,6 +213,9 @@ export default function AuditDashboard() {
   const [selectedTimelineSource, setSelectedTimelineSource] = useState(null);
   const [activeAlertRequestIds, setActiveAlertRequestIds] = useState([]);
   const [alertActionNotice, setAlertActionNotice] = useState("");
+  const [highlightedEventType, setHighlightedEventType] = useState("");
+  const [highlightedRequestIds, setHighlightedRequestIds] = useState([]);
+  const [focusedEventId, setFocusedEventId] = useState(null);
   const [dismissedAlerts, setDismissedAlerts] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("dismissedAlerts") || "[]");
@@ -377,6 +380,10 @@ export default function AuditDashboard() {
     setSelectedRequestId(requestId);
     setSelectedTimelineSource(source);
     setActiveAlertRequestIds([]);
+    setHighlightedEventType("");
+    setHighlightedRequestIds([]);
+    const timeline = groupedByRequestId[requestId] || [];
+    setFocusedEventId(timeline.length ? timeline[timeline.length - 1].id : null);
     setAlertActionNotice(`Opened timeline for request ${requestId}.`);
     scrollToRef(timelineSectionRef);
     if (updateUrl) {
@@ -396,6 +403,10 @@ export default function AuditDashboard() {
       setSelectedRequestId("");
       setSelectedTimelineSource("alert");
       setActiveAlertRequestIds(requestIds);
+      setHighlightedEventType("");
+      setHighlightedRequestIds(requestIds);
+      const focused = events.find((event) => event.request_id && requestIds.includes(event.request_id));
+      setFocusedEventId(focused?.id || null);
       setAlertActionNotice(`Showing events for ${requestIds.length} request IDs.`);
       scrollToRef(eventsTableRef);
       updateUrlParams({ request_ids: requestIds.join(","), request_id: null });
@@ -409,7 +420,10 @@ export default function AuditDashboard() {
       };
       setFilters(nextFilters);
       setActiveAlertRequestIds([]);
-      await loadEvents(nextFilters);
+      setHighlightedEventType(eventType);
+      setHighlightedRequestIds([]);
+      const loadedEvents = await loadEvents(nextFilters);
+      setFocusedEventId(loadedEvents[0]?.id || null);
       setAlertActionNotice(`Filtered events by ${eventType}.`);
       scrollToRef(eventsTableRef);
       updateUrlParams({
@@ -422,6 +436,9 @@ export default function AuditDashboard() {
     }
 
     updateUrlParams({ event_type: null, request_id: null, request_ids: null, window: null });
+    setHighlightedEventType("");
+    setHighlightedRequestIds([]);
+    setFocusedEventId(null);
     setAlertActionNotice("Showing all events.");
     scrollToRef(eventsTableRef);
     navigate("/admin/audit");
@@ -443,10 +460,12 @@ export default function AuditDashboard() {
       setEvents(sorted);
       setTotalCount(Number(payload?.count || sorted.length || 0));
       setNextOffset(payload?.next_offset ?? null);
+      return sorted;
     } catch (loadError) {
       setError(loadError?.message || "Failed to load audit events.");
       setTotalCount(0);
       setNextOffset(null);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -1060,6 +1079,14 @@ export default function AuditDashboard() {
 
         {!loading && !error && (
           <>
+            {(highlightedEventType || highlightedRequestIds.length > 0) && (
+              <div style={{ padding: "10px", fontSize: "12px", color: "#1d4ed8", borderBottom: "1px solid #e2e8f0", backgroundColor: "#eff6ff" }}>
+                {highlightedEventType
+                  ? `Highlighted event type: ${highlightedEventType}.`
+                  : `Highlighted request IDs: ${highlightedRequestIds.length}.`}
+              </div>
+            )}
+
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "840px" }}>
               <thead>
                 <tr style={{ backgroundColor: "#f8fafc", textAlign: "left" }}>
@@ -1073,10 +1100,15 @@ export default function AuditDashboard() {
               <tbody>
                 {visibleEvents.map((event) => {
                   const palette = severityColor(event.severity);
+                  const isFocusedEvent = focusedEventId !== null && event.id === focusedEventId;
+                  const isTypeMatch = Boolean(highlightedEventType) && event.event_type === highlightedEventType;
+                  const isRequestMatch = highlightedRequestIds.length > 0 && event.request_id && highlightedRequestIds.includes(event.request_id);
+
                   return (
                     <tr
                       key={event.id}
                       onClick={() => {
+                        setFocusedEventId(event.id);
                         if (event.request_id) {
                           setSelectedRequestId(event.request_id);
                           setSelectedTimelineSource("table");
@@ -1085,6 +1117,9 @@ export default function AuditDashboard() {
                       style={{
                         cursor: event.request_id ? "pointer" : "default",
                         borderBottom: "1px solid #f1f5f9",
+                        backgroundColor: isFocusedEvent ? "#dbeafe" : (isTypeMatch || isRequestMatch) ? "#eff6ff" : "transparent",
+                        outline: isFocusedEvent ? "2px solid #3b82f6" : "none",
+                        outlineOffset: "-2px",
                       }}
                     >
                       <td style={{ padding: "10px", fontSize: "12px", color: "#334155" }}>{formatTimestamp(event.timestamp)}</td>
