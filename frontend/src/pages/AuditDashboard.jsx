@@ -300,6 +300,7 @@ function formatTimestamp(timestamp) {
 export default function AuditDashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [summaryEvents, setSummaryEvents] = useState([]);
   const [events, setEvents] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [nextOffset, setNextOffset] = useState(null);
@@ -375,14 +376,14 @@ export default function AuditDashboard() {
     resetDismissedAlerts();
   }
 
-  const allAlerts = useMemo(() => buildAlerts(events), [events]);
+  const allAlerts = useMemo(() => buildAlerts(summaryEvents), [summaryEvents]);
   const alerts = useMemo(
     () => allAlerts.filter((alert) => !dismissedAlerts.includes(alert.id) && !permanentlyDismissedAlerts.includes(alert.id)),
     [allAlerts, dismissedAlerts, permanentlyDismissedAlerts]
   );
 
   const usageSnapshot = useMemo(() => {
-    const count = (type) => events.filter((event) => event.event_type === type).length;
+    const count = (type) => summaryEvents.filter((event) => event.event_type === type).length;
 
     const started = count("INTERVIEW_STARTED");
     const submitted = count("INTERVIEW_SUBMITTED");
@@ -398,13 +399,13 @@ export default function AuditDashboard() {
       conversionRate: started > 0 ? (submitted / started) * 100 : 0,
       dropoffRate: started > 0 ? (abandoned / started) * 100 : 0,
     };
-  }, [events]);
+  }, [summaryEvents]);
 
   const trafficSnapshot = useMemo(() => {
     const ipCounts = {};
     const pageCounts = {};
 
-    events.forEach((event) => {
+    summaryEvents.forEach((event) => {
       const metadata = event.metadata || {};
       if (metadata.ip) {
         ipCounts[metadata.ip] = (ipCounts[metadata.ip] || 0) + 1;
@@ -423,13 +424,13 @@ export default function AuditDashboard() {
       .slice(0, 5);
 
     return { topIps, topPages };
-  }, [events]);
+  }, [summaryEvents]);
 
-  const topUsers = useMemo(() => getTopUsers(events), [events]);
+  const topUsers = useMemo(() => getTopUsers(summaryEvents), [summaryEvents]);
 
   const groupedByRequestId = useMemo(() => {
     const grouped = {};
-    events.forEach((event) => {
+    summaryEvents.forEach((event) => {
       if (!event.request_id) {
         return;
       }
@@ -448,7 +449,22 @@ export default function AuditDashboard() {
     });
 
     return grouped;
-  }, [events]);
+  }, [summaryEvents]);
+
+  async function loadSummaryEvents() {
+    try {
+      const payload = await getAdminAuditEvents({ limit: EVENT_WINDOW_FOR_ALERTS });
+      const resultItems = Array.isArray(payload?.results) ? payload.results : [];
+      const sorted = [...resultItems].sort((a, b) => {
+        const left = parseTimestamp(a.timestamp)?.getTime() || 0;
+        const right = parseTimestamp(b.timestamp)?.getTime() || 0;
+        return right - left;
+      });
+      setSummaryEvents(sorted);
+    } catch {
+      setSummaryEvents([]);
+    }
+  }
 
   const visibleEvents = useMemo(() => {
     if (!activeAlertRequestIds.length) {
@@ -598,6 +614,7 @@ export default function AuditDashboard() {
       setPaymentReviewNotes("");
       await loadPendingPayments();
       await loadEvents({ ...filters, limit: EVENT_WINDOW_FOR_ALERTS });
+      await loadSummaryEvents();
       setPaymentMessage(`Payment ${action}d successfully.`);
     } catch (error) {
       setPaymentMessage(error?.message || `Failed to ${action} payment.`);
@@ -606,6 +623,7 @@ export default function AuditDashboard() {
 
   useEffect(() => {
     loadEvents();
+    loadSummaryEvents();
     loadPendingPayments();
     loadSystemFlags();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -639,8 +657,8 @@ export default function AuditDashboard() {
   }, [searchParams]);
 
   const availableEventTypes = useMemo(
-    () => [...new Set(events.map((event) => event.event_type))].sort(),
-    [events]
+    () => [...new Set(summaryEvents.map((event) => event.event_type))].sort(),
+    [summaryEvents]
   );
 
   const selectedTimeline = selectedRequestId
@@ -723,7 +741,10 @@ export default function AuditDashboard() {
           <div style={{ display: "flex", gap: "8px" }}>
             <button
               type="button"
-              onClick={() => loadEvents({ ...filters, limit: EVENT_WINDOW_FOR_ALERTS })}
+              onClick={async () => {
+                await loadSummaryEvents();
+                await loadEvents({ ...filters, limit: EVENT_WINDOW_FOR_ALERTS });
+              }}
               style={{
                 border: "1px solid rgba(15,23,42,0.15)",
                 backgroundColor: "#ffffff",
