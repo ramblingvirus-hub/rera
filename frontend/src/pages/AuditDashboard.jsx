@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   getAdminAuditEvents,
@@ -8,6 +9,27 @@ import {
 } from "../api/apiClient";
 
 const EVENT_WINDOW_FOR_ALERTS = 100;
+
+function buildAlert(eventGroup) {
+  const requestIds = Array.isArray(eventGroup.request_ids)
+    ? eventGroup.request_ids.filter(Boolean)
+    : [];
+
+  return {
+    id: eventGroup.id,
+    level: eventGroup.type,
+    type: eventGroup.type,
+    title: eventGroup.title,
+    message: eventGroup.message,
+    requestId: requestIds.length === 1 ? requestIds[0] : null,
+    context: {
+      request_ids: requestIds,
+      event_type: eventGroup.event_type || null,
+      ip: eventGroup.ip || null,
+      time_window: eventGroup.time_window || "5m",
+    },
+  };
+}
 
 function parseTimestamp(value) {
   const parsed = new Date(value || "");
@@ -45,33 +67,34 @@ function buildAlerts(events) {
     const deductionCount = requestEvents.filter((event) => event.event_type === "BILLING_CREDIT_DEDUCTED").length;
 
     if (hasDeducted && !hasSuccess) {
-      alerts.push({
+      alerts.push(buildAlert({
         id: `refund-${requestId}`,
-        level: "RED",
+        type: "RED",
         title: "Refund Risk",
         message: "Credit deducted but no successful evaluation was recorded.",
-        requestId,
-      });
+        request_ids: [requestId],
+      }));
     }
 
     if (deductionCount > 1) {
-      alerts.push({
+      alerts.push(buildAlert({
         id: `duplicate-billing-${requestId}`,
-        level: "RED",
+        type: "RED",
         title: "Duplicate Billing Anomaly",
         message: "Multiple credit deduction events were recorded for the same request.",
-        requestId,
-      });
+        request_ids: [requestId],
+      }));
     }
   });
 
   if (latest.some((event) => event.event_type === "PAYMENT_FAILED")) {
-    alerts.push({
+    alerts.push(buildAlert({
       id: "payment-failed",
-      level: "RED",
+      type: "RED",
       title: "Payment Failure Detected",
       message: "One or more payment flows failed before credits were issued.",
-    });
+      event_type: "PAYMENT_FAILED",
+    }));
   }
 
   const paymentVerified = latest.filter((event) => event.event_type === "PAYMENT_VERIFIED");
@@ -83,31 +106,34 @@ function buildAlerts(events) {
   );
 
   if (paymentVerified.some((event) => event.user_id && !purchaseCreatedByUser.has(event.user_id))) {
-    alerts.push({
+    alerts.push(buildAlert({
       id: "verified-no-credit",
-      level: "RED",
+      type: "RED",
       title: "Payment Verified Without Credit Issuance",
       message: "At least one verified payment has no corresponding credit-creation record.",
-    });
+      event_type: "PAYMENT_VERIFIED",
+    }));
   }
 
   const validationFailures = latest.filter((event) => event.event_type === "EVALUATION_VALIDATION_FAIL");
   if (validationFailures.length >= 4) {
-    alerts.push({
+    alerts.push(buildAlert({
       id: "validation-failures",
-      level: "ORANGE",
+      type: "ORANGE",
       title: "Validation Failure Spike",
       message: `Detected ${validationFailures.length} validation failures in recent activity.`,
-    });
+      event_type: "EVALUATION_VALIDATION_FAIL",
+    }));
   }
 
   if (latest.some((event) => event.event_type === "REPORT_VIEW_FAILED")) {
-    alerts.push({
+    alerts.push(buildAlert({
       id: "report-view-failed",
-      level: "ORANGE",
+      type: "ORANGE",
       title: "Report View Failure",
       message: "Users experienced report view failures.",
-    });
+      event_type: "REPORT_VIEW_FAILED",
+    }));
   }
 
   const interviewStarted = latest.filter((event) => event.event_type === "INTERVIEW_STARTED").length;
@@ -119,21 +145,23 @@ function buildAlerts(events) {
     const conversionRate = interviewSubmitted / interviewStarted;
 
     if (dropoffRate > 0.5) {
-      alerts.push({
+      alerts.push(buildAlert({
         id: "abandonment",
-        level: "ORANGE",
+        type: "ORANGE",
         title: "High Interview Abandonment",
         message: `Drop-off rate reached ${(dropoffRate * 100).toFixed(0)}%.`,
-      });
+        event_type: "INTERVIEW_ABANDONED",
+      }));
     }
 
     if (conversionRate < 0.4) {
-      alerts.push({
+      alerts.push(buildAlert({
         id: "low-conversion",
-        level: "ORANGE",
+        type: "ORANGE",
         title: "Low Conversion",
         message: `Submission conversion is ${(conversionRate * 100).toFixed(0)}% in recent traffic.`,
-      });
+        event_type: "INTERVIEW_SUBMITTED",
+      }));
     }
   }
 
@@ -141,23 +169,25 @@ function buildAlerts(events) {
   const throttleCount = latest.filter((event) => event.event_type === "THROTTLE_TRIGGERED").length;
 
   if (loginFailed > 3 || throttleCount > 2 || latest.some((event) => ["SUSPICIOUS_ACTIVITY", "BOT_SUSPECTED", "RAPID_PAGE_REQUESTS"].includes(event.event_type))) {
-    alerts.push({
+    alerts.push(buildAlert({
       id: "security",
-      level: "YELLOW",
+      type: "YELLOW",
       title: "Security Warning",
       message: "Potential brute-force, scraping, or suspicious activity detected.",
-    });
+      event_type: "THROTTLE_TRIGGERED",
+    }));
   }
 
   const pageViews = latest.filter((event) => event.event_type === "PAGE_VIEW").length;
   const sessions = latest.filter((event) => event.event_type === "SESSION_STARTED").length;
   if (pageViews > 80 || (sessions >= 8 && interviewStarted / sessions < 0.3)) {
-    alerts.push({
+    alerts.push(buildAlert({
       id: "usage-spike",
-      level: "ORANGE",
+      type: "ORANGE",
       title: "Usage Anomaly",
       message: "Traffic pattern suggests unusual flow progression or page-view spike.",
-    });
+      event_type: "PAGE_VIEW",
+    }));
   }
 
   return alerts;
@@ -172,6 +202,8 @@ function formatTimestamp(timestamp) {
 }
 
 export default function AuditDashboard() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [events, setEvents] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [nextOffset, setNextOffset] = useState(null);
@@ -179,6 +211,7 @@ export default function AuditDashboard() {
   const [error, setError] = useState("");
   const [selectedRequestId, setSelectedRequestId] = useState("");
   const [selectedTimelineSource, setSelectedTimelineSource] = useState(null);
+  const [activeAlertRequestIds, setActiveAlertRequestIds] = useState([]);
   const [dismissedAlerts, setDismissedAlerts] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("dismissedAlerts") || "[]");
@@ -307,6 +340,64 @@ export default function AuditDashboard() {
     return grouped;
   }, [events]);
 
+  const visibleEvents = useMemo(() => {
+    if (!activeAlertRequestIds.length) {
+      return events;
+    }
+    return events.filter((event) => event.request_id && activeAlertRequestIds.includes(event.request_id));
+  }, [activeAlertRequestIds, events]);
+
+  function openTimeline(requestId, source = "alert") {
+    if (!requestId) {
+      return;
+    }
+    setSelectedRequestId(requestId);
+    setSelectedTimelineSource(source);
+    setActiveAlertRequestIds([]);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("request_id", requestId);
+      next.delete("request_ids");
+      return next;
+    });
+  }
+
+  async function handleAlertAction(alert) {
+    const { request_ids: requestIds = [], event_type: eventType, time_window: timeWindow } = alert.context || {};
+
+    if (requestIds.length === 1) {
+      openTimeline(requestIds[0], "alert");
+      return;
+    }
+
+    if (requestIds.length > 1) {
+      setSelectedRequestId("");
+      setSelectedTimelineSource("alert");
+      setActiveAlertRequestIds(requestIds);
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("request_ids", requestIds.join(","));
+        next.delete("request_id");
+        return next;
+      });
+      return;
+    }
+
+    if (eventType) {
+      const nextFilters = {
+        ...filters,
+        event_type: eventType,
+      };
+      setFilters(nextFilters);
+      setActiveAlertRequestIds([]);
+      await loadEvents(nextFilters);
+      navigate(`/admin/audit?event_type=${encodeURIComponent(eventType)}&window=${encodeURIComponent(timeWindow || "5m")}`);
+      return;
+    }
+
+    navigate("/admin/audit");
+  }
+
   async function loadEvents(nextFilters = filters) {
     setLoading(true);
     setError("");
@@ -371,6 +462,34 @@ export default function AuditDashboard() {
     loadEvents();
     loadPendingPayments();
     loadSystemFlags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const eventType = searchParams.get("event_type");
+    const requestId = searchParams.get("request_id");
+    const requestIdsParam = searchParams.get("request_ids");
+
+    if (eventType) {
+      const nextFilters = {
+        ...filters,
+        event_type: eventType,
+      };
+      setFilters(nextFilters);
+      loadEvents(nextFilters);
+    }
+
+    if (requestIdsParam) {
+      const requestIds = requestIdsParam
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean);
+      setActiveAlertRequestIds(requestIds);
+    }
+
+    if (requestId) {
+      openTimeline(requestId, "deeplink");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -510,27 +629,22 @@ export default function AuditDashboard() {
                 )}
               </div>
               <div style={{ display: "flex", gap: "6px", flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                {alert.requestId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedRequestId(alert.requestId);
-                      setSelectedTimelineSource("alert");
-                    }}
-                    style={{
-                      border: "1px solid rgba(15,23,42,0.18)",
-                      backgroundColor: "#ffffff",
-                      borderRadius: "8px",
-                      padding: "6px 10px",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    View Timeline
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => handleAlertAction(alert)}
+                  style={{
+                    border: "1px solid rgba(15,23,42,0.18)",
+                    backgroundColor: "#ffffff",
+                    borderRadius: "8px",
+                    padding: "6px 10px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  VIEW EVENTS
+                </button>
                 <button
                   type="button"
                   onClick={() => dismissAlert(alert.id)}
@@ -914,7 +1028,7 @@ export default function AuditDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {events.map((event) => {
+                {visibleEvents.map((event) => {
                   const palette = severityColor(event.severity);
                   return (
                     <tr
@@ -966,7 +1080,7 @@ export default function AuditDashboard() {
               }}
             >
               <div style={{ fontSize: "12px", color: "#64748b" }}>
-                Showing {events.length} of {totalCount} events
+                Showing {visibleEvents.length} of {totalCount} events
               </div>
               <div style={{ display: "flex", gap: "8px" }}>
                 <button
