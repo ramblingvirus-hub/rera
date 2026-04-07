@@ -347,19 +347,30 @@ export default function AuditDashboard() {
     return events.filter((event) => event.request_id && activeAlertRequestIds.includes(event.request_id));
   }, [activeAlertRequestIds, events]);
 
-  function openTimeline(requestId, source = "alert") {
+  function updateUrlParams(updates = {}) {
+    const next = new URLSearchParams(searchParams);
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === "") {
+        next.delete(key);
+      } else {
+        next.set(key, String(value));
+      }
+    });
+
+    setSearchParams(next);
+  }
+
+  function openTimeline(requestId, source = "alert", updateUrl = true) {
     if (!requestId) {
       return;
     }
     setSelectedRequestId(requestId);
     setSelectedTimelineSource(source);
     setActiveAlertRequestIds([]);
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set("request_id", requestId);
-      next.delete("request_ids");
-      return next;
-    });
+    if (updateUrl) {
+      updateUrlParams({ request_id: requestId, request_ids: null });
+    }
   }
 
   async function handleAlertAction(alert) {
@@ -374,12 +385,7 @@ export default function AuditDashboard() {
       setSelectedRequestId("");
       setSelectedTimelineSource("alert");
       setActiveAlertRequestIds(requestIds);
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.set("request_ids", requestIds.join(","));
-        next.delete("request_id");
-        return next;
-      });
+      updateUrlParams({ request_ids: requestIds.join(","), request_id: null });
       return;
     }
 
@@ -391,10 +397,16 @@ export default function AuditDashboard() {
       setFilters(nextFilters);
       setActiveAlertRequestIds([]);
       await loadEvents(nextFilters);
-      navigate(`/admin/audit?event_type=${encodeURIComponent(eventType)}&window=${encodeURIComponent(timeWindow || "5m")}`);
+      updateUrlParams({
+        event_type: eventType,
+        window: timeWindow || "5m",
+        request_id: null,
+        request_ids: null,
+      });
       return;
     }
 
+    updateUrlParams({ event_type: null, request_id: null, request_ids: null, window: null });
     navigate("/admin/audit");
   }
 
@@ -488,10 +500,9 @@ export default function AuditDashboard() {
     }
 
     if (requestId) {
-      openTimeline(requestId, "deeplink");
+      openTimeline(requestId, "deeplink", false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   const availableEventTypes = useMemo(
     () => [...new Set(events.map((event) => event.event_type))].sort(),
