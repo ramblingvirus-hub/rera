@@ -10,6 +10,98 @@ import {
 
 const EVENT_WINDOW_FOR_ALERTS = 100;
 
+function groupBy(items, key) {
+  return items.reduce((accumulator, item) => {
+    const value = item?.[key] || "Unknown";
+    if (!accumulator[value]) {
+      accumulator[value] = [];
+    }
+    accumulator[value].push(item);
+    return accumulator;
+  }, {});
+}
+
+function isWithinLastMinutes(timestamp, minutes) {
+  const parsed = parseTimestamp(timestamp);
+  if (!parsed) {
+    return false;
+  }
+  const diffMinutes = (Date.now() - parsed.getTime()) / 1000 / 60;
+  return diffMinutes <= minutes;
+}
+
+function generateAnomalyExplanation(events) {
+  const recent = events.filter((event) => isWithinLastMinutes(event.timestamp, 5));
+  const pageViewEvents = recent.filter((event) => event.event_type === "PAGE_VIEW");
+  const interviewStartedEvents = recent.filter((event) => event.event_type === "INTERVIEW_STARTED");
+  const interviewSubmittedEvents = recent.filter((event) => event.event_type === "INTERVIEW_SUBMITTED");
+  const pageViewsByUser = groupBy(pageViewEvents, "user_id");
+
+  let topUser = null;
+  let topUserCount = 0;
+
+  Object.entries(pageViewsByUser).forEach(([userId, userEvents]) => {
+    if (userEvents.length > topUserCount) {
+      topUser = userId;
+      topUserCount = userEvents.length;
+    }
+  });
+
+  const totalPageViews = pageViewEvents.length;
+  const topUserPercentage = totalPageViews > 0
+    ? Math.round((topUserCount / totalPageViews) * 100)
+    : 0;
+
+  return {
+    totalPageViews,
+    topUser,
+    topUserCount,
+    topUserPercentage,
+    interviewStarted: interviewStartedEvents.length,
+    interviewSubmitted: interviewSubmittedEvents.length,
+    noProgression: interviewStartedEvents.length === 0 && interviewSubmittedEvents.length === 0,
+    isAnomaly: totalPageViews > 50,
+  };
+}
+
+function buildUsageAnomalyAlert(events) {
+  const analysis = generateAnomalyExplanation(events);
+
+  if (!analysis.isAnomaly) {
+    return null;
+  }
+
+  const details = [
+    `Top user: ${analysis.topUser || "Unknown"} (${analysis.topUserCount} events, ${analysis.topUserPercentage}%)`,
+    `Started: ${analysis.interviewStarted}`,
+    `Submitted: ${analysis.interviewSubmitted}`,
+  ];
+
+  if (analysis.noProgression) {
+    details.push("No progression detected");
+  }
+
+  return buildAlert({
+    id: "usage-spike",
+    type: "ORANGE",
+    title: "Usage Anomaly",
+    message: `${analysis.totalPageViews} PAGE_VIEW events in 5 min`,
+    details: details.join(" | "),
+    event_type: "PAGE_VIEW",
+  });
+}
+
+function getTopUsers(events) {
+  const recentPageViewEvents = events.filter(
+    (event) => event.event_type === "PAGE_VIEW" && isWithinLastMinutes(event.timestamp, 5)
+  );
+
+  return Object.entries(groupBy(recentPageViewEvents, "user_id"))
+    .map(([userId, userEvents]) => ({ userId, count: userEvents.length }))
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 5);
+}
+
 function buildAlert(eventGroup) {
   const requestIds = Array.isArray(eventGroup.request_ids)
     ? eventGroup.request_ids.filter(Boolean)
@@ -21,6 +113,7 @@ function buildAlert(eventGroup) {
     type: eventGroup.type,
     title: eventGroup.title,
     message: eventGroup.message,
+    details: eventGroup.details || "",
     requestId: requestIds.length === 1 ? requestIds[0] : null,
     context: {
       request_ids: requestIds,
@@ -178,15 +271,18 @@ function buildAlerts(events) {
     }));
   }
 
-  const pageViews = latest.filter((event) => event.event_type === "PAGE_VIEW").length;
   const sessions = latest.filter((event) => event.event_type === "SESSION_STARTED").length;
-  if (pageViews > 80 || (sessions >= 8 && interviewStarted / sessions < 0.3)) {
+  const usageAnomalyAlert = buildUsageAnomalyAlert(latest);
+  if (usageAnomalyAlert) {
+    alerts.push(usageAnomalyAlert);
+  } else if (sessions >= 8 && interviewStarted / sessions < 0.3) {
     alerts.push(buildAlert({
-      id: "usage-spike",
+      id: "flow-progression",
       type: "ORANGE",
-      title: "Usage Anomaly",
-      message: "Traffic pattern suggests unusual flow progression or page-view spike.",
-      event_type: "PAGE_VIEW",
+      title: "Flow Progression Risk",
+      message: "Session volume is high but interview starts remain low.",
+      details: `Sessions: ${sessions} | Started: ${interviewStarted} | Start rate: ${((interviewStarted / sessions) * 100).toFixed(0)}%`,
+      event_type: "SESSION_STARTED",
     }));
   }
 
@@ -328,6 +424,8 @@ export default function AuditDashboard() {
 
     return { topIps, topPages };
   }, [events]);
+
+  const topUsers = useMemo(() => getTopUsers(events), [events]);
 
   const groupedByRequestId = useMemo(() => {
     const grouped = {};
@@ -686,6 +784,9 @@ export default function AuditDashboard() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: "13px", fontWeight: 700 }}>{alert.title}</div>
                 <div style={{ fontSize: "12px" }}>{alert.message}</div>
+                {alert.details && (
+                  <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>{alert.details}</div>
+                )}
                 {alert.requestId && (
                   <div style={{ fontSize: "12px", marginTop: "2px" }}>Request ID: {alert.requestId}</div>
                 )}
@@ -946,7 +1047,7 @@ export default function AuditDashboard() {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
         <div style={{ backgroundColor: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "10px", padding: "12px" }}>
           <div style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a", marginBottom: "8px" }}>Top IPs</div>
           {trafficSnapshot.topIps.length === 0 && <div style={{ fontSize: "12px", color: "#94a3b8" }}>No IP traffic metadata available.</div>}
@@ -963,6 +1064,16 @@ export default function AuditDashboard() {
           {trafficSnapshot.topPages.map(([path, count]) => (
             <div key={path} style={{ fontSize: "12px", color: "#334155", marginBottom: "4px" }}>
               {path} - {count} views
+            </div>
+          ))}
+        </div>
+
+        <div style={{ backgroundColor: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "10px", padding: "12px" }}>
+          <div style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a", marginBottom: "8px" }}>Top Users (5m PAGE_VIEW)</div>
+          {topUsers.length === 0 && <div style={{ fontSize: "12px", color: "#94a3b8" }}>No recent PAGE_VIEW user concentration detected.</div>}
+          {topUsers.map(({ userId, count }) => (
+            <div key={userId} style={{ fontSize: "12px", color: "#334155", marginBottom: "4px" }}>
+              {userId || "Unknown"} - {count} events
             </div>
           ))}
         </div>
