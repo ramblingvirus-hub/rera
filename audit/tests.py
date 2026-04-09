@@ -24,6 +24,11 @@ class AuditApiTests(TestCase):
 		response = self.client.get("/api/v1/admin/audit/")
 		self.assertEqual(response.status_code, 403)
 
+	def test_ops_events_alias_requires_superuser(self):
+		self.client.force_authenticate(user=self.regular)
+		response = self.client.get("/api/v1/ops/events/")
+		self.assertEqual(response.status_code, 403)
+
 	def test_admin_audit_returns_filtered_events(self):
 		first = AuditEvent.objects.create(
 			user=self.regular,
@@ -101,6 +106,20 @@ class AuditApiTests(TestCase):
 		self.assertEqual(event.event_type, "PAGE_VIEW")
 		self.assertEqual(event.severity, "INFO")
 		self.assertEqual(event.metadata.get("path"), "/dashboard")
+
+	def test_events_log_alias_creates_event(self):
+		self.client.force_authenticate(user=self.regular)
+		response = self.client.post(
+			"/api/v1/events/log/",
+			{
+				"event_type": "PAGE_VIEW",
+				"metadata": {"path": "/dashboard"},
+			},
+			format="json",
+		)
+
+		self.assertEqual(response.status_code, 201)
+		self.assertEqual(AuditEvent.objects.count(), 1)
 
 	def test_token_contains_superuser_claim(self):
 		response = self.client.post(

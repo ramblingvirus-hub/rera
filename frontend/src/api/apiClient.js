@@ -492,7 +492,7 @@ export async function getAdminAuditEvents(filters = {}) {
   });
 
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  const payload = await apiRequest(`/admin/audit/${suffix}`, {
+  const payload = await apiRequest(`/ops/events/${suffix}`, {
     auth: true,
   });
 
@@ -510,14 +510,14 @@ export async function getAdminAuditEvents(filters = {}) {
 }
 
 export async function getAdminSystemFlags() {
-  return apiRequest("/admin/audit/system-flags/", {
+  return apiRequest("/ops/system-flags/", {
     auth: true,
   });
 }
 
 export async function logAuditEvent(eventType, metadata = {}, options = {}) {
   const { requestId = null, severity = "INFO" } = options;
-  return apiRequest("/audit/log/", {
+  return apiRequest("/events/log/", {
     method: "POST",
     auth: true,
     body: {
