@@ -324,21 +324,16 @@ LOGGING = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", False)
-CORS_ALLOWED_ORIGINS = env_list(
-    "CORS_ALLOWED_ORIGINS",
-    [
-        "https://rera.heptageeks.com",
-        "https://www.rera.heptageeks.com",
-        "https://rera-five.vercel.app",
-    ],
+_DEFAULT_FRONTEND_ORIGINS = [
+    "https://rera.heptageeks.com",
+    "https://www.rera.heptageeks.com",
+    "https://rera-five.vercel.app",
+]
+CORS_ALLOWED_ORIGINS = sorted(
+    set(_DEFAULT_FRONTEND_ORIGINS + env_list("CORS_ALLOWED_ORIGINS"))
 )
-CSRF_TRUSTED_ORIGINS = env_list(
-    "CSRF_TRUSTED_ORIGINS",
-    [
-        "https://rera.heptageeks.com",
-        "https://www.rera.heptageeks.com",
-        "https://rera-five.vercel.app",
-    ],
+CSRF_TRUSTED_ORIGINS = sorted(
+    set(_DEFAULT_FRONTEND_ORIGINS + env_list("CSRF_TRUSTED_ORIGINS"))
 )
 CORS_ALLOW_CREDENTIALS = True
 
