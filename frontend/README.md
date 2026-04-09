@@ -44,6 +44,11 @@ VITE_BACKEND_ORIGIN=https://api-rera.heptageeks.com
 
 This value must point at the Django backend origin, not the frontend domain.
 
+Validation:
+
+- Production builds now fail fast if `VITE_BACKEND_ORIGIN` is missing or invalid.
+- See `.env.production.example` for the expected format.
+
 ## Key frontend behavior
 
 - API requests are sent to the backend configured by `VITE_BACKEND_ORIGIN`.
@@ -56,3 +61,6 @@ This value must point at the Django backend origin, not the frontend domain.
 - The frontend is deployed separately from Django.
 - Any change to `VITE_BACKEND_ORIGIN` requires a rebuild and redeploy.
 - Production frontend should point to the live backend domain, currently `https://api-rera.heptageeks.com`.
+- If deployment variables are missing, `npm run build` exits with an error instead of generating a broken bundle.
+- GitHub Actions now enforces this on `main` via `.github/workflows/frontend-env-guard.yml`.
+- Configure repository secret `VITE_BACKEND_ORIGIN_PROD` so CI can validate and build with the same production backend origin.

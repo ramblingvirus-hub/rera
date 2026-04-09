@@ -1,11 +1,46 @@
 
-const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:8000";
-const BACKEND_ORIGIN =
-  import.meta.env.VITE_BACKEND_ORIGIN || DEFAULT_BACKEND_ORIGIN;
+function resolveDefaultBackendOrigin() {
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return "http://127.0.0.1:8000";
+}
+
+function normalizeOrigin(origin) {
+  return origin.replace(/\/$/, "");
+}
+
+function resolveBackendOrigin() {
+  const configuredOrigin = import.meta.env.VITE_BACKEND_ORIGIN?.trim();
+
+  if (configuredOrigin) {
+    return normalizeOrigin(configuredOrigin);
+  }
+
+  const fallbackOrigin = resolveDefaultBackendOrigin();
+
+  if (import.meta.env.PROD) {
+    throw new Error(
+      "Missing VITE_BACKEND_ORIGIN in production build. Configure it in your frontend deployment environment."
+    );
+  }
+
+  console.warn(
+    `[api] VITE_BACKEND_ORIGIN is not set. Falling back to ${fallbackOrigin} for local development.`
+  );
+
+  return fallbackOrigin;
+}
+
+const BACKEND_ORIGIN = resolveBackendOrigin();
 
 const API_V1_BASE = `${BACKEND_ORIGIN}/api/v1`;
 const TOKEN_OBTAIN_URL = `${BACKEND_ORIGIN}/api/token/`;
 const TOKEN_REFRESH_URL = `${BACKEND_ORIGIN}/api/token/refresh/`;
+
+export function getBackendOrigin() {
+  return BACKEND_ORIGIN;
+}
 
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";

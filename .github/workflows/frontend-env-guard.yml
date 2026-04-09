@@ -1,0 +1,48 @@
+name: Frontend Env Guard
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate-production-backend-origin:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Ensure production backend origin secret is configured
+        env:
+          VITE_BACKEND_ORIGIN_PROD: ${{ secrets.VITE_BACKEND_ORIGIN_PROD }}
+        run: |
+          if [ -z "$VITE_BACKEND_ORIGIN_PROD" ]; then
+            echo "::error::Missing secret VITE_BACKEND_ORIGIN_PROD. Set it to your backend origin (e.g. https://api-rera.heptageeks.com)."
+            exit 1
+          fi
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Validate frontend environment contract
+        env:
+          VITE_BACKEND_ORIGIN: ${{ secrets.VITE_BACKEND_ORIGIN_PROD }}
+        run: node ./scripts/validate-env.mjs
+
+      - name: Build frontend
+        env:
+          VITE_BACKEND_ORIGIN: ${{ secrets.VITE_BACKEND_ORIGIN_PROD }}
+        run: npm run build
