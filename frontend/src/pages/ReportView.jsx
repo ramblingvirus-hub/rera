@@ -4,9 +4,6 @@ import {
   getReport,
   listReports,
   getCreditBalance,
-  initiateCreditPurchase,
-  confirmCreditPurchase,
-  activateSubscription,
   submitInterview,
   login,
   isAuthenticated,
@@ -18,47 +15,6 @@ const CREDIT_PACKAGE_OPTIONS = [
   { value: "bundle_3", label: "3 credits — PHP 1,500" },
   { value: "bundle_5", label: "5 credits — PHP 2,000" },
 ];
-
-const PENDING_PURCHASE_STORAGE_KEY = "rera_pending_purchase";
-
-function readPendingPurchase() {
-  try {
-    const raw = localStorage.getItem(PENDING_PURCHASE_STORAGE_KEY);
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") {
-      return null;
-    }
-
-    return {
-      requestId: parsed.requestId ? String(parsed.requestId) : "",
-      purchaseId: parsed.purchaseId ? String(parsed.purchaseId) : "",
-      returnPath: parsed.returnPath ? String(parsed.returnPath) : "",
-      createdAt: parsed.createdAt ? String(parsed.createdAt) : "",
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writePendingPurchase(payload) {
-  try {
-    localStorage.setItem(PENDING_PURCHASE_STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // Non-blocking: checkout flow can still proceed without localStorage.
-  }
-}
-
-function clearPendingPurchase() {
-  try {
-    localStorage.removeItem(PENDING_PURCHASE_STORAGE_KEY);
-  } catch {
-    // Non-blocking.
-  }
-}
 
 const LOCKED_SECTION_LABELS = {
   category_breakdown: "Category Breakdown",
@@ -315,12 +271,8 @@ export default function ReportView() {
 
   const [billingMessage, setBillingMessage] = useState("");
   const [selectedPackage, setSelectedPackage] = useState("single");
-  const [purchaseId, setPurchaseId] = useState("");
   const [isBillingLoading, setIsBillingLoading] = useState(false);
   const [isClaimingPreview, setIsClaimingPreview] = useState(false);
-
-  const [subscriptionId, setSubscriptionId] = useState("");
-  const [subscriptionPeriodDays, setSubscriptionPeriodDays] = useState(30);
 
   const claimableInterviewId = useMemo(() => {
     try {
@@ -332,31 +284,7 @@ export default function ReportView() {
     }
   }, [request_id]);
 
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [isTestUnlocked, setIsTestUnlocked] = useState(false);
-
-  const pendingPurchase = useMemo(() => {
-    const data = readPendingPurchase();
-    if (!data || !data.requestId || data.requestId !== String(request_id)) {
-      return null;
-    }
-    return data;
-  }, [request_id]);
-
-  // Detect ?payment=success after returning from PayMongo checkout
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("payment") === "success") {
-      setPaymentSuccess(true);
-      navigate(location.pathname, { replace: true });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!purchaseId && pendingPurchase?.purchaseId) {
-      setPurchaseId(pendingPurchase.purchaseId);
-    }
-  }, [purchaseId, pendingPurchase]);
 
   const canViewFullReport = Boolean(access?.can_view_full_report || isTestUnlocked);
   const testUnlockEnabled =
@@ -444,41 +372,6 @@ export default function ReportView() {
   }, []);
 
   useEffect(() => {
-    async function autoConfirmPayment() {
-      if (!paymentSuccess || !isLoggedIn) {
-        return;
-      }
-
-      const effectivePurchaseId = purchaseId?.trim() || pendingPurchase?.purchaseId || "";
-      if (!effectivePurchaseId) {
-        setBillingMessage("Payment success detected, but purchase ID is missing. Click 'I Already Paid - Unlock Report'.");
-        return;
-      }
-
-      setIsBillingLoading(true);
-      setBillingMessage("");
-      try {
-        const data = await confirmCreditPurchase(effectivePurchaseId);
-        const status = data?.status || "unknown";
-
-        if (status === "completed" || status === "failed") {
-          clearPendingPurchase();
-        }
-
-        await refreshBalance();
-        await loadReport(true);
-        setBillingMessage(`Payment verified. Current status: ${status}.`);
-      } catch (error) {
-        setBillingMessage(error?.message || "Payment verification failed. Try 'I Already Paid - Unlock Report'.");
-      } finally {
-        setIsBillingLoading(false);
-      }
-    }
-
-    autoConfirmPayment();
-  }, [paymentSuccess, isLoggedIn, purchaseId, pendingPurchase, refreshBalance, loadReport]);
-
-  useEffect(() => {
     loadReport();
   }, [loadReport]);
 
@@ -536,104 +429,10 @@ export default function ReportView() {
       return;
     }
 
-    setIsBillingLoading(true);
-    setBillingMessage("");
-    try {
-      const successUrl = `${window.location.origin}${returnPath}${returnPath.includes("?") ? "&" : "?"}payment=success`;
-      const cancelUrl = `${window.location.origin}${returnPath}${returnPath.includes("?") ? "&" : "?"}payment=cancel`;
-
-      const data = await initiateCreditPurchase(selectedPackage, {
-        successUrl,
-        cancelUrl,
-      });
-      const nextPurchaseId = data?.purchase_id || "";
-      const checkoutUrl = data?.checkout_url || "";
-      setPurchaseId(nextPurchaseId);
-
-      if (nextPurchaseId) {
-        writePendingPurchase({
-          requestId: String(request_id),
-          purchaseId: String(nextPurchaseId),
-          returnPath,
-          createdAt: new Date().toISOString(),
-        });
-      }
-
-      if (checkoutUrl) {
-        setBillingMessage("Redirecting to PayMongo checkout...");
-        window.location.assign(checkoutUrl);
-        return;
-      }
-
-      setBillingMessage("Purchase initialized but checkout URL is missing.");
-      await refreshBalance();
-    } catch (error) {
-      setBillingMessage(error.message || "Failed to initiate purchase");
-    } finally {
-      setIsBillingLoading(false);
-    }
-  }
-
-  async function handleConfirmPurchase() {
-    if (!isLoggedIn) {
-      setBillingMessage("Please sign in or register to continue purchase.");
-      navigate("/login", { state: { from: returnPath } });
-      return;
-    }
-
-    const effectivePurchaseId = purchaseId?.trim() || pendingPurchase?.purchaseId || "";
-
-    if (!effectivePurchaseId) {
-      setBillingMessage("Purchase ID is required before confirmation.");
-      return;
-    }
-    setIsBillingLoading(true);
-    setBillingMessage("");
-    try {
-      const data = await confirmCreditPurchase(effectivePurchaseId);
-      const status = data?.status || "unknown";
-      setBillingMessage(`Purchase check complete. Status: ${status}.`);
-
-      if (status === "completed" || status === "failed") {
-        clearPendingPurchase();
-      }
-
-      await refreshBalance();
-      await loadReport(true);
-
-      if (status === "completed" && claimableInterviewId) {
-        await handleClaimAnonymousPreview();
-      }
-    } catch (error) {
-      setBillingMessage(error.message || "Failed to confirm purchase");
-    } finally {
-      setIsBillingLoading(false);
-    }
-  }
-
-  async function handleActivateSubscription() {
-    if (!isLoggedIn) {
-      setBillingMessage("Please sign in or register to continue subscription activation.");
-      navigate("/login", { state: { from: returnPath } });
-      return;
-    }
-
-    if (!subscriptionId.trim()) {
-      setBillingMessage("PayMongo subscription ID is required.");
-      return;
-    }
-    setIsBillingLoading(true);
-    setBillingMessage("");
-    try {
-      await activateSubscription(subscriptionId.trim(), Number(subscriptionPeriodDays));
-      setBillingMessage("Subscription activated or renewed.");
-      await refreshBalance();
-      await loadReport();
-    } catch (error) {
-      setBillingMessage(error.message || "Failed to activate subscription");
-    } finally {
-      setIsBillingLoading(false);
-    }
+    const params = new URLSearchParams();
+    params.set("from", returnPath);
+    params.set("package", selectedPackage);
+    navigate(`/billing?${params.toString()}`);
   }
 
   async function handleClaimAnonymousPreview() {
@@ -680,17 +479,6 @@ export default function ReportView() {
     setIsBillingLoading(true);
     setBillingMessage("");
     try {
-      const effectivePurchaseId = purchaseId?.trim() || pendingPurchase?.purchaseId || "";
-
-      if (effectivePurchaseId) {
-        const data = await confirmCreditPurchase(effectivePurchaseId);
-        const status = data?.status || "unknown";
-
-        if (status === "completed" || status === "failed") {
-          clearPendingPurchase();
-        }
-      }
-
       await refreshBalance();
       await loadReport(true);
 
@@ -1013,22 +801,6 @@ export default function ReportView() {
 
   return (
     <div style={{ maxWidth: "900px" }}>
-      {paymentSuccess && (
-        <div
-          style={{
-            backgroundColor: "#dcfce7",
-            border: "1px solid #86efac",
-            borderRadius: "10px",
-            padding: "14px 18px",
-            marginBottom: "20px",
-            fontSize: "14px",
-            color: "#166534",
-            fontWeight: 500,
-          }}
-        >
-          Payment received! Your full report is being loaded below.
-        </div>
-      )}
       {/* ── Page header ── */}
       <div
         style={{
@@ -1580,7 +1352,7 @@ export default function ReportView() {
               >
                 <div style={{ marginBottom: "22px" }}>
                   <h3 style={{ fontSize: "14px", fontWeight: 600, color: "#1a2332", marginBottom: "10px" }}>
-                    Manual Payment Approved?
+                    GCash Payment Approved?
                   </h3>
                   <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
                     <button
@@ -1646,97 +1418,6 @@ export default function ReportView() {
                       }}
                     >
                       Buy Credits
-                    </button>
-                  </div>
-                </div>
-
-                {/* Confirm Purchase */}
-                <div style={{ marginBottom: "22px" }}>
-                  <h3 style={{ fontSize: "14px", fontWeight: 600, color: "#1a2332", marginBottom: "10px" }}>
-                    Refresh Purchase Status
-                  </h3>
-                  <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                    <input
-                      placeholder="purchase_id"
-                      value={purchaseId}
-                      onChange={(e) => setPurchaseId(e.target.value)}
-                      style={{
-                        padding: "9px 12px",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "8px",
-                        fontSize: "13.5px",
-                        flex: "1 1 260px",
-                      }}
-                    />
-                    <button
-                      onClick={handleConfirmPurchase}
-                      disabled={isBillingLoading}
-                      style={{
-                        padding: "9px 18px",
-                        backgroundColor: "#ffffff",
-                        color: "#374151",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "8px",
-                        fontSize: "13.5px",
-                        fontWeight: 500,
-                        cursor: isBillingLoading ? "not-allowed" : "pointer",
-                        opacity: isBillingLoading ? 0.7 : 1,
-                      }}
-                    >
-                      Confirm
-                    </button>
-                  </div>
-                </div>
-
-                {/* Subscription Activation */}
-                <div style={{ marginBottom: "10px" }}>
-                  <h3 style={{ fontSize: "14px", fontWeight: 600, color: "#1a2332", marginBottom: "10px" }}>
-                    Activate Subscription
-                  </h3>
-                  <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginBottom: "10px" }}>
-                    <input
-                      placeholder="paymongo_subscription_id"
-                      value={subscriptionId}
-                      onChange={(e) => setSubscriptionId(e.target.value)}
-                      style={{
-                        padding: "9px 12px",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "8px",
-                        fontSize: "13.5px",
-                        flex: "1 1 260px",
-                      }}
-                    />
-                    <select
-                      id="period_days"
-                      value={subscriptionPeriodDays}
-                      onChange={(e) => setSubscriptionPeriodDays(Number(e.target.value))}
-                      style={{
-                        padding: "9px 12px",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "8px",
-                        fontSize: "13.5px",
-                        color: "#374151",
-                      }}
-                    >
-                      <option value={30}>30 days</option>
-                      <option value={365}>365 days</option>
-                    </select>
-                    <button
-                      onClick={handleActivateSubscription}
-                      disabled={isBillingLoading}
-                      style={{
-                        padding: "9px 18px",
-                        backgroundColor: "#ffffff",
-                        color: "#374151",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "8px",
-                        fontSize: "13.5px",
-                        fontWeight: 500,
-                        cursor: isBillingLoading ? "not-allowed" : "pointer",
-                        opacity: isBillingLoading ? 0.7 : 1,
-                      }}
-                    >
-                      Activate
                     </button>
                   </div>
                 </div>
