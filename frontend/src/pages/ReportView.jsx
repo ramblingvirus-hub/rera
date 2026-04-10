@@ -275,6 +275,16 @@ export default function ReportView() {
   const [isClaimingPreview, setIsClaimingPreview] = useState(false);
 
   const claimableInterviewId = useMemo(() => {
+    const queryInterviewId = (searchParams.get("iid") || "").trim();
+    if (queryInterviewId) {
+      return queryInterviewId;
+    }
+
+    const stateInterviewId = location.state?.interviewId;
+    if (stateInterviewId) {
+      return String(stateInterviewId);
+    }
+
     try {
       const map = JSON.parse(localStorage.getItem("rera_preview_claims") || "{}");
       const interviewId = map?.[String(request_id)];
@@ -282,7 +292,7 @@ export default function ReportView() {
     } catch {
       return "";
     }
-  }, [request_id]);
+  }, [location.state, request_id, searchParams]);
 
   const [isTestUnlocked, setIsTestUnlocked] = useState(false);
 
@@ -479,13 +489,32 @@ export default function ReportView() {
     setIsBillingLoading(true);
     setBillingMessage("");
     try {
+      if (claimableInterviewId) {
+        try {
+          const result = await submitInterview(claimableInterviewId);
+          const nextRequestId = result?.request_id;
+          if (nextRequestId) {
+            try {
+              const existing = JSON.parse(localStorage.getItem("rera_preview_claims") || "{}");
+              delete existing[String(request_id)];
+              localStorage.setItem("rera_preview_claims", JSON.stringify(existing));
+            } catch {
+              // Ignore cleanup failures.
+            }
+            navigate(`/report/${nextRequestId}`, { replace: true });
+            return;
+          }
+        } catch (claimError) {
+          if (claimError?.status === 402) {
+            setBillingMessage("Payment is still pending admin approval. Please try again after approval.");
+            return;
+          }
+          throw claimError;
+        }
+      }
+
       await refreshBalance();
       await loadReport(true);
-
-      if (claimableInterviewId) {
-        await handleClaimAnonymousPreview();
-        return;
-      }
 
       setBillingMessage("Access refreshed. If your payment was approved, your full report should now be available.");
     } catch (error) {

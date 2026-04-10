@@ -12,6 +12,7 @@ import {
   saveInterview as saveInterviewRequest,
   submitInterview,
   logAuditEvent,
+  getBackendOrigin,
 } from "../api/apiClient";
 
 const BTN_PRIMARY = {
@@ -45,6 +46,11 @@ export default function InterviewPage() {
   const [reviewMode, setReviewMode] = useState(false);
   const [flowMessage, setFlowMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const backendOrigin = getBackendOrigin();
+  const healthcheckUrl = `${backendOrigin}/api/v1/contact/`;
+  const showNetworkDiagnostics =
+    flowMessage.includes("Unable to reach the server") ||
+    new URLSearchParams(window.location.search).get("diag") === "1";
 
   const interviewQuestions = getQuestionsForContext(responses);
   const currentQuestion = interviewQuestions[currentIndex];
@@ -174,7 +180,11 @@ export default function InterviewPage() {
         localStorage.removeItem("rera_interview_id");
       }
 
-      navigate(`/report/${requestId}`, {
+      const reportPath = anonymousPreview
+        ? `/report/${requestId}?src=teaser&iid=${encodeURIComponent(String(interview.id))}`
+        : `/report/${requestId}`;
+
+      navigate(reportPath, {
         state: {
           submittedReport: result?.report || null,
           submittedContext: result?.context || null,
@@ -256,9 +266,33 @@ export default function InterviewPage() {
             Start Evaluation
           </button>
           {flowMessage && (
-            <p style={{ color: "#dc2626", fontSize: "13px", marginTop: "16px" }}>
-              {flowMessage}
-            </p>
+            <div style={{ marginTop: "16px" }}>
+              <p style={{ color: "#dc2626", fontSize: "13px", margin: 0 }}>
+                {flowMessage}
+              </p>
+              {showNetworkDiagnostics && (
+                <div
+                  style={{
+                    marginTop: "10px",
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    backgroundColor: "#f9fafb",
+                    border: "1px solid #e5e7eb",
+                    fontSize: "12px",
+                    color: "#374151",
+                    lineHeight: "1.5",
+                  }}
+                >
+                  <div>Diagnostic: frontend is targeting {backendOrigin}</div>
+                  <div>
+                    Quick test: open {" "}
+                    <a href={healthcheckUrl} target="_blank" rel="noreferrer">
+                      {healthcheckUrl}
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
