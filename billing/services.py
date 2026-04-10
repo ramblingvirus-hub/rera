@@ -3,7 +3,7 @@ from django.db.models import Sum, Q
 from django.conf import settings
 from audit.services import log_audit_event
 from .models import CreditPurchase, CreditTransaction, ManualPayment, Subscription
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.utils import OperationalError, ProgrammingError
 from audit.constants import (
     PAYMENT_MANUAL_APPROVED,
@@ -57,13 +57,12 @@ def calculate_user_balance(user):
 
     now = timezone.now()
 
-    # Self-heal historical/manual approval records that were marked approved
-    # without a corresponding immutable credit ledger entry.
+    # Self-heal historical records into immutable ledger entries.
     try:
         reconcile_manual_payment_credits(user)
-    except (OperationalError, ProgrammingError):
-        # Some test environments don't include manual-payment tables.
-        # Balance checks must remain available for all deployments.
+        reconcile_completed_purchases(user)
+    except Exception:
+        # Balance checks must remain available even if reconciliation fails.
         pass
 
     transactions = CreditTransaction.objects.filter(
@@ -83,6 +82,9 @@ def reconcile_manual_payment_credits(user):
     exactly one immutable purchase ledger transaction.
     """
     if not user:
+        return 0
+
+    if not table_exists("billing_manualpayment"):
         return 0
 
     repaired = 0
@@ -127,6 +129,80 @@ def reconcile_manual_payment_credits(user):
             CreditTransaction.objects.create(
                 user=payment.user,
                 amount=payment.credits_purchased,
+                type="purchase",
+                expiry_date=expiry_anchor + timedelta(days=365),
+                reference_id=reference_id,
+            )
+            repaired += 1
+
+    return repaired
+
+
+def table_exists(table_name):
+    try:
+        return table_name in connection.introspection.table_names()
+    except Exception:
+        return False
+
+
+def reconcile_completed_purchases(user):
+    """
+    Backfill missing purchase ledger rows from completed purchases.
+    This protects balance visibility if historical jobs marked purchases
+    as completed but never wrote immutable credit transactions.
+    """
+    if not user:
+        return 0
+
+    repaired = 0
+
+    with transaction.atomic():
+        purchases = (
+            CreditPurchase.objects
+            .select_for_update()
+            .filter(user=user, status="completed")
+            .order_by("created_at")
+        )
+
+        for purchase in purchases:
+            if purchase.paymongo_payment_id:
+                reference_id = f"paymongo-{purchase.paymongo_payment_id}"
+            elif str(purchase.payment_method or "").startswith("manual_"):
+                reference_id = f"manual-purchase-{purchase.id}"
+            else:
+                reference_id = f"purchase-{purchase.id}"
+
+            if CreditTransaction.objects.filter(
+                user=user,
+                type="purchase",
+                reference_id=reference_id,
+            ).exists():
+                continue
+
+            # If this manual purchase is linked to a manual payment record,
+            # prefer the canonical manual-{payment_id} reference.
+            if str(purchase.payment_method or "").startswith("manual_") and table_exists("billing_manualpayment"):
+                linked_payment_id = (
+                    ManualPayment.objects
+                    .filter(credit_purchase_id=purchase.id)
+                    .values_list("id", flat=True)
+                    .first()
+                )
+                if linked_payment_id:
+                    canonical_ref = f"manual-{linked_payment_id}"
+                    if CreditTransaction.objects.filter(
+                        user=user,
+                        type="purchase",
+                        reference_id=canonical_ref,
+                    ).exists():
+                        continue
+                    reference_id = canonical_ref
+
+            expiry_anchor = purchase.updated_at or purchase.created_at or timezone.now()
+
+            CreditTransaction.objects.create(
+                user=user,
+                amount=purchase.credits_purchased,
                 type="purchase",
                 expiry_date=expiry_anchor + timedelta(days=365),
                 reference_id=reference_id,

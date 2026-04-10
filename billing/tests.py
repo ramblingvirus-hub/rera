@@ -238,6 +238,23 @@ class ManualPaymentFlowTests(TestCase):
 			).exists()
 		)
 
+	def test_balance_reconciles_completed_manual_purchase_without_ledger(self):
+		CreditPurchase.objects.create(
+			user=self.user,
+			credits_purchased=5,
+			amount_php=2000,
+			payment_method="manual_gcash",
+			paymongo_payment_id=None,
+			status="completed",
+		)
+
+		self.client.force_authenticate(user=self.user)
+		response = self.client.get("/api/v1/billing/credits/balance/")
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.data["credit_balance"], 5)
+		self.assertEqual(CreditTransaction.objects.filter(user=self.user, type="purchase").count(), 1)
+
 
 @override_settings(GCASH_QR_URL="/media/qr/gcash.png", MAYA_QR_URL="https://cdn.example.com/maya.png")
 class ManualPaymentConfigTests(TestCase):
