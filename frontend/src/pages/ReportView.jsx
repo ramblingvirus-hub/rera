@@ -448,7 +448,7 @@ export default function ReportView() {
       return false;
     }
 
-    const latestRequestId = reports[0]?.request_id;
+    const latestRequestId = reports.find((item) => item?.request_id && String(item.request_id) !== String(request_id))?.request_id;
     if (!latestRequestId) {
       return false;
     }
@@ -514,6 +514,13 @@ export default function ReportView() {
     setIsBillingLoading(true);
     setBillingMessage("");
     try {
+      if (!claimableInterviewId) {
+        const movedToLatest = await recoverToLatestReport();
+        if (movedToLatest) {
+          return;
+        }
+      }
+
       if (claimableInterviewId) {
         try {
           const result = await submitInterview(claimableInterviewId);
