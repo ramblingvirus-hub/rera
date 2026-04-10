@@ -51,6 +51,8 @@ const LOCKED_SECTION_PREVIEW_LINES = {
   ],
 };
 
+const UNLOCK_SUBMIT_TIMEOUT_MS = 15000;
+
 const RISK_STYLE = {
   LOW_RISK:      { color: "#16a34a", bg: "#f0fdf4", label: "Lower Risk" },
   MODERATE_RISK: { color: "#d97706", bg: "#fffbeb", label: "Moderate Risk" },
@@ -442,19 +444,49 @@ export default function ReportView() {
     }
   }
 
-  async function recoverToLatestReport() {
+  async function recoverToLatestReport(options = {}) {
+    const { includeCurrent = false } = options;
     const reports = await listReports();
     if (!Array.isArray(reports) || reports.length === 0) {
       return false;
     }
 
-    const latestRequestId = reports.find((item) => item?.request_id && String(item.request_id) !== String(request_id))?.request_id;
+    const latestRequestId = reports.find((item) => {
+      if (!item?.request_id) {
+        return false;
+      }
+
+      if (includeCurrent) {
+        return true;
+      }
+
+      return String(item.request_id) !== String(request_id);
+    })?.request_id;
+
     if (!latestRequestId) {
       return false;
     }
 
     navigate(`/report/${latestRequestId}`, { replace: true });
     return true;
+  }
+
+  async function submitInterviewWithTimeout(interviewId) {
+    let timeoutId;
+
+    try {
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error("Unlock check timed out. Please try again in a few seconds."));
+        }, UNLOCK_SUBMIT_TIMEOUT_MS);
+      });
+
+      return await Promise.race([submitInterview(interviewId), timeoutPromise]);
+    } finally {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    }
   }
 
   async function handleInitiatePurchase() {
@@ -521,15 +553,16 @@ export default function ReportView() {
     setBillingMessage("Checking payment approval and refreshing access...");
     try {
       if (!claimableInterviewId) {
-        const movedToLatest = await recoverToLatestReport();
+        const movedToLatest = await recoverToLatestReport({ includeCurrent: false });
         if (movedToLatest) {
+          setBillingMessage("Opening your latest saved report...");
           return;
         }
       }
 
       if (claimableInterviewId) {
         try {
-          const result = await submitInterview(claimableInterviewId);
+          const result = await submitInterviewWithTimeout(claimableInterviewId);
 
           if (result?.preview) {
             setBillingMessage("Sign in session is required to unlock this report. Please sign in and try again.");
@@ -568,14 +601,54 @@ export default function ReportView() {
       }
 
       await refreshBalance();
-      await loadReport(true);
+      const currentReport = await getReport(request_id).catch(() => null);
+      if (currentReport) {
+        const backendReport = currentReport?.report || null;
+        const canView = Boolean(currentReport?.access?.can_view_full_report);
+
+        const mergedReport =
+          canView && backendReport && submittedReport
+            ? {
+                ...submittedReport,
+                ...backendReport,
+                category_breakdown:
+                  backendReport.category_breakdown ?? submittedReport.category_breakdown,
+                signals: backendReport.signals ?? submittedReport.signals,
+                information_gaps:
+                  backendReport.information_gaps ?? submittedReport.information_gaps,
+                suggestions: backendReport.suggestions ?? submittedReport.suggestions,
+              }
+            : backendReport;
+
+        setReport(mergedReport);
+        setAccess(currentReport?.access || null);
+        setContext(currentReport?.context || null);
+
+        if (canView) {
+          setBillingMessage("Payment approved. Full report unlocked.");
+          return;
+        }
+      }
 
       if (!claimableInterviewId && !canViewFullReport) {
-        setBillingMessage("Payment appears approved, but this teaser session ID is missing. Please re-open the report from Billing or run a new evaluation.");
+        const movedToLatest = await recoverToLatestReport({ includeCurrent: false });
+        if (movedToLatest) {
+          setBillingMessage("Payment approved. Opening your latest saved report...");
+          return;
+        }
+
+        setBillingMessage("Payment may still be pending, or no unlocked report was found yet. If approval was just done, please retry in a few seconds.");
         return;
       }
 
-      setBillingMessage("Access refreshed. If your payment was approved, your full report should now be available.");
+      const movedToLatest = await recoverToLatestReport({ includeCurrent: false });
+      if (movedToLatest) {
+        setBillingMessage("Opening your latest saved report...");
+        return;
+      }
+
+      await loadReport(true);
+      setBillingMessage("Access refreshed. If payment was approved, your full report should now be available.");
     } catch (error) {
       setBillingMessage(error?.message || "Unable to refresh access right now.");
     } finally {
