@@ -67,8 +67,7 @@ export default function InterviewPage() {
   }, []);
 
   async function handleStartNew() {
-    // Clear any saved interview and start fresh
-    localStorage.removeItem("rera_interview_id");
+    // Keep existing draft id until a new interview is successfully created.
     setInterview(null);
     setResponses({});
     setCurrentIndex(0);

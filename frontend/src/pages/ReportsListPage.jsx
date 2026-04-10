@@ -130,6 +130,54 @@ export default function ReportsListPage() {
         </button>
       </div>
 
+      {savedInterviewId && (
+        <div
+          style={{
+            backgroundColor: "#ecfeff",
+            border: "1px solid #99f6e4",
+            borderRadius: "10px",
+            padding: "14px 16px",
+            marginBottom: "16px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+            }}
+          >
+            <p style={{ margin: 0, fontSize: "13px", color: "#0f766e" }}>
+              You have a saved teaser evaluation draft in this browser.
+            </p>
+            <button
+              onClick={handleRecoverTeaser}
+              disabled={recovering}
+              style={{
+                padding: "8px 14px",
+                backgroundColor: "#0f766e",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: recovering ? "not-allowed" : "pointer",
+                opacity: recovering ? 0.7 : 1,
+              }}
+            >
+              {recovering ? "Recovering..." : "Recover Draft Report"}
+            </button>
+          </div>
+          {recoverMessage && (
+            <p style={{ marginTop: "8px", marginBottom: 0, fontSize: "12px", color: "#475569" }}>
+              {recoverMessage}
+            </p>
+          )}
+        </div>
+      )}
+
       {reports.length === 0 ? (
         <div
           style={{
@@ -144,32 +192,6 @@ export default function ReportsListPage() {
           <p style={{ fontSize: "15px", marginBottom: "16px" }}>
             No evaluations yet.
           </p>
-          {savedInterviewId && (
-            <div style={{ marginBottom: "14px" }}>
-              <button
-                onClick={handleRecoverTeaser}
-                disabled={recovering}
-                style={{
-                  padding: "10px 22px",
-                  backgroundColor: "#0f766e",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: recovering ? "not-allowed" : "pointer",
-                  opacity: recovering ? 0.7 : 1,
-                }}
-              >
-                {recovering ? "Recovering..." : "Recover My Last Teaser Report"}
-              </button>
-              {recoverMessage && (
-                <p style={{ marginTop: "10px", fontSize: "12px", color: "#475569" }}>
-                  {recoverMessage}
-                </p>
-              )}
-            </div>
-          )}
           <button
             onClick={() => navigate("/new")}
             style={{
