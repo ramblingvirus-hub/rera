@@ -169,6 +169,8 @@ async function refreshAccessToken() {
   const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
 
   if (!refresh) {
+    clearAuthTokens();
+    window.dispatchEvent(new CustomEvent("auth:session-expired"));
     return false;
   }
 
