@@ -81,7 +81,11 @@ export default function InterviewPage() {
       Promise.resolve(logAuditEvent("INTERVIEW_STARTED", { interview_id: id })).catch(() => {});
       await loadInterview(id);
     } catch (error) {
-      setFlowMessage(error.message || "Failed to start evaluation");
+      if (error.status === 401) {
+        navigate("/login", { replace: true, state: { sessionExpired: true } });
+      } else {
+        setFlowMessage(error.message || "Failed to start evaluation");
+      }
     }
   }
 
@@ -92,7 +96,11 @@ export default function InterviewPage() {
       setResponses(data.responses || {});
       setFlowMessage("");
     } catch (error) {
-      setFlowMessage(error.message || "Failed to load evaluation");
+      if (error.status === 401) {
+        navigate("/login", { replace: true, state: { sessionExpired: true } });
+      } else {
+        setFlowMessage(error.message || "Failed to load evaluation");
+      }
     }
   }
 
@@ -194,7 +202,9 @@ export default function InterviewPage() {
         },
       });
     } catch (error) {
-      if (error.status === 402) {
+      if (error.status === 401) {
+        navigate("/login", { replace: true, state: { sessionExpired: true } });
+      } else if (error.status === 402) {
         setShowCreditModal(true);
       } else {
         setFlowMessage(error.message || "Failed to submit evaluation");
