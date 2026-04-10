@@ -4,6 +4,7 @@ import {
   getReport,
   listReports,
   getCreditBalance,
+  reconcileManualPayments,
   submitInterview,
   login,
   isAuthenticated,
@@ -632,6 +633,16 @@ export default function ReportView() {
     try {
       let claimValidationFailed = false;
       let claimValidationMessage = "";
+
+      setBillingMessage("Reconciling approved payments with your account...");
+      const reconciliation = await withTimeout(
+        () => reconcileManualPayments(),
+        "Payment reconciliation"
+      ).catch(() => null);
+
+      if (reconciliation?.credit_balance > 0) {
+        setCreditBalance(reconciliation.credit_balance);
+      }
 
       if (!claimableInterviewId) {
         setBillingMessage("Checking saved reports for an unlocked result...");

@@ -273,6 +273,28 @@ class ManualPaymentFlowTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.data["credit_balance"], 3)
 
+	def test_manual_payment_reconcile_endpoint_repairs_balance(self):
+		ManualPayment.objects.create(
+			user=self.user,
+			package_key="single",
+			amount_php=550,
+			credits_purchased=1,
+			payment_method="GCASH",
+			reference_number="MANUAL-RECONCILE-1",
+			reference_number_normalized="MANUAL-RECONCILE-1",
+			proof_file=self._proof_file("manual-reconcile.png"),
+			status=ManualPayment.STATUS_APPROVED,
+			reviewed_at=timezone.now(),
+			reviewed_by=self.admin,
+		)
+
+		self.client.force_authenticate(user=self.user)
+		response = self.client.post("/api/v1/billing/manual-payments/reconcile/", data={}, format="json")
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.data["credit_balance"], 1)
+		self.assertGreaterEqual(response.data["repaired_manual"], 1)
+
 
 @override_settings(GCASH_QR_URL="/media/qr/gcash.png", MAYA_QR_URL="https://cdn.example.com/maya.png")
 class ManualPaymentConfigTests(TestCase):

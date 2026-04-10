@@ -217,6 +217,32 @@ def reconcile_completed_purchases(user):
 
     return repaired
 
+
+def reconcile_user_credits(user):
+    """
+    Run all available reconciliation routines for a user and return summary.
+    """
+    repaired_manual = 0
+    repaired_purchase = 0
+
+    try:
+        repaired_manual = reconcile_manual_payment_credits(user)
+    except Exception:
+        repaired_manual = 0
+
+    try:
+        repaired_purchase = reconcile_completed_purchases(user)
+    except Exception:
+        repaired_purchase = 0
+
+    balance = calculate_user_balance(user)
+
+    return {
+        "repaired_manual": int(repaired_manual or 0),
+        "repaired_purchase": int(repaired_purchase or 0),
+        "credit_balance": int(balance or 0),
+    }
+
 def deduct_credit(user, reference_id=None):
     """
     Deducts 1 credit from user if balance is sufficient.

@@ -8,6 +8,7 @@ from billing.views import (
     ActivateSubscriptionView,
     ManualPaymentConfigView,
     ManualPaymentListCreateView,
+    ManualPaymentReconcileView,
     PayMongoWebhookView,
 )
 
@@ -18,6 +19,7 @@ urlpatterns = [
     path("subscription/activate/", ActivateSubscriptionView.as_view(), name="subscription_activate"),
     path("manual-payments/config/", ManualPaymentConfigView.as_view(), name="manual_payment_config"),
     path("manual-payments/", ManualPaymentListCreateView.as_view(), name="manual_payment_list_create"),
+    path("manual-payments/reconcile/", ManualPaymentReconcileView.as_view(), name="manual_payment_reconcile"),
     path("admin/manual-payments/", AdminManualPaymentListView.as_view(), name="admin_manual_payment_list"),
     path("admin/manual-payments/<int:payment_id>/review/", AdminManualPaymentReviewView.as_view(), name="admin_manual_payment_review"),
     path("webhooks/paymongo/", PayMongoWebhookView.as_view(), name="paymongo_webhook"),

@@ -17,6 +17,7 @@ from billing.services import (
     calculate_user_balance,
     get_credit_package,
     paymongo_enabled,
+    reconcile_user_credits,
     review_manual_payment,
 )
 from django.utils import timezone
@@ -399,6 +400,14 @@ class CreditBalanceView(APIView):
             {"credit_balance": balance},
             status=status.HTTP_200_OK
         )
+
+
+class ManualPaymentReconcileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        summary = reconcile_user_credits(request.user)
+        return Response(summary, status=status.HTTP_200_OK)
 
 
 class ManualPaymentConfigView(APIView):

@@ -431,6 +431,13 @@ export async function listManualPayments() {
   });
 }
 
+export async function reconcileManualPayments() {
+  return apiRequest("/billing/manual-payments/reconcile/", {
+    method: "POST",
+    auth: true,
+  });
+}
+
 export async function listAdminManualPayments(filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
