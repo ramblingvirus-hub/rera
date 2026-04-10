@@ -649,13 +649,26 @@ export default function ReportView() {
         const successfulPurchases = Number(reconciliation?.diagnostics?.successful_purchases || 0);
         const repairedCount = Number(reconciliation?.repaired_manual || 0) + Number(reconciliation?.repaired_purchase || 0);
 
+        if (approvedCount > 0 || successfulPurchases > 0) {
+          setBillingMessage("Payment was approved. Checking for your unlocked saved report...");
+          const moved = await withTimeout(
+            () => recoverToLatestReport({ includeCurrent: false }),
+            "Saved report lookup"
+          ).catch(() => false);
+
+          if (moved) {
+            setBillingMessage("Opening your unlocked report...");
+            return;
+          }
+        }
+
         if (approvedCount === 0 && successfulPurchases === 0) {
           setBillingMessage("No approved payment was found for this account yet. Please ask admin to approve this account's submission.");
           return;
         }
 
         if (repairedCount === 0) {
-          setBillingMessage("Payment records were found but no credits could be applied automatically. Please contact admin to run account credit repair.");
+          setBillingMessage("Payment is approved, but no credit is currently available and no unlocked report was found. The payment may be linked to a different account or already consumed.");
           return;
         }
       }
