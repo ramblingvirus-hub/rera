@@ -5,6 +5,7 @@ from audit.services import log_audit_event
 from .models import CreditPurchase, CreditTransaction, ManualPayment, Subscription
 from django.db import connection, transaction
 from django.db.utils import OperationalError, ProgrammingError
+from django.db.models.functions import Lower
 from audit.constants import (
     PAYMENT_MANUAL_APPROVED,
     PAYMENT_MANUAL_REJECTED,
@@ -30,6 +31,9 @@ MANUAL_CREDIT_PACKAGES = {
         "description": "5 RERA Report Credits - PHP 2,000",
     },
 }
+
+SUCCESS_PURCHASE_STATUSES = {"completed", "approved", "paid", "succeeded"}
+APPROVED_MANUAL_STATUSES = {"approved"}
 
 
 def paymongo_enabled():
@@ -94,7 +98,8 @@ def reconcile_manual_payment_credits(user):
             ManualPayment.objects
             .select_for_update()
             .select_related("credit_purchase")
-            .filter(user=user, status=ManualPayment.STATUS_APPROVED)
+            .annotate(status_lower=Lower("status"))
+            .filter(user=user, status_lower__in=APPROVED_MANUAL_STATUSES)
         )
 
         for payment in approved_payments:
@@ -160,7 +165,8 @@ def reconcile_completed_purchases(user):
         purchases = (
             CreditPurchase.objects
             .select_for_update()
-            .filter(user=user, status="completed")
+            .annotate(status_lower=Lower("status"))
+            .filter(user=user, status_lower__in=SUCCESS_PURCHASE_STATUSES)
             .order_by("created_at")
         )
 

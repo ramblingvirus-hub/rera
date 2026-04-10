@@ -255,6 +255,24 @@ class ManualPaymentFlowTests(TestCase):
 		self.assertEqual(response.data["credit_balance"], 5)
 		self.assertEqual(CreditTransaction.objects.filter(user=self.user, type="purchase").count(), 1)
 
+	def test_balance_reconciles_legacy_approved_purchase_without_ledger(self):
+		purchase = CreditPurchase.objects.create(
+			user=self.user,
+			credits_purchased=3,
+			amount_php=1500,
+			payment_method="manual_gcash",
+			paymongo_payment_id=None,
+			status="pending",
+		)
+		purchase.status = "approved"
+		purchase.save(update_fields=["status", "updated_at"])
+
+		self.client.force_authenticate(user=self.user)
+		response = self.client.get("/api/v1/billing/credits/balance/")
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.data["credit_balance"], 3)
+
 
 @override_settings(GCASH_QR_URL="/media/qr/gcash.png", MAYA_QR_URL="https://cdn.example.com/maya.png")
 class ManualPaymentConfigTests(TestCase):
