@@ -184,3 +184,49 @@ class QaBypassUnlockTests(TestCase):
         self.assertIn("strengths", payload["report"])
         self.assertIn("category_interpretations", payload["report"])
         self.assertIn("signals", payload["report"])
+
+
+class ExistingOwnedReportAccessTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        unique_suffix = uuid.uuid4().hex
+        self.user = User.objects.create_user(
+            username=f"owned-report-user-{unique_suffix}",
+            email=f"owned-report-{unique_suffix}@example.com",
+            password="StrongPass123!",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_owned_report_remains_unlocked_even_with_zero_credits(self):
+        report = Report.objects.create(
+            request_id=uuid.uuid4(),
+            timestamp_utc=timezone.now(),
+            user=self.user,
+            structure_version="1.0",
+            total_score=71.2,
+            risk_band="MODERATE_RISK",
+            category_breakdown={
+                "developer_legitimacy": 70,
+                "project_compliance": 72,
+                "title_land": 68,
+                "financial_exposure": 69,
+                "lgu_environment": 77,
+            },
+            license_to_sell_present=True,
+            signals=["Signal A"],
+            information_gaps=["Gap A"],
+            suggestions=["Suggestion A"],
+            assessment_summary="Owned report should remain visible.",
+            project_name="Owned Report Project",
+            city="Makati",
+            location="Ayala",
+        )
+
+        response = self.client.get(f"/api/v1/reports/{report.request_id}/")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["access"]["can_view_full_report"])
+        self.assertEqual(payload["access"]["locked_sections"], [])
+        self.assertIn("assessment_summary", payload["report"])
+        self.assertIn("signals", payload["report"])

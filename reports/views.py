@@ -318,7 +318,9 @@ class GetReportView(APIView):
             user=request.user
         )
 
-        can_view_full = ReportAccessControl.can_access_full_report(request.user)
+        # A saved report owned by the authenticated user is already paid/evaluated
+        # output and should remain fully viewable even if current balance is zero.
+        can_view_full = (report.user_id == request.user.id) or ReportAccessControl.can_access_full_report(request.user)
         active_subscription = ReportAccessControl.get_active_subscription(request.user)
         subscription_days_remaining = ReportAccessControl.get_subscription_days_remaining(request.user)
 
