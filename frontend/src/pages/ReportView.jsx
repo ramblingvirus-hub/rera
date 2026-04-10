@@ -53,6 +53,8 @@ const LOCKED_SECTION_PREVIEW_LINES = {
 
 const UNLOCK_SUBMIT_TIMEOUT_MS = 15000;
 const UNLOCK_NETWORK_TIMEOUT_MS = 12000;
+const UNLOCK_POLL_ATTEMPTS = 8;
+const UNLOCK_POLL_INTERVAL_MS = 1500;
 
 const RISK_STYLE = {
   LOW_RISK:      { color: "#16a34a", bg: "#f0fdf4", label: "Lower Risk" },
@@ -508,6 +510,63 @@ export default function ReportView() {
     }
   }
 
+  async function wait(ms) {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, ms);
+    });
+  }
+
+  async function pollForUnlockedAccess() {
+    for (let attempt = 1; attempt <= UNLOCK_POLL_ATTEMPTS; attempt += 1) {
+      const progressLabel = `Checking unlock status (${attempt}/${UNLOCK_POLL_ATTEMPTS})...`;
+      setBillingMessage(progressLabel);
+
+      const currentReport = await withTimeout(
+        () => getReport(request_id),
+        "Current report refresh",
+        7000
+      ).catch(() => null);
+
+      if (currentReport?.access?.can_view_full_report) {
+        const backendReport = currentReport?.report || null;
+        const mergedReport =
+          backendReport && submittedReport
+            ? {
+                ...submittedReport,
+                ...backendReport,
+                category_breakdown:
+                  backendReport.category_breakdown ?? submittedReport.category_breakdown,
+                signals: backendReport.signals ?? submittedReport.signals,
+                information_gaps:
+                  backendReport.information_gaps ?? submittedReport.information_gaps,
+                suggestions: backendReport.suggestions ?? submittedReport.suggestions,
+              }
+            : backendReport;
+
+        setReport(mergedReport);
+        setAccess(currentReport?.access || null);
+        setContext(currentReport?.context || null);
+        return "current";
+      }
+
+      const moved = await withTimeout(
+        () => recoverToLatestReport({ includeCurrent: false }),
+        "Saved report lookup",
+        7000
+      ).catch(() => false);
+
+      if (moved) {
+        return "latest";
+      }
+
+      if (attempt < UNLOCK_POLL_ATTEMPTS) {
+        await wait(UNLOCK_POLL_INTERVAL_MS);
+      }
+    }
+
+    return "none";
+  }
+
   async function handleInitiatePurchase() {
     if (!isLoggedIn) {
       setBillingMessage("Please sign in or register to continue purchase.");
@@ -630,6 +689,19 @@ export default function ReportView() {
           claimValidationFailed = true;
           claimValidationMessage = claimError?.message || "Interview validation could not be completed.";
           setBillingMessage("Interview validation did not complete. Checking saved report access...");
+        }
+      }
+
+      if (claimableInterviewId) {
+        const pollResult = await pollForUnlockedAccess();
+        if (pollResult === "current") {
+          setBillingMessage("Payment approved. Full report unlocked.");
+          return;
+        }
+
+        if (pollResult === "latest") {
+          setBillingMessage("Payment approved. Opening your latest saved report...");
+          return;
         }
       }
 
