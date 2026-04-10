@@ -24,40 +24,15 @@ def custom_exception_handler(exc, context):
             }
         )
 
-    # If DRF handled the exception, reformat the response
+    # Return minimal responses for auth and probing-related failures.
     if response is not None:
-        error_type = "api_error"
-        error_code = None
-        message = None
-
-        # Extract standard DRF error structure
-        if isinstance(response.data, dict):
-            message = response.data.get("detail")
-
-            # If DRF provides a code (like token_not_valid)
-            if hasattr(exc, "default_code"):
-                error_code = exc.default_code
-        else:
-            message = str(response.data)
-
-        # Map common HTTP status codes to structured types
         if response.status_code == status.HTTP_401_UNAUTHORIZED:
-            error_type = "authentication_error"
+            response.data = {"detail": "Unauthorized"}
         elif response.status_code == status.HTTP_403_FORBIDDEN:
-            error_type = "permission_error"
+            response.data = {"detail": "Forbidden"}
         elif response.status_code == status.HTTP_404_NOT_FOUND:
-            error_type = "not_found"
-        elif response.status_code == status.HTTP_400_BAD_REQUEST:
-            error_type = "validation_error"
+            response.data = {"detail": "Not found"}
         elif response.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
-            error_type = "rate_limit_error"
-
-        response.data = {
-            "error": {
-                "type": error_type,
-                "code": error_code,
-                "message": message,
-            }
-        }
+            response.data = {"detail": "Too many requests"}
 
     return response

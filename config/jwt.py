@@ -7,8 +7,9 @@ from rest_framework_simplejwt.serializers import (
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from audit.constants import LOGIN_FAILED
+from audit.constants import LOGIN_FAILED, SUSPICIOUS_ACTIVITY
 from audit.services import log_audit_event
+from config.throttles import TokenRateThrottle
 
 
 def get_superadmin_access_lifetime():
@@ -55,7 +56,22 @@ class RERATokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class RERATokenRefreshSerializer(TokenRefreshSerializer):
     def validate(self, attrs):
-        data = super().validate(attrs)
+        try:
+            data = super().validate(attrs)
+        except InvalidToken:
+            request = self.context.get("request")
+            ip_address = request.META.get("REMOTE_ADDR") if request is not None else None
+
+            log_audit_event(
+                user=None,
+                event_type=SUSPICIOUS_ACTIVITY,
+                severity="WARNING",
+                metadata={
+                    "action": "token_refresh_failed",
+                    "ip": ip_address,
+                },
+            )
+            raise
 
         try:
             refresh_token = RefreshToken(attrs.get("refresh"))
@@ -72,7 +88,9 @@ class RERATokenRefreshSerializer(TokenRefreshSerializer):
 
 class RERATokenObtainPairView(TokenObtainPairView):
     serializer_class = RERATokenObtainPairSerializer
+    throttle_classes = [TokenRateThrottle]
 
 
 class RERATokenRefreshView(TokenRefreshView):
     serializer_class = RERATokenRefreshSerializer
+    throttle_classes = [TokenRateThrottle]

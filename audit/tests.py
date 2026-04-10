@@ -1,8 +1,10 @@
+from django.conf import settings
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from audit.models import AuditEvent
+from audit.constants import LOGIN_FAILED, SUSPICIOUS_ACTIVITY
 
 
 class AuditApiTests(TestCase):
@@ -23,6 +25,12 @@ class AuditApiTests(TestCase):
 		self.client.force_authenticate(user=self.regular)
 		response = self.client.get("/api/v1/admin/audit/")
 		self.assertEqual(response.status_code, 403)
+		self.assertEqual(response.data, {"detail": "Forbidden"})
+
+	def test_ops_events_alias_requires_authentication(self):
+		response = self.client.get("/api/v1/ops/events/")
+		self.assertEqual(response.status_code, 401)
+		self.assertEqual(response.data, {"detail": "Unauthorized"})
 
 	def test_ops_events_alias_requires_superuser(self):
 		self.client.force_authenticate(user=self.regular)
@@ -140,3 +148,47 @@ class AuditApiTests(TestCase):
 
 		self.assertTrue(payload.get("is_superuser"))
 		self.assertEqual(payload.get("user_id"), self.admin.id)
+
+	def test_invalid_login_uses_minimal_response_and_logs_failure(self):
+		response = self.client.post(
+			"/api/token/",
+			{"username": self.admin.username, "password": "wrong-password"},
+			format="json",
+		)
+
+		self.assertEqual(response.status_code, 401)
+		self.assertEqual(response.data, {"detail": "Unauthorized"})
+		self.assertEqual(AuditEvent.objects.filter(event_type=LOGIN_FAILED).count(), 1)
+
+	def test_invalid_refresh_uses_minimal_response_and_logs_suspicious_activity(self):
+		response = self.client.post(
+			"/api/token/refresh/",
+			{"refresh": "not-a-real-refresh-token"},
+			format="json",
+		)
+
+		self.assertEqual(response.status_code, 401)
+		self.assertEqual(response.data, {"detail": "Unauthorized"})
+		self.assertEqual(AuditEvent.objects.filter(event_type=SUSPICIOUS_ACTIVITY).count(), 1)
+
+	def test_token_endpoint_is_rate_limited(self):
+		rest_framework = dict(settings.REST_FRAMEWORK)
+		rates = dict(rest_framework.get("DEFAULT_THROTTLE_RATES", {}))
+		rates["token"] = "1/min"
+		rest_framework["DEFAULT_THROTTLE_RATES"] = rates
+
+		with override_settings(REST_FRAMEWORK=rest_framework):
+			first = self.client.post(
+				"/api/token/",
+				{"username": self.admin.username, "password": "wrong-password"},
+				format="json",
+			)
+			second = self.client.post(
+				"/api/token/",
+				{"username": self.admin.username, "password": "wrong-password"},
+				format="json",
+			)
+
+		self.assertEqual(first.status_code, 401)
+		self.assertEqual(second.status_code, 429)
+		self.assertEqual(second.data, {"detail": "Too many requests"})
