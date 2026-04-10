@@ -285,6 +285,14 @@ export default function ReportView() {
       return String(stateInterviewId);
     }
 
+    const source = (searchParams.get("src") || "").trim().toLowerCase();
+    if (source === "teaser") {
+      const recentInterviewId = (localStorage.getItem("rera_interview_id") || "").trim();
+      if (recentInterviewId) {
+        return recentInterviewId;
+      }
+    }
+
     try {
       const map = JSON.parse(localStorage.getItem("rera_preview_claims") || "{}");
       const interviewId = map?.[String(request_id)];
@@ -515,6 +523,11 @@ export default function ReportView() {
 
       await refreshBalance();
       await loadReport(true);
+
+      if (!claimableInterviewId && !canViewFullReport) {
+        setBillingMessage("Payment appears approved, but this teaser session ID is missing. Please re-open the report from Billing or run a new evaluation.");
+        return;
+      }
 
       setBillingMessage("Access refreshed. If your payment was approved, your full report should now be available.");
     } catch (error) {
