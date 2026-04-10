@@ -46,6 +46,7 @@ export default function InterviewPage() {
   const [reviewMode, setReviewMode] = useState(false);
   const [flowMessage, setFlowMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCreditModal, setShowCreditModal] = useState(false);
   const backendOrigin = getBackendOrigin();
   const healthcheckUrl = `${backendOrigin}/api/v1/contact/`;
   const showNetworkDiagnostics =
@@ -193,7 +194,11 @@ export default function InterviewPage() {
         },
       });
     } catch (error) {
-      setFlowMessage(error.message || "Failed to submit evaluation");
+      if (error.status === 402) {
+        setShowCreditModal(true);
+      } else {
+        setFlowMessage(error.message || "Failed to submit evaluation");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -302,6 +307,7 @@ export default function InterviewPage() {
   // ── Review mode ──
   if (reviewMode) {
     return (
+      <>
       <div style={{ maxWidth: "720px" }}>
         <div
           style={{
@@ -393,6 +399,71 @@ export default function InterviewPage() {
           </p>
         )}
       </div>
+
+      {/* Insufficient credits modal */}
+      {showCreditModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowCreditModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "12px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              padding: "36px 40px",
+              maxWidth: "420px",
+              width: "90%",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              style={{
+                fontSize: "18px",
+                fontWeight: 700,
+                color: "#1a2332",
+                marginBottom: "10px",
+              }}
+            >
+              Insufficient Credits
+            </h2>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "#6b7280",
+                lineHeight: "1.6",
+                marginBottom: "28px",
+              }}
+            >
+              You don&apos;t have enough credits to run this evaluation.
+              Purchase credits to continue.
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button
+                style={BTN_SECONDARY}
+                onClick={() => setShowCreditModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                style={BTN_PRIMARY}
+                onClick={() => navigate("/billing")}
+              >
+                Buy Credits
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </>
     );
   }
 
