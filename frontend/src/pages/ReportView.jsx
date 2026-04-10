@@ -511,8 +511,14 @@ export default function ReportView() {
   }
 
   async function handleRefreshUnlockedAccess() {
+    if (!isLoggedIn) {
+      setBillingMessage("Please sign in first to check payment approval and unlock your report.");
+      navigate("/login", { state: { from: returnPath } });
+      return;
+    }
+
     setIsBillingLoading(true);
-    setBillingMessage("");
+    setBillingMessage("Checking payment approval and refreshing access...");
     try {
       if (!claimableInterviewId) {
         const movedToLatest = await recoverToLatestReport();
@@ -524,6 +530,12 @@ export default function ReportView() {
       if (claimableInterviewId) {
         try {
           const result = await submitInterview(claimableInterviewId);
+
+          if (result?.preview) {
+            setBillingMessage("Sign in session is required to unlock this report. Please sign in and try again.");
+            return;
+          }
+
           const nextRequestId = result?.request_id;
           if (nextRequestId) {
             try {

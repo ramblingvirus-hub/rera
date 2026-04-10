@@ -551,6 +551,30 @@ class SubmitInterviewView(APIView):
                     status=status.HTTP_200_OK,
                 )
 
+            # Fallback for historical records where interview status is submitted
+            # but no report is currently reachable for the authenticated user.
+            if request.user.is_authenticated:
+                payload = {
+                    "answers": interview.responses or {}
+                }
+
+                factory = APIRequestFactory()
+                internal_request = factory.post(
+                    "/api/v1/evaluate/",
+                    payload,
+                    format="json",
+                    HTTP_AUTHORIZATION=request.META.get("HTTP_AUTHORIZATION")
+                )
+                internal_request.user = request.user
+
+                response = EvaluateProjectView.as_view()(internal_request)
+
+                if response.status_code == 200:
+                    if interview.user_id is None:
+                        interview.user = request.user
+                        interview.save(update_fields=["user", "updated_at"])
+                return response
+
             return Response(
                 {"error": "Interview already submitted"},
                 status=status.HTTP_400_BAD_REQUEST

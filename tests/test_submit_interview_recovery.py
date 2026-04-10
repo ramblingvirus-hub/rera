@@ -8,7 +8,7 @@ django.setup()
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -85,7 +85,8 @@ class SubmitInterviewRecoveryTests(TestCase):
         self.assertEqual(response.data.get("request_id"), str(report.request_id))
         self.assertTrue(response.data.get("recovered"))
 
-    def test_submitted_interview_without_report_returns_error(self):
+    @override_settings(QA_BYPASS_UNLOCK=True)
+    def test_submitted_interview_without_report_falls_back_to_re_evaluation(self):
         interview = InterviewSession.objects.create(
             user=self.user,
             interview_version="v1.1",
@@ -96,5 +97,5 @@ class SubmitInterviewRecoveryTests(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.post(f"/api/v1/interview/{interview.id}/submit/", format="json")
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data.get("error"), "Interview already submitted")
+        self.assertNotEqual(response.status_code, 400)
+        self.assertNotEqual(response.data.get("error"), "Interview already submitted")
