@@ -493,6 +493,35 @@ class GetInterviewView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class RecoverLatestInterviewView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        interview = (
+            InterviewSession.objects
+            .filter(user=request.user)
+            .exclude(responses={})
+            .order_by("-updated_at", "-created_at")
+            .first()
+        )
+
+        if interview is None:
+            return Response(
+                {"error": "No recoverable interview found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(
+            {
+                "interview_id": str(interview.id),
+                "status": interview.status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class SubmitInterviewView(APIView):
 
     permission_classes = [AllowAny]

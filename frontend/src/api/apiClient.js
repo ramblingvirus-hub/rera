@@ -395,6 +395,13 @@ export async function submitInterview(interviewId) {
   });
 }
 
+export async function recoverLatestInterview() {
+  return apiRequest("/interview/recover-latest/", {
+    method: "POST",
+    auth: true,
+  });
+}
+
 export async function getReport(requestId) {
   return apiRequest(`/reports/${requestId}/`, {
     auth: true,

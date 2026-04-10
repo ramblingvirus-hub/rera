@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { listReports, submitInterview } from "../api/apiClient";
+import { listReports, recoverLatestInterview, submitInterview } from "../api/apiClient";
 
 const RISK_COLORS = {
   LOW_RISK: { color: "#16a34a", bg: "#f0fdf4" },
@@ -72,15 +72,21 @@ export default function ReportsListPage() {
   }
 
   async function handleRecoverTeaser() {
-    if (!savedInterviewId) {
-      setRecoverMessage("No recoverable teaser draft found in this browser.");
-      return;
-    }
-
     setRecovering(true);
     setRecoverMessage("");
     try {
-      const result = await submitInterview(savedInterviewId);
+      let interviewId = savedInterviewId;
+
+      if (!interviewId) {
+        const latest = await recoverLatestInterview();
+        interviewId = latest?.interview_id ? String(latest.interview_id) : "";
+      }
+
+      if (!interviewId) {
+        throw new Error("No recoverable draft found.");
+      }
+
+      const result = await submitInterview(interviewId);
       const nextRequestId = result?.request_id;
       if (!nextRequestId) {
         throw new Error("Recovery failed: no request id returned.");
@@ -88,6 +94,9 @@ export default function ReportsListPage() {
       localStorage.removeItem("rera_interview_id");
       navigate(`/report/${nextRequestId}`);
     } catch (err) {
+      if (err?.status === 404) {
+        setRecoverMessage("No recoverable draft was found for your account.");
+      } else 
       if (err?.status === 402) {
         setRecoverMessage("This draft is valid, but credits are required to finalize it. After payment approval, click recover again.");
       } else if (err?.message?.toLowerCase().includes("already submitted")) {
