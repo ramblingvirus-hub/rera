@@ -571,6 +571,9 @@ export default function ReportView() {
     setIsBillingLoading(true);
     setBillingMessage("Checking payment approval and refreshing access...");
     try {
+      let claimValidationFailed = false;
+      let claimValidationMessage = "";
+
       if (!claimableInterviewId) {
         setBillingMessage("Checking saved reports for an unlocked result...");
         const movedToLatest = await withTimeout(
@@ -624,7 +627,9 @@ export default function ReportView() {
             return;
           }
 
-          throw claimError;
+          claimValidationFailed = true;
+          claimValidationMessage = claimError?.message || "Interview validation could not be completed.";
+          setBillingMessage("Interview validation did not complete. Checking saved report access...");
         }
       }
 
@@ -687,6 +692,12 @@ export default function ReportView() {
       }
 
       await withTimeout(() => loadReport(true), "Access refresh", 15000);
+
+      if (claimValidationFailed) {
+        setBillingMessage(`${claimValidationMessage} No unlocked report was found yet.`);
+        return;
+      }
+
       setBillingMessage("Access refreshed. If payment was approved, your full report should now be available.");
     } catch (error) {
       setBillingMessage(error?.message || "Unable to refresh access right now.");
