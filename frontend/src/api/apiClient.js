@@ -267,7 +267,18 @@ export function clearAuthTokens() {
 }
 
 export function isAuthenticated() {
-  return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!token) {
+    return false;
+  }
+
+  const payload = parseJwtPayload(token);
+  if (!payload || typeof payload.exp !== "number") {
+    return false;
+  }
+
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  return payload.exp > nowInSeconds;
 }
 
 export function getCurrentUser() {

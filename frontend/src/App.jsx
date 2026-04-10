@@ -116,9 +116,11 @@ function App() {
         <Route
           path="/new"
           element={
-            <AppShell breadcrumb={{ parent: "Dashboard", current: "New Evaluation" }}>
-              <InterviewPage />
-            </AppShell>
+            <ProtectedRoute>
+              <AppShell breadcrumb={{ parent: "Dashboard", current: "New Evaluation" }}>
+                <InterviewPage />
+              </AppShell>
+            </ProtectedRoute>
           }
         />
 
