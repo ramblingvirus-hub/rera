@@ -442,6 +442,21 @@ export default function ReportView() {
     }
   }
 
+  async function recoverToLatestReport() {
+    const reports = await listReports();
+    if (!Array.isArray(reports) || reports.length === 0) {
+      return false;
+    }
+
+    const latestRequestId = reports[0]?.request_id;
+    if (!latestRequestId) {
+      return false;
+    }
+
+    navigate(`/report/${latestRequestId}`, { replace: true });
+    return true;
+  }
+
   async function handleInitiatePurchase() {
     if (!isLoggedIn) {
       setBillingMessage("Please sign in or register to continue purchase.");
@@ -519,6 +534,16 @@ export default function ReportView() {
             setBillingMessage("Payment is still pending admin approval. Please try again after approval.");
             return;
           }
+
+          const submittedMessage = String(claimError?.message || "").toLowerCase();
+          if (submittedMessage.includes("interview already submitted")) {
+            const moved = await recoverToLatestReport();
+            if (!moved) {
+              setBillingMessage("Interview already submitted. We could not find the saved report. Please run a new evaluation.");
+            }
+            return;
+          }
+
           throw claimError;
         }
       }
