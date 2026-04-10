@@ -501,6 +501,37 @@ class SubmitInterviewView(APIView):
     def _normalize_sale_mode(value):
         return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
 
+    @staticmethod
+    def _recover_existing_request_id(interview, user):
+        if user is None or not getattr(user, "is_authenticated", False):
+            return None
+
+        answers = interview.responses or {}
+        project_name = str(answers.get("q1") or "").strip()
+        city = str(answers.get("q3") or "").strip()
+        location = str(answers.get("q4") or "").strip()
+
+        queryset = Report.objects.filter(user=user)
+
+        if project_name or city or location:
+            exact = queryset.filter(
+                project_name=project_name,
+                city=city,
+                location=location,
+            ).order_by("-created_at").first()
+            if exact:
+                return str(exact.request_id)
+
+        nearest = queryset.filter(created_at__gte=interview.created_at).order_by("created_at").first()
+        if nearest:
+            return str(nearest.request_id)
+
+        latest = queryset.order_by("-created_at").first()
+        if latest:
+            return str(latest.request_id)
+
+        return None
+
     def post(self, request, interview_id):
 
         interview = get_object_or_404(
@@ -510,6 +541,16 @@ class SubmitInterviewView(APIView):
         )
 
         if interview.status == InterviewStatus.SUBMITTED:
+            recovered_request_id = self._recover_existing_request_id(interview, request.user)
+            if recovered_request_id:
+                return Response(
+                    {
+                        "request_id": recovered_request_id,
+                        "recovered": True,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
             return Response(
                 {"error": "Interview already submitted"},
                 status=status.HTTP_400_BAD_REQUEST
