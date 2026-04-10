@@ -97,6 +97,41 @@ class ManualPaymentFlowTests(TestCase):
 	def _proof_file(self, name="proof.png"):
 		return SimpleUploadedFile(name, b"file-bytes", content_type="image/png")
 
+	def test_admin_manual_payment_list_requires_authentication(self):
+		response = self.client.get("/api/v1/billing/admin/manual-payments/")
+
+		self.assertEqual(response.status_code, 401)
+		self.assertEqual(response.data, {"detail": "Unauthorized"})
+
+	def test_admin_manual_payment_list_requires_admin(self):
+		self.client.force_authenticate(user=self.user)
+		response = self.client.get("/api/v1/billing/admin/manual-payments/")
+
+		self.assertEqual(response.status_code, 403)
+		self.assertEqual(response.data, {"detail": "Forbidden"})
+
+	def test_admin_manual_payment_review_requires_admin(self):
+		payment = ManualPayment.objects.create(
+			user=self.user,
+			package_key="single",
+			amount_php=550,
+			credits_purchased=1,
+			payment_method="GCASH",
+			reference_number="MANUAL-NON-ADMIN-1",
+			reference_number_normalized="MANUAL-NON-ADMIN-1",
+			proof_file=self._proof_file("non-admin.png"),
+		)
+
+		self.client.force_authenticate(user=self.user)
+		response = self.client.post(
+			f"/api/v1/billing/admin/manual-payments/{payment.id}/review/",
+			data={"action": "approve", "admin_notes": "should fail"},
+			format="json",
+		)
+
+		self.assertEqual(response.status_code, 403)
+		self.assertEqual(response.data, {"detail": "Forbidden"})
+
 	def test_submit_manual_payment_creates_pending_record(self):
 		self.client.force_authenticate(user=self.user)
 		response = self.client.post(

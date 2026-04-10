@@ -28,7 +28,7 @@ class RERATokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         try:
             data = super().validate(attrs)
-        except InvalidToken:
+        except Exception:
             request = self.context.get("request")
             username = attrs.get("username")
             ip_address = request.META.get("REMOTE_ADDR") if request is not None else None
@@ -58,7 +58,7 @@ class RERATokenRefreshSerializer(TokenRefreshSerializer):
     def validate(self, attrs):
         try:
             data = super().validate(attrs)
-        except InvalidToken:
+        except Exception:
             request = self.context.get("request")
             ip_address = request.META.get("REMOTE_ADDR") if request is not None else None
 
