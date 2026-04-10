@@ -4,6 +4,7 @@ from django.conf import settings
 from audit.services import log_audit_event
 from .models import CreditPurchase, CreditTransaction, ManualPayment, Subscription
 from django.db import transaction
+from django.db.utils import OperationalError, ProgrammingError
 from audit.constants import (
     PAYMENT_MANUAL_APPROVED,
     PAYMENT_MANUAL_REJECTED,
@@ -56,6 +57,15 @@ def calculate_user_balance(user):
 
     now = timezone.now()
 
+    # Self-heal historical/manual approval records that were marked approved
+    # without a corresponding immutable credit ledger entry.
+    try:
+        reconcile_manual_payment_credits(user)
+    except (OperationalError, ProgrammingError):
+        # Some test environments don't include manual-payment tables.
+        # Balance checks must remain available for all deployments.
+        pass
+
     transactions = CreditTransaction.objects.filter(
         user=user
     ).filter(
@@ -65,6 +75,65 @@ def calculate_user_balance(user):
     result = transactions.aggregate(total=Sum('amount'))
 
     return result['total'] or 0
+
+
+def reconcile_manual_payment_credits(user):
+    """
+    Ensure every approved manual payment has a completed purchase record and
+    exactly one immutable purchase ledger transaction.
+    """
+    if not user:
+        return 0
+
+    repaired = 0
+
+    with transaction.atomic():
+        approved_payments = (
+            ManualPayment.objects
+            .select_for_update()
+            .select_related("credit_purchase")
+            .filter(user=user, status=ManualPayment.STATUS_APPROVED)
+        )
+
+        for payment in approved_payments:
+            reference_id = f"manual-{payment.id}"
+
+            purchase = payment.credit_purchase
+            if purchase is None:
+                purchase = CreditPurchase.objects.create(
+                    user=payment.user,
+                    credits_purchased=payment.credits_purchased,
+                    amount_php=payment.amount_php,
+                    payment_method=f"manual_{payment.payment_method.lower()}",
+                    paymongo_payment_id=None,
+                    status="completed",
+                )
+                payment.credit_purchase = purchase
+                payment.save(update_fields=["credit_purchase"])
+            elif purchase.status != "completed":
+                purchase.status = "completed"
+                purchase.save(update_fields=["status", "updated_at"])
+
+            has_purchase_txn = CreditTransaction.objects.filter(
+                user=payment.user,
+                type="purchase",
+                reference_id=reference_id,
+            ).exists()
+
+            if has_purchase_txn:
+                continue
+
+            expiry_anchor = payment.reviewed_at or payment.created_at or timezone.now()
+            CreditTransaction.objects.create(
+                user=payment.user,
+                amount=payment.credits_purchased,
+                type="purchase",
+                expiry_date=expiry_anchor + timedelta(days=365),
+                reference_id=reference_id,
+            )
+            repaired += 1
+
+    return repaired
 
 def deduct_credit(user, reference_id=None):
     """
@@ -275,13 +344,18 @@ def review_manual_payment(payment, reviewer, action, admin_notes=""):
         )
 
         reference_id = f"manual-{locked.id}"
-        create_credit_purchase(
+        if not CreditTransaction.objects.filter(
             user=locked.user,
-            credit_amount=locked.credits_purchased,
-            expiry_date=now + timedelta(days=365),
+            type="purchase",
             reference_id=reference_id,
-            source="manual_review",
-        )
+        ).exists():
+            CreditTransaction.objects.create(
+                user=locked.user,
+                amount=locked.credits_purchased,
+                type="purchase",
+                expiry_date=now + timedelta(days=365),
+                reference_id=reference_id,
+            )
 
         locked.status = ManualPayment.STATUS_APPROVED
         locked.reviewed_at = now

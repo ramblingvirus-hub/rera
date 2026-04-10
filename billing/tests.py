@@ -5,6 +5,7 @@ import json
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from billing.models import CreditPurchase, CreditTransaction, ManualPayment
@@ -208,6 +209,34 @@ class ManualPaymentFlowTests(TestCase):
 		self.assertEqual(payment.status, ManualPayment.STATUS_APPROVED)
 		self.assertEqual(CreditTransaction.objects.filter(user=self.user, type="purchase").count(), 1)
 		self.assertEqual(CreditPurchase.objects.filter(user=self.user, status="completed").count(), 1)
+
+	def test_balance_reconciles_approved_manual_payment_without_ledger(self):
+		payment = ManualPayment.objects.create(
+			user=self.user,
+			package_key="bundle_3",
+			amount_php=1500,
+			credits_purchased=3,
+			payment_method="GCASH",
+			reference_number="MANUAL-MISSING-LEDGER-1",
+			reference_number_normalized="MANUAL-MISSING-LEDGER-1",
+			proof_file=self._proof_file("missing-ledger.png"),
+			status=ManualPayment.STATUS_APPROVED,
+			reviewed_at=timezone.now(),
+			reviewed_by=self.admin,
+		)
+
+		self.client.force_authenticate(user=self.user)
+		response = self.client.get("/api/v1/billing/credits/balance/")
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.data["credit_balance"], 3)
+		self.assertTrue(
+			CreditTransaction.objects.filter(
+				user=self.user,
+				type="purchase",
+				reference_id=f"manual-{payment.id}",
+			).exists()
+		)
 
 
 @override_settings(GCASH_QR_URL="/media/qr/gcash.png", MAYA_QR_URL="https://cdn.example.com/maya.png")
