@@ -285,18 +285,20 @@ export default function ReportView() {
       return String(stateInterviewId);
     }
 
-    const source = (searchParams.get("src") || "").trim().toLowerCase();
-    if (source === "teaser") {
-      const recentInterviewId = (localStorage.getItem("rera_interview_id") || "").trim();
-      if (recentInterviewId) {
-        return recentInterviewId;
-      }
+    const recentInterviewId = (localStorage.getItem("rera_interview_id") || "").trim();
+    if (recentInterviewId) {
+      return recentInterviewId;
     }
 
     try {
       const map = JSON.parse(localStorage.getItem("rera_preview_claims") || "{}");
       const interviewId = map?.[String(request_id)];
-      return interviewId ? String(interviewId) : "";
+      if (interviewId) {
+        return String(interviewId);
+      }
+
+      const latestMappedInterviewId = Object.values(map || {}).find((value) => Boolean(value));
+      return latestMappedInterviewId ? String(latestMappedInterviewId) : "";
     } catch {
       return "";
     }
