@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   getCreditBalance,
@@ -15,7 +16,14 @@ const CARD_STYLE = {
   padding: "24px",
 };
 
-const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:8000";
+function resolveDefaultBackendOrigin() {
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return "http://127.0.0.1:8000";
+}
+
+const DEFAULT_BACKEND_ORIGIN = resolveDefaultBackendOrigin();
 const DEFAULT_GCASH_QR_PUBLIC_PATH = "/hg-gcash-qr-code.png";
 
 function resolveInstructionAssetUrl(rawUrl) {
@@ -65,6 +73,9 @@ function statusStyle(status) {
 }
 
 export default function BillingPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [flowMessage, setFlowMessage] = useState("");
@@ -80,6 +91,17 @@ export default function BillingPage() {
   const [qrPreviewUrl, setQrPreviewUrl] = useState("");
   const [qrImageFailed, setQrImageFailed] = useState(false);
   const [activeQrUrl, setActiveQrUrl] = useState("");
+
+  const { returnToReportPath, initialPackageKey } = useMemo(() => {
+    const params = new URLSearchParams(location.search || "");
+    const fromPath = (params.get("from") || "").trim();
+    const packageKey = (params.get("package") || "").trim();
+
+    return {
+      returnToReportPath: fromPath.startsWith("/report/") ? fromPath : "",
+      initialPackageKey: packageKey,
+    };
+  }, [location.search]);
 
   const selectedPackage = useMemo(() => {
     if (!config?.packages) {
@@ -123,6 +145,10 @@ export default function BillingPage() {
         setConfig(configPayload || null);
         setPayments(Array.isArray(paymentsPayload) ? paymentsPayload : []);
 
+        if (initialPackageKey && configPayload?.packages?.[initialPackageKey]) {
+          setPackageKey(initialPackageKey);
+        }
+
         if (configPayload?.methods?.includes("GCASH")) {
           setPaymentMethod("GCASH");
         } else if (configPayload?.methods?.[0]) {
@@ -136,7 +162,7 @@ export default function BillingPage() {
     }
 
     load();
-  }, []);
+  }, [initialPackageKey]);
 
   useEffect(() => {
     setQrImageFailed(false);
@@ -209,6 +235,24 @@ export default function BillingPage() {
         <div style={{ fontSize: "14px", color: "#1f2937", fontWeight: 600 }}>
           Current Credits: {creditBalance ?? "-"}
         </div>
+        {returnToReportPath && (
+          <button
+            type="button"
+            onClick={() => navigate(returnToReportPath)}
+            style={{
+              marginTop: "10px",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              padding: "8px 12px",
+              backgroundColor: "#ffffff",
+              color: "#1f2937",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Back to Report
+          </button>
+        )}
       </div>
 
       <div style={CARD_STYLE}>

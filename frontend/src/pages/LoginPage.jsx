@@ -54,7 +54,13 @@ export default function LoginPage() {
 
       // PayMongo is disabled — send users with a pending purchase to billing
       if (pendingPackage) {
-        navigate("/billing", { replace: true });
+        const reportFrom = resolveRedirectTarget(location.state, "/dashboard");
+        const params = new URLSearchParams();
+        if (typeof reportFrom === "string" && reportFrom.startsWith("/report/")) {
+          params.set("from", reportFrom);
+        }
+        params.set("package", String(pendingPackage));
+        navigate(`/billing?${params.toString()}`, { replace: true });
         return;
       }
 

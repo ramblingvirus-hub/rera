@@ -19,6 +19,47 @@ const CREDIT_PACKAGE_OPTIONS = [
   { value: "bundle_5", label: "5 credits — PHP 2,000" },
 ];
 
+const PENDING_PURCHASE_STORAGE_KEY = "rera_pending_purchase";
+
+function readPendingPurchase() {
+  try {
+    const raw = localStorage.getItem(PENDING_PURCHASE_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    return {
+      requestId: parsed.requestId ? String(parsed.requestId) : "",
+      purchaseId: parsed.purchaseId ? String(parsed.purchaseId) : "",
+      returnPath: parsed.returnPath ? String(parsed.returnPath) : "",
+      createdAt: parsed.createdAt ? String(parsed.createdAt) : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writePendingPurchase(payload) {
+  try {
+    localStorage.setItem(PENDING_PURCHASE_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Non-blocking: checkout flow can still proceed without localStorage.
+  }
+}
+
+function clearPendingPurchase() {
+  try {
+    localStorage.removeItem(PENDING_PURCHASE_STORAGE_KEY);
+  } catch {
+    // Non-blocking.
+  }
+}
+
 const LOCKED_SECTION_LABELS = {
   category_breakdown: "Category Breakdown",
   category_interpretations: "Category Interpretation",
@@ -294,6 +335,14 @@ export default function ReportView() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [isTestUnlocked, setIsTestUnlocked] = useState(false);
 
+  const pendingPurchase = useMemo(() => {
+    const data = readPendingPurchase();
+    if (!data || !data.requestId || data.requestId !== String(request_id)) {
+      return null;
+    }
+    return data;
+  }, [request_id]);
+
   // Detect ?payment=success after returning from PayMongo checkout
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -302,6 +351,12 @@ export default function ReportView() {
       navigate(location.pathname, { replace: true });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!purchaseId && pendingPurchase?.purchaseId) {
+      setPurchaseId(pendingPurchase.purchaseId);
+    }
+  }, [purchaseId, pendingPurchase]);
 
   const canViewFullReport = Boolean(access?.can_view_full_report || isTestUnlocked);
   const testUnlockEnabled =
@@ -389,6 +444,41 @@ export default function ReportView() {
   }, []);
 
   useEffect(() => {
+    async function autoConfirmPayment() {
+      if (!paymentSuccess || !isLoggedIn) {
+        return;
+      }
+
+      const effectivePurchaseId = purchaseId?.trim() || pendingPurchase?.purchaseId || "";
+      if (!effectivePurchaseId) {
+        setBillingMessage("Payment success detected, but purchase ID is missing. Click 'I Already Paid - Unlock Report'.");
+        return;
+      }
+
+      setIsBillingLoading(true);
+      setBillingMessage("");
+      try {
+        const data = await confirmCreditPurchase(effectivePurchaseId);
+        const status = data?.status || "unknown";
+
+        if (status === "completed" || status === "failed") {
+          clearPendingPurchase();
+        }
+
+        await refreshBalance();
+        await loadReport(true);
+        setBillingMessage(`Payment verified. Current status: ${status}.`);
+      } catch (error) {
+        setBillingMessage(error?.message || "Payment verification failed. Try 'I Already Paid - Unlock Report'.");
+      } finally {
+        setIsBillingLoading(false);
+      }
+    }
+
+    autoConfirmPayment();
+  }, [paymentSuccess, isLoggedIn, purchaseId, pendingPurchase, refreshBalance, loadReport]);
+
+  useEffect(() => {
     loadReport();
   }, [loadReport]);
 
@@ -449,10 +539,25 @@ export default function ReportView() {
     setIsBillingLoading(true);
     setBillingMessage("");
     try {
-      const data = await initiateCreditPurchase(selectedPackage);
+      const successUrl = `${window.location.origin}${returnPath}${returnPath.includes("?") ? "&" : "?"}payment=success`;
+      const cancelUrl = `${window.location.origin}${returnPath}${returnPath.includes("?") ? "&" : "?"}payment=cancel`;
+
+      const data = await initiateCreditPurchase(selectedPackage, {
+        successUrl,
+        cancelUrl,
+      });
       const nextPurchaseId = data?.purchase_id || "";
       const checkoutUrl = data?.checkout_url || "";
       setPurchaseId(nextPurchaseId);
+
+      if (nextPurchaseId) {
+        writePendingPurchase({
+          requestId: String(request_id),
+          purchaseId: String(nextPurchaseId),
+          returnPath,
+          createdAt: new Date().toISOString(),
+        });
+      }
 
       if (checkoutUrl) {
         setBillingMessage("Redirecting to PayMongo checkout...");
@@ -476,18 +581,29 @@ export default function ReportView() {
       return;
     }
 
-    if (!purchaseId) {
+    const effectivePurchaseId = purchaseId?.trim() || pendingPurchase?.purchaseId || "";
+
+    if (!effectivePurchaseId) {
       setBillingMessage("Purchase ID is required before confirmation.");
       return;
     }
     setIsBillingLoading(true);
     setBillingMessage("");
     try {
-      const data = await confirmCreditPurchase(purchaseId.trim());
+      const data = await confirmCreditPurchase(effectivePurchaseId);
       const status = data?.status || "unknown";
       setBillingMessage(`Purchase check complete. Status: ${status}.`);
+
+      if (status === "completed" || status === "failed") {
+        clearPendingPurchase();
+      }
+
       await refreshBalance();
-      await loadReport();
+      await loadReport(true);
+
+      if (status === "completed" && claimableInterviewId) {
+        await handleClaimAnonymousPreview();
+      }
     } catch (error) {
       setBillingMessage(error.message || "Failed to confirm purchase");
     } finally {
@@ -564,8 +680,25 @@ export default function ReportView() {
     setIsBillingLoading(true);
     setBillingMessage("");
     try {
+      const effectivePurchaseId = purchaseId?.trim() || pendingPurchase?.purchaseId || "";
+
+      if (effectivePurchaseId) {
+        const data = await confirmCreditPurchase(effectivePurchaseId);
+        const status = data?.status || "unknown";
+
+        if (status === "completed" || status === "failed") {
+          clearPendingPurchase();
+        }
+      }
+
       await refreshBalance();
       await loadReport(true);
+
+      if (claimableInterviewId) {
+        await handleClaimAnonymousPreview();
+        return;
+      }
+
       setBillingMessage("Access refreshed. If your payment was approved, your full report should now be available.");
     } catch (error) {
       setBillingMessage(error?.message || "Unable to refresh access right now.");
