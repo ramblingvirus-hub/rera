@@ -59,8 +59,6 @@ def calculate_user_balance(user):
     Expired purchase credits are excluded.
     """
 
-    now = timezone.now()
-
     # Self-heal historical records into immutable ledger entries.
     try:
         reconcile_manual_payment_credits(user)
@@ -69,6 +67,11 @@ def calculate_user_balance(user):
         # Balance checks must remain available even if reconciliation fails.
         pass
 
+    return _raw_calculate_user_balance(user)
+
+
+def _raw_calculate_user_balance(user):
+    now = timezone.now()
     transactions = CreditTransaction.objects.filter(
         user=user
     ).filter(
@@ -76,7 +79,6 @@ def calculate_user_balance(user):
     )
 
     result = transactions.aggregate(total=Sum('amount'))
-
     return result['total'] or 0
 
 
@@ -235,12 +237,34 @@ def reconcile_user_credits(user):
     except Exception:
         repaired_purchase = 0
 
-    balance = calculate_user_balance(user)
+    balance = _raw_calculate_user_balance(user)
+
+    diagnostics = {
+        "manual_table_present": table_exists("billing_manualpayment"),
+        "approved_manual_payments": 0,
+        "successful_purchases": 0,
+    }
+
+    if diagnostics["manual_table_present"]:
+        try:
+            diagnostics["approved_manual_payments"] = ManualPayment.objects.annotate(
+                status_lower=Lower("status")
+            ).filter(user=user, status_lower__in=APPROVED_MANUAL_STATUSES).count()
+        except Exception:
+            diagnostics["approved_manual_payments"] = 0
+
+    try:
+        diagnostics["successful_purchases"] = CreditPurchase.objects.annotate(
+            status_lower=Lower("status")
+        ).filter(user=user, status_lower__in=SUCCESS_PURCHASE_STATUSES).count()
+    except Exception:
+        diagnostics["successful_purchases"] = 0
 
     return {
         "repaired_manual": int(repaired_manual or 0),
         "repaired_purchase": int(repaired_purchase or 0),
         "credit_balance": int(balance or 0),
+        "diagnostics": diagnostics,
     }
 
 def deduct_credit(user, reference_id=None):

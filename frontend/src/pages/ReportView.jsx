@@ -644,6 +644,22 @@ export default function ReportView() {
         setCreditBalance(reconciliation.credit_balance);
       }
 
+      if (reconciliation && Number(reconciliation.credit_balance || 0) <= 0) {
+        const approvedCount = Number(reconciliation?.diagnostics?.approved_manual_payments || 0);
+        const successfulPurchases = Number(reconciliation?.diagnostics?.successful_purchases || 0);
+        const repairedCount = Number(reconciliation?.repaired_manual || 0) + Number(reconciliation?.repaired_purchase || 0);
+
+        if (approvedCount === 0 && successfulPurchases === 0) {
+          setBillingMessage("No approved payment was found for this account yet. Please ask admin to approve this account's submission.");
+          return;
+        }
+
+        if (repairedCount === 0) {
+          setBillingMessage("Payment records were found but no credits could be applied automatically. Please contact admin to run account credit repair.");
+          return;
+        }
+      }
+
       if (!claimableInterviewId) {
         setBillingMessage("Checking saved reports for an unlocked result...");
         const movedToLatest = await withTimeout(
