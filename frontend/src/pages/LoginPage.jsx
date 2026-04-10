@@ -345,6 +345,19 @@ export default function LoginPage() {
             </>
           )}
 
+          {location.state?.sessionExpired && !error && (
+            <p
+              style={{
+                color: "#b45309",
+                fontSize: "13px",
+                marginBottom: "16px",
+                lineHeight: "1.4",
+              }}
+            >
+              Your session has expired. Please log in again.
+            </p>
+          )}
+
           {error && (
             <p
               style={{

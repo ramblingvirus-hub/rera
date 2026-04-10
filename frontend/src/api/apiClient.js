@@ -185,6 +185,7 @@ async function refreshAccessToken() {
 
         if (!response.ok) {
           clearAuthTokens();
+          window.dispatchEvent(new CustomEvent("auth:session-expired"));
           return false;
         }
 
@@ -239,6 +240,9 @@ async function apiRequest(path, options = {}) {
         retryOn401: false,
       });
     }
+
+    // Refresh failed — session is fully expired; surface a clean error.
+    throw new ApiError("Session expired. Please log in again.", 401, null);
   }
 
   return parseResponse(response);

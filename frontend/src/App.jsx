@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 
 import AppShell from "./layouts/AppShell";
@@ -21,6 +21,23 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import AuditDashboard from "./pages/AuditDashboard";
 import AdminPaymentsPage from "./pages/AdminPaymentsPage";
 import { isAuthenticated, logAuditEvent } from "./api/apiClient";
+
+function SessionExpiryWatcher() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    function handleSessionExpired() {
+      navigate("/login", { replace: true, state: { sessionExpired: true } });
+    }
+
+    window.addEventListener("auth:session-expired", handleSessionExpired);
+    return () => {
+      window.removeEventListener("auth:session-expired", handleSessionExpired);
+    };
+  }, [navigate]);
+
+  return null;
+}
 
 function AuditRouteTracker() {
   const location = useLocation();
@@ -44,6 +61,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuditRouteTracker />
+      <SessionExpiryWatcher />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
