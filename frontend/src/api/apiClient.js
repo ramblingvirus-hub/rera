@@ -529,6 +529,7 @@ export async function getAdminAuditEvents(filters = {}) {
   for (const endpoint of [`/ops/events/${suffix}`, `/insights/events/${suffix}`, `/admin/audit/${suffix}`]) {
     try {
       payload = await apiRequest(endpoint, { auth: true });
+      console.info(`[audit] events loaded via ${endpoint}`);
       break;
     } catch (error) {
       lastError = error;
@@ -557,13 +558,31 @@ export async function getAdminSystemFlags() {
 
   for (const endpoint of ["/ops/system-flags/", "/insights/system-flags/", "/admin/audit/system-flags/"]) {
     try {
-      return await apiRequest(endpoint, { auth: true });
+      const payload = await apiRequest(endpoint, { auth: true });
+      console.info(`[audit] system flags loaded via ${endpoint}`);
+      return payload;
     } catch (error) {
       lastError = error;
     }
   }
 
   throw lastError || new Error("Failed to load system flags.");
+}
+
+export async function getAdminAuditHealth() {
+  let lastError = null;
+
+  for (const endpoint of ["/ops/health/", "/insights/health/", "/admin/audit/health/"]) {
+    try {
+      const payload = await apiRequest(endpoint, { auth: true });
+      console.info(`[audit] health loaded via ${endpoint}`);
+      return payload;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Failed to load audit health.");
 }
 
 export async function logAuditEvent(eventType, metadata = {}, options = {}) {

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   getAdminAuditEvents,
+  getAdminAuditHealth,
   getAdminSystemFlags,
   listAdminManualPayments,
   reviewManualPayment,
@@ -306,6 +307,7 @@ export default function AuditDashboard() {
   const [nextOffset, setNextOffset] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+    const [healthMessage, setHealthMessage] = useState("Checking API route health...");
   const [selectedRequestId, setSelectedRequestId] = useState("");
   const [selectedTimelineSource, setSelectedTimelineSource] = useState(null);
   const [activeAlertRequestIds, setActiveAlertRequestIds] = useState([]);
@@ -606,6 +608,16 @@ export default function AuditDashboard() {
     }
   }
 
+  async function loadAuditHealth() {
+    try {
+      const payload = await getAdminAuditHealth();
+      const eventCount = Number(payload?.event_count || 0);
+      setHealthMessage(`Audit API healthy. Events tracked: ${eventCount}.`);
+    } catch (probeError) {
+      setHealthMessage(probeError?.message || "Audit API health check failed.");
+    }
+  }
+
   async function handleReviewPayment(paymentId, action) {
     setPaymentMessage("");
     try {
@@ -626,6 +638,7 @@ export default function AuditDashboard() {
     loadSummaryEvents();
     loadPendingPayments();
     loadSystemFlags();
+    loadAuditHealth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -772,6 +785,10 @@ export default function AuditDashboard() {
                   color: "#0f766e",
                 }}
               >
+
+              <div style={{ fontSize: "12px", opacity: 0.85, marginBottom: "8px" }}>
+                {healthMessage}
+              </div>
                 Reset All
               </button>
             )}

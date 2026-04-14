@@ -97,3 +97,24 @@ class AdminSystemFlagsView(APIView):
 			},
 			status=status.HTTP_200_OK,
 		)
+
+
+class AdminAuditHealthView(APIView):
+	permission_classes = [IsAdminUser]
+
+	def get(self, request):
+		latest = (
+			AuditEvent.objects.only("timestamp")
+			.order_by("-timestamp")
+			.first()
+		)
+
+		return Response(
+			{
+				"status": "ok",
+				"service": "audit-dashboard",
+				"event_count": AuditEvent.objects.count(),
+				"latest_event_at": latest.timestamp if latest else None,
+			},
+			status=status.HTTP_200_OK,
+		)
