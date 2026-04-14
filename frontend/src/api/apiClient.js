@@ -523,9 +523,21 @@ export async function getAdminAuditEvents(filters = {}) {
   });
 
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  const payload = await apiRequest(`/ops/events/${suffix}`, {
-    auth: true,
-  });
+  let payload = null;
+  let lastError = null;
+
+  for (const endpoint of [`/ops/events/${suffix}`, `/insights/events/${suffix}`, `/admin/audit/${suffix}`]) {
+    try {
+      payload = await apiRequest(endpoint, { auth: true });
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (payload === null) {
+    throw lastError || new Error("Failed to load audit events.");
+  }
 
   if (Array.isArray(payload)) {
     return {
@@ -541,9 +553,17 @@ export async function getAdminAuditEvents(filters = {}) {
 }
 
 export async function getAdminSystemFlags() {
-  return apiRequest("/ops/system-flags/", {
-    auth: true,
-  });
+  let lastError = null;
+
+  for (const endpoint of ["/ops/system-flags/", "/insights/system-flags/", "/admin/audit/system-flags/"]) {
+    try {
+      return await apiRequest(endpoint, { auth: true });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Failed to load system flags.");
 }
 
 export async function logAuditEvent(eventType, metadata = {}, options = {}) {

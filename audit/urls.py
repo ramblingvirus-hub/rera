@@ -11,5 +11,7 @@ urlpatterns = [
     # neutral aliases so frontend traffic can use stable, non-admin route names.
     path("ops/events/", AdminAuditListView.as_view(), name="ops_audit_list"),
     path("ops/system-flags/", AdminSystemFlagsView.as_view(), name="ops_system_flags"),
+    path("insights/events/", AdminAuditListView.as_view(), name="insights_audit_list"),
+    path("insights/system-flags/", AdminSystemFlagsView.as_view(), name="insights_system_flags"),
     path("events/log/", AuditLogView.as_view(), name="events_log"),
 ]
